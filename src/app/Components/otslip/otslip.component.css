@@ -1,0 +1,15 @@
+@media print {
+    body * {
+      visibility: hidden;
+    }
+    #ot-form, #ot-form * {
+      visibility: visible;
+    }
+    #ot-form {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+    }
+  }
+  

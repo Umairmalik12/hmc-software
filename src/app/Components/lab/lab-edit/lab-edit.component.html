@@ -1,0 +1,60 @@
+<h2 mat-dialog-title>{{edit ? 'Update Lab Patient Data' : 'Add New Lab Patient'}}</h2>
+
+<form [formGroup]="labPatientForm" (ngSubmit)="onSubmit()" novalidate>
+    <mat-dialog-content>
+        <div class="outer-input-section">
+            <mat-form-field appearance="fill">
+                <mat-label>Patient ID</mat-label>
+                <input matInput type="number" formControlName="patientId">
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+                <mat-label>Name</mat-label>
+                <input matInput type="text" formControlName="name">
+                <mat-error *ngIf="c.name.errors?.required">Name is required</mat-error>
+                <mat-error *ngIf="c.name.errors?.pattern">Only alphabets are allowed</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+                <mat-label>Phone Number</mat-label>
+                <input matInput type="tel" formControlName="phone">
+                <mat-error *ngIf="c.phone.errors?.required">Phone number is required</mat-error>
+                <mat-error *ngIf="c.phone.errors?.pattern">Invalid phone number</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+                <mat-label>Test Name</mat-label>
+                <mat-select formControlName="testName">
+                    <mat-option *ngFor="let test of testList" [value]="test.value">{{ test.viewValue }}</mat-option>
+                </mat-select>
+                <mat-error *ngIf="c.testName.errors?.required">Test name is required</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+                <mat-label>Price</mat-label>
+                <input matInput type="number" formControlName="price">
+                <mat-error *ngIf="c.price.errors?.required">Price is required</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+                <mat-label>Suggested Doctor Name</mat-label>
+                <input matInput type="text" formControlName="suggestedDr">
+                <mat-error *ngIf="c.suggestedDr.errors?.required">Doctor name is required</mat-error>
+                <mat-error *ngIf="c.suggestedDr.errors?.pattern">Only alphabets are allowed</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+                <mat-label>Date & Time</mat-label>
+                <input matInput [matDatepicker]="picker" formControlName="dateTime">
+                <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                <mat-datepicker #picker></mat-datepicker>
+                <mat-error *ngIf="c.dateTime.errors?.required">Date & Time is required</mat-error>
+            </mat-form-field>
+        </div>
+    </mat-dialog-content>
+    
+    <mat-dialog-actions>
+        <button mat-raised-button color="primary" type="submit">Submit</button>
+        <button mat-raised-button color="warn" type="button" (click)="close()">Cancel</button>
+    </mat-dialog-actions>
+</form>

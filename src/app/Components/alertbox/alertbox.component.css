@@ -1,0 +1,21 @@
+.alert-box{
+    position: absolute;
+    top:1;
+    left: 40%;
+    width: 20vw;
+    height: fit-content;
+    text-align: center;
+    z-index: 100;
+    padding: 20px 40px;
+    font-size: 17px;
+    box-shadow: 0 0 3px 2px #444343;
+    color: black;
+    border-radius: 5px;
+    border-color: transparent;
+}
+.error{
+    background-color: red;
+}
+.success{
+    background-color: yellowgreen
+}

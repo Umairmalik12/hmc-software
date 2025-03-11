@@ -1,0 +1,55 @@
+.sidenav-container {
+    height: 100vh;
+    display: flex;
+}
+
+.sidebar-title {
+    padding: 15px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.nav-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 16px;
+    margin-right: 20px;
+}
+
+.datetime {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 16px;
+}
+
+.nav-options {
+    display: flex;
+    gap: 10px;
+}
+
+.nav-button {
+    margin-left: auto;
+}
+
+.content {
+    padding: 20px;
+}
+
+.welcome {
+    text-align: center;
+    margin-top: 50px;
+}

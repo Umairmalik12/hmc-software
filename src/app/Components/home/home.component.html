@@ -1,0 +1,84 @@
+<ng-template #placeholder></ng-template>
+
+<!-- Sidenav Container -->
+<mat-sidenav-container class="sidenav-container">
+    <mat-sidenav #sidenav mode="side" opened>
+        <mat-nav-list>
+            <h3 class="sidebar-title">Navigation</h3>
+            <a mat-list-item (click)="addPatient()">
+                <mat-icon>person_add</mat-icon>
+                <span>Add Operate Patient</span>
+            </a>
+            <a mat-list-item (click)="showPatientList()">
+                <mat-icon>local_hospital</mat-icon>
+                <span>Operate Patients</span>
+            </a>
+
+            <a mat-list-item (click)="addOpdSlip()">
+                <mat-icon>note_add</mat-icon>
+                <span>Add OPD Slip</span>
+            </a>
+            <a mat-list-item (click)="showOpdList()">
+                <mat-icon>assignment</mat-icon>
+                <span>OPD Slips</span>
+            </a>
+
+            <a mat-list-item (click)="addLabTestSlip()">
+                <mat-icon>biotech</mat-icon>
+                <span>Add Lab Slip</span>
+            </a>
+            <a mat-list-item (click)="showLabTestSlipList()">
+                <mat-icon>science</mat-icon>
+                <span>Lab Test Slips</span>
+            </a>
+
+            <a mat-list-item (click)="showOtListSlip()">
+                <mat-icon>science</mat-icon>
+                <span>OT Medicine Slip</span>
+            </a>
+            
+            <a mat-list-item routerLink="">
+                <mat-icon>exit_to_app</mat-icon>
+                <span>Logout</span>
+            </a>
+        </mat-nav-list>
+    </mat-sidenav>
+
+    <!-- Main Content -->
+    <mat-sidenav-content>
+        <!-- Toolbar -->
+        <mat-toolbar color="primary" class="nav-toolbar">
+            <div class="title">Haq Medical Center</div>
+
+            <!-- User Info -->
+            <div class="user-info">
+                <mat-icon>person</mat-icon>
+                <span>{{ userName }}</span>
+            </div>
+
+            <!-- Date & Time -->
+            <div class="datetime">
+                <mat-icon>schedule</mat-icon>
+                <span>{{ currentDateTime | date:'MMM d, y, h:mm a' }}</span>
+            </div>
+
+            <button mat-mini-fab color="warn" (click)="sidenav.toggle()" class="nav-button">
+                <mat-icon>menu</mat-icon>
+            </button>
+        </mat-toolbar>
+
+        <!-- Page Content -->
+        <div class="content">
+            <app-patient *ngIf="isShowPatients"></app-patient>
+            <app-opd *ngIf="isShowOpdPatients"></app-opd>
+            <app-lab *ngIf="isShowLabSlips"></app-lab>
+            <app-ot-form *ngIf="isShowOtSlips"></app-ot-form>
+
+            <!-- Welcome Message -->
+            <div *ngIf="!isShowPatients && !isShowOpdPatients && !isShowLabSlips" class="welcome">
+                <h1>Welcome to Haq Medical Center</h1>
+                <p>Providing quality healthcare with excellence.</p>
+            </div>
+        </div>
+    </mat-sidenav-content>
+</mat-sidenav-container>

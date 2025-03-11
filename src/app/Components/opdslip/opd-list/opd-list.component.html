@@ -1,0 +1,52 @@
+<div class="body">
+    <h1> OPD Patient List</h1>
+    <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource">
+
+        <ng-container matColumnDef="patientId">
+            <mat-header-cell *matHeaderCellDef>Patient ID</mat-header-cell>
+            <mat-cell *matCellDef="let opd">{{ opd.patientId }}</mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="dateTime">
+            <mat-header-cell *matHeaderCellDef>Date & Time</mat-header-cell>
+            <mat-cell *matCellDef="let opd">{{ opd.dateTime }}</mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="patientName">
+            <mat-header-cell *matHeaderCellDef>Name</mat-header-cell>
+            <mat-cell *matCellDef="let opd">{{ opd.patientName }}</mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="sex">
+            <mat-header-cell *matHeaderCellDef>Sex</mat-header-cell>
+            <mat-cell *matCellDef="let opd">{{ opd.sex }}</mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="drName">
+            <mat-header-cell *matHeaderCellDef>Doctor Name</mat-header-cell>
+            <mat-cell *matCellDef="let opd">{{ opd.drName }}</mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="followUp">
+            <mat-header-cell *matHeaderCellDef>Follow Up</mat-header-cell>
+            <mat-cell *matCellDef="let opd">{{ opd.followUp }}</mat-cell>
+        </ng-container>
+
+        <ng-container matColumnDef="action">
+            <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
+            <mat-cell *matCellDef="let opd">
+                <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editOpd(opd.patientId)">Edit</button>
+                <button mat-button class="mat-raised-button mat-warn table-btn">Delete</button>
+            </mat-cell>
+        </ng-container>
+
+        <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+    </mat-table>
+</div>
+
+<mat-paginator class="page"
+               [length]="total"
+               [pageSize]="5"
+               [pageSizeOptions]="[5, 10, 15, 20]">
+</mat-paginator>
