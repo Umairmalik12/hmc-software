@@ -32,9 +32,14 @@
                 <span>Lab Test Slips</span>
             </a>
 
-            <a mat-list-item (click)="showOtListSlip()">
-                <mat-icon>science</mat-icon>
+            <a mat-list-item (click)="showOtSlip()">
+                <mat-icon>local_pharmacy</mat-icon>
                 <span>OT Medicine Slip</span>
+            </a>
+
+            <a mat-list-item (click)="showOtListSlip()">
+                <mat-icon>local_pharmacy</mat-icon>
+                <span>OT Medicine List</span>
             </a>
             
             <a mat-list-item routerLink="">
@@ -72,7 +77,8 @@
             <app-patient *ngIf="isShowPatients"></app-patient>
             <app-opd *ngIf="isShowOpdPatients"></app-opd>
             <app-lab *ngIf="isShowLabSlips"></app-lab>
-            <app-ot-form *ngIf="isShowOtSlips"></app-ot-form>
+            <app-ot-form *ngIf="isShowOtSlips" [selectedPatientId]="otPatientId"></app-ot-form>
+            <app-otlist *ngIf="isShowOtList"></app-otlist>
 
             <!-- Welcome Message -->
             <div *ngIf="!isShowPatients && !isShowOpdPatients && !isShowLabSlips" class="welcome">

@@ -40,6 +40,7 @@ import { LabComponent } from './Components/lab/lab.component';
 import { LabListComponent } from './Components/lab/lab-list/lab-list.component';
 import { LabEditComponent } from './Components/lab/lab-edit/lab-edit.component';
 import { OtFormComponent } from './Components/otslip/otslip.component';
+import { OtlistComponent } from './Components/otlist/otlist.component';
 
 
 
@@ -59,7 +60,8 @@ import { OtFormComponent } from './Components/otslip/otslip.component';
     LabEditComponent,
     AlertboxComponent,
     OtFormComponent,
-    AgePipePipe
+    AgePipePipe,
+    OtlistComponent
   ],
   imports: [
     BrowserModule,

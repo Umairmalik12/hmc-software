@@ -11,6 +11,7 @@ import { Opd } from 'src/app/Models/opd.model';
 import { LabEditComponent } from '../lab/lab-edit/lab-edit.component';
 import { LabPatient } from 'src/app/Models/lab.model';
 import { LabService } from 'src/app/Services/lab.service';
+import { ActivatedRoute } from '@angular/router';
 
 
 @Component({
@@ -61,12 +62,15 @@ export class HomeComponent implements OnInit {
   isShowOtSlips: boolean = false;
 
   @ViewChild("placeholder", { read: ViewContainerRef }) alertContainer!: ViewContainerRef;
+  isShowOtList: boolean = false;
+  otPatientId: any;
 
   constructor(private dialog: MatDialog, private notifyUpdate: NotifyUpdateService,
     private patientService: PatientService,
     private opdService: OpdService,
     private labService: LabService,
-    private showAlert: ShowalertService) {
+    private showAlert: ShowalertService,
+  private route: ActivatedRoute) {
 
     this.notifyUpdate.alertNotify.subscribe(ob => {
       this.showAlert.showAlert(ob.msg, ob.type, this.alertContainer);
@@ -84,6 +88,19 @@ export class HomeComponent implements OnInit {
     setInterval(() => {
       this.currentDateTime = new Date();
     }, 1000);
+
+    this.route.queryParams.subscribe(params => {
+      this.otPatientId = params['patientId'];
+      console.log('Received patientId:', this.otPatientId);
+      if(this.otPatientId){
+        this.isShowOtSlips = true;
+        this.isShowOtList = false;
+        this.isShowLabSlips = false;
+        this.isShowPatients = false;
+        this.isShowOpdPatients = false;
+      }
+
+    });
   }
 
   addPatient() {
@@ -138,12 +155,20 @@ export class HomeComponent implements OnInit {
     this.isShowOpdPatients = false;
     this.isShowOtSlips = false;
   }
-
-  showOtListSlip() {
+  showOtSlip(){
     this.isShowOtSlips = true;
+    this.isShowOtList = false
     this.isShowLabSlips = false;
     this.isShowPatients = false;
     this.isShowOpdPatients = false;
+  }
+
+  showOtListSlip() {
+    this.isShowOtSlips = false;
+    this.isShowLabSlips = false;
+    this.isShowPatients = false;
+    this.isShowOpdPatients = false;
+    this.isShowOtList = true;
 
   }
 

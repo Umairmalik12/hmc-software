@@ -1,0 +1,44 @@
+<div class="body">
+    <h1>OT Medicine Patient List</h1>
+    
+    <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource">
+    
+      <ng-container matColumnDef="patientName">
+        <mat-header-cell *matHeaderCellDef>Name</mat-header-cell>
+        <mat-cell *matCellDef="let ot">{{ ot.patientName }}</mat-cell>
+      </ng-container>
+    
+      <ng-container matColumnDef="operationDate">
+        <mat-header-cell *matHeaderCellDef>Date</mat-header-cell>
+        <mat-cell *matCellDef="let ot">{{ ot.operationDate }}</mat-cell>
+      </ng-container>
+    
+      <ng-container matColumnDef="operationTime">
+        <mat-header-cell *matHeaderCellDef>Time</mat-header-cell>
+        <mat-cell *matCellDef="let ot">{{ ot.operationTime }}</mat-cell>
+      </ng-container>
+    
+      <ng-container matColumnDef="doctorName">
+        <mat-header-cell *matHeaderCellDef>Doctor Name</mat-header-cell>
+        <mat-cell *matCellDef="let ot">{{ ot.doctorName }}</mat-cell>
+      </ng-container>
+    
+      <ng-container matColumnDef="action">
+        <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
+        <mat-cell *matCellDef="let ot">
+          <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editOt(ot.id)">Edit</button>
+          <button mat-button class="mat-raised-button mat-warn table-btn">Delete</button>
+        </mat-cell>
+      </ng-container>
+    
+      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+      <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+    </mat-table>
+  </div>
+  
+  <mat-paginator class="page"
+                 [length]="total"
+                 [pageSize]="5"
+                 [pageSizeOptions]="[5, 10, 15, 20]">
+  </mat-paginator>
+  

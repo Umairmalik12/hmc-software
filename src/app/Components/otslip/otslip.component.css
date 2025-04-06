@@ -12,4 +12,44 @@
       width: 100%;
     }
   }
+
+  .product-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px; /* space between items */
+  }
   
+  .product-item {
+    width: 48%; /* two columns */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .quantity-field {
+    flex: 1;
+  }
+  
+  @media (max-width: 600px) {
+    .product-item {
+      width: 100%;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  
+    .quantity-field {
+      width: 100%;
+    }
+  }
+
+  .product-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  
+  .product-item {
+    width: 48%; /* Adjust width to fit two items in a row */
+    margin-bottom: 20px;
+    box-sizing: border-box; /* Ensures padding/margin doesn't affect width */
+  }
