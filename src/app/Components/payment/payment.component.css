@@ -1,0 +1,82 @@
+.payment-dashboard {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+  }
+  
+  .payment-card {
+    width: 100%;
+    max-width: 800px;
+    margin-bottom: 20px;
+  }
+  
+  .payment-card-header {
+    background-color: #f5f5f5;
+    color: #0066cc;
+    font-weight: bold;
+  }
+  
+  .payment-card-title {
+    font-size: 20px;
+    text-align: center;
+  }
+  
+  .form-content {
+    padding: 20px;
+  }
+  
+  .form-field {
+    margin-bottom: 20px;
+  }
+  
+  .input-field {
+    width: 100%;
+  }
+  
+  .amount-label, .cash-label {
+    color: #0066cc;
+  }
+  
+  .full-width {
+    width: 100%;
+  }
+  
+  .payment-table {
+    width: 100%;
+    margin-top: 20px;
+  }
+  
+  .payment-table th {
+    background-color: #0066cc;
+    color: white;
+  }
+  
+  .print-receipt-btn {
+    background-color: #28a745;
+    color: white;
+  }
+  
+  .submit-btn {
+    width: 48%;
+    margin-right: 4%;
+  }
+  
+  .cancel-btn {
+    width: 48%;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .payment-history {
+    margin-top: 20px;
+  }
+  
+  h3 {
+    text-align: center;
+    color: #0066cc;
+    font-size: 24px;
+  }
+  

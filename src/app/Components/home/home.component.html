@@ -41,6 +41,11 @@
                 <mat-icon>local_pharmacy</mat-icon>
                 <span>OT Medicine List</span>
             </a>
+
+            <a mat-list-item (click)="showPayment()">
+                <mat-icon>local_pharmacy</mat-icon>
+                <span>Payment</span>
+            </a>
             
             <a mat-list-item routerLink="">
                 <mat-icon>exit_to_app</mat-icon>
@@ -77,8 +82,9 @@
             <app-patient *ngIf="isShowPatients"></app-patient>
             <app-opd *ngIf="isShowOpdPatients"></app-opd>
             <app-lab *ngIf="isShowLabSlips"></app-lab>
-            <app-ot-form *ngIf="isShowOtSlips" [selectedPatientId]="otPatientId"></app-ot-form>
+            <app-ot-form *ngIf="isShowOtSlips" (isCancelForm)="close()" [selectedPatientId]="otPatientId"></app-ot-form>
             <app-otlist *ngIf="isShowOtList"></app-otlist>
+            <app-payment *ngIf="isShowPayment"></app-payment>
 
             <!-- Welcome Message -->
             <div *ngIf="!isShowPatients && !isShowOpdPatients && !isShowLabSlips" class="welcome">

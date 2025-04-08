@@ -41,6 +41,7 @@ import { LabListComponent } from './Components/lab/lab-list/lab-list.component';
 import { LabEditComponent } from './Components/lab/lab-edit/lab-edit.component';
 import { OtFormComponent } from './Components/otslip/otslip.component';
 import { OtlistComponent } from './Components/otlist/otlist.component';
+import { PaymentComponent } from './Components/payment/payment.component';
 
 
 
@@ -61,7 +62,8 @@ import { OtlistComponent } from './Components/otlist/otlist.component';
     AlertboxComponent,
     OtFormComponent,
     AgePipePipe,
-    OtlistComponent
+    OtlistComponent,
+    PaymentComponent
   ],
   imports: [
     BrowserModule,

@@ -1,42 +1,55 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormBuilder, FormGroup, FormArray } from '@angular/forms';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-ot-form',
   templateUrl: './otslip.html',
   styleUrls: ['./otslip.component.css'],
 })
-export class OtFormComponent {
-  isEditMode: boolean = false;
+export class OtFormComponent implements OnInit {
+  isEditMode = false;
+  otlist: any[] = [];
+  editingId: string | null = null;
 
-  @Input() set selectedPatientId (selectedPatientId : any){
-    if(selectedPatientId){
+  @Output() isCancelForm = new EventEmitter();
+
+  @Input() set selectedPatientId(selectedPatientId: any) {
+    if (selectedPatientId) {
       const otFormData = localStorage.getItem('otFormData');
-    
       if (otFormData) {
         const parsedData = JSON.parse(otFormData);
-        
         const patientData = parsedData.find((ot: any) => ot.id === selectedPatientId);
-        
+
         if (patientData) {
-          console.log('Patient data found:', patientData);
-          
+          this.editingId = patientData.id;
+          this.isEditMode = true;
           this.otForm.patchValue({
             patientName: patientData.patientName,
             operationDate: patientData.operationDate,
             operationTime: patientData.operationTime,
             doctorName: patientData.doctorName,
             roomNumber: patientData.roomNumber,
-            products: patientData.products // assuming products is an array
+            includeMedicineHeader: patientData.includeMedicineHeader || 'withMedicine',
           });
-          this.isEditMode = true; // Set edit mode to true
-        } else {
-          console.log('No matching patient data found');
+
+          // Patch product selections
+          const productArray = this.otForm.get('products') as FormArray;
+          patientData.products.forEach((product: any, index: number) => {
+            if (productArray.at(index)) {
+              productArray.at(index).patchValue({
+                selected: product.selected,
+                quantity: product.quantity,
+              });
+            }
+          });
         }
       }
     }
-  };
+  }
+
   otForm: FormGroup;
+
   products = [
     'INJ. AVIL', 'INJ. DECADRON', 'INJ. DERMOCUIM', 'INJ. ATROPINE', 'INJ. TRAMADOL',
     'INJ. TORLAC', 'INJ. KINZ', 'INJ. OXYTOCIN', 'INJ. IBUPROFEN SP', 'INJ. TRANEXAMINE 500MG',
@@ -54,9 +67,7 @@ export class OtFormComponent {
     'BILD NO.11', 'BILD NO.15', 'BILD NO.19', 'BILD NO.24', 'LOCAL 100CC',
   ];
 
-  
-
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder, private router: Router) {
     this.otForm = this.fb.group({
       patientName: [''],
       doctorName: [''],
@@ -69,269 +80,226 @@ export class OtFormComponent {
         quantity: ['']
       })))
     });
-
-    
   }
 
   get productControls(): FormArray {
     return this.otForm.get('products') as FormArray;
   }
 
-  submitForm(isEditMode = false): void {
-    this.isEditMode =isEditMode
-    const formValue = this.otForm.value;
-  
-    const randomId = 'form-' + Math.random().toString(36).substr(2, 9); // Generates a random ID
-  
-    const selectedProducts = formValue.products
-      .map((item: any, index: number) => ({
-        name: this.products[index],
-        quantity: item.quantity,
-        selected: item.selected 
-      }))
-      .filter((item: { quantity: number; selected: boolean }) => item.quantity && item.quantity > 0);
-  
-    // Add the random ID to the form value
-    const formWithId = { ...formValue, id: randomId };
-  let otlist = []
-
-  if (this.isEditMode) {
-    // Update the existing entry if in edit mode
-    const existingData = JSON.parse(localStorage.getItem('otFormData') || '[]');
-    const updatedData = existingData.map((data: any) => 
-      data.id === formWithId.id ? formWithId : data
-    );
-    otlist = updatedData;
-    this.otForm.reset();
-  } else {
-    // Add new entry if not in edit mode
-    otlist.push(formWithId);
+  ngOnInit(): void {
+    const saved = localStorage.getItem('otFormData');
+    this.otlist = saved ? JSON.parse(saved) : [];
   }
-    localStorage.setItem('otFormData', JSON.stringify(otlist));
-    console.log('Selected Products:', selectedProducts);
-    console.log('Form with Random ID:', formWithId);
+
+  submitForm(): void {
+    const formValue = this.otForm.value;
+    const selectedProducts = formValue.products.map((item: any, i: number) => ({
+      name: this.products[i],
+      selected: item.selected,
+      quantity: item.quantity
+    })).filter((p: { selected: any; quantity: any; }) => p.selected && p.quantity);
+
+    const record = {
+      ...formValue,
+      products: selectedProducts,
+      id: this.editingId || 'form-' + Math.random().toString(36).substr(2, 9)
+    };
+
+    if (this.isEditMode && this.editingId) {
+      this.otlist = this.otlist.map(item => item.id === this.editingId ? record : item);
+    } else {
+      this.otlist.push(record);
+    }
+
+    localStorage.setItem('otFormData', JSON.stringify(this.otlist));
+
     this.printPage();
     this.otForm.reset();
+    this.isEditMode = false;
+    this.router.navigate(['/home'])
   }
-  
+
   cancelForm(): void {
     this.otForm.reset();
-    // Optionally, reset any other variables here
-    console.log('Form has been reset.');
+    this.isEditMode = false;
+    this.editingId = null;
+    this.router.navigate(['/home'])
+    this.isCancelForm.emit(true);
+    
+    console.log('Form cancelled.');
   }
-
-
 
   printPage(): void {
     const printContent = document.getElementById('ot-form');
     if (printContent) {
-      const WindowPrt = window.open('', '', 'width=1000,height=800');
-      if (WindowPrt) {
-        WindowPrt.document.write(`
+      const win = window.open('', '', 'width=1000,height=800');
+      if (win) {
+        const styles = `
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              padding: 40px;
+              background: #fdfdfd;
+              color: #222;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+            }
+            .header h2 {
+              margin: 0;
+              font-size: 24px;
+              color: #2c3e50;
+            }
+            .header h4 {
+              margin: 5px 0 0;
+              font-size: 18px;
+              color: #16a085;
+            }
+            .section {
+              border: 1px solid #ccc;
+              border-radius: 10px;
+              padding: 20px;
+              margin-bottom: 20px;
+              background-color: #f9f9f9;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+            .section h4 {
+              margin-bottom: 15px;
+              border-bottom: 1px solid #ddd;
+              padding-bottom: 5px;
+              color: #2980b9;
+            }
+            .info-row {
+              margin: 10px 0;
+              font-size: 15px;
+            }
+            .info-row .label {
+              font-weight: bold;
+              display: inline-block;
+              width: 150px;
+              color: #34495e;
+            }
+            ul {
+              padding-left: 20px;
+              margin: 0;
+            }
+            li {
+              margin: 5px 0;
+              font-size: 14px;
+              display: flex;
+              justify-content: space-between;
+              padding: 10px;
+              border-bottom: 1px solid #ddd;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 40px;
+              font-size: 13px;
+              color: #999;
+            }
+            .products-list {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 20px;
+            }
+            .product-item {
+              width: calc(50% - 10px);
+              padding: 10px;
+              border-radius: 8px;
+              background: #fff;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+              margin-bottom: 10px;
+              display: flex;
+              justify-content: space-between;
+              font-size: 14px;
+            }
+            .product-name {
+              font-weight: bold;
+              color: #2980b9;
+            }
+            .product-quantity {
+              font-size: 14px;
+              color: #34495e;
+            }
+          </style>
+        `;
+  
+        const externalStyles = `
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/primeng/resources/themes/saga-blue/theme.css">
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/primeng/resources/primeng.min.css">
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/primeicons/primeicons.css">
+          <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+          <link rel="stylesheet" href="assets/styles.css">
+        `;
+  
+        win.document.write(`
           <html>
             <head>
               <title>OT Slip</title>
-              <style>
-                * {
-                  font-family: Arial, sans-serif;
-                  box-sizing: border-box;
-                }
-  
-                body {
-                  margin: 0;
-                  padding: 0;
-                  font-size: 10pt;
-                  color: #333;
-                  line-height: 1.5;
-                }
-  
-                h3, .title {
-                  text-align: center;
-                  margin-bottom: 10px;
-                  font-size: 14pt;
-                  font-weight: bold;
-                }
-  
-                .form-group, .product-item {
-                  margin-bottom: 5px;
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                }
-  
-                .product-item {
-                  border-bottom: 1px solid #ccc;
-                  padding: 5px 0;
-                  font-size: 10pt;
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                }
-  
-                .product-name {
-                  width: 50%;
-                  text-align: left;
-                }
-  
-                .checkbox-container {
-                  width: 10%;
-                  text-align: center;
-                }
-  
-                .quantity {
-                  width: 30%;
-                  text-align: right;
-                  font-weight: bold;
-                }
-  
-                .checkbox-label {
-                  margin-left: 5px;
-                }
-  
-                .product-list {
-                  display: block;
-                  margin-top: 10px;
-                }
-  
-                .product-item {
-                  font-size: 9pt;
-                  margin-bottom: 8px;
-                  display: flex;
-                  justify-content: space-between;
-                }
-  
-                /* Print-specific styling */
-                @media print {
-                  body {
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                    font-size: 10pt;
-                  }
-  
-                  html, body {
-                    width: 100%;
-                    height: 100%;
-                    padding: 0;
-                    margin: 0;
-                    overflow: visible;
-                  }
-  
-                  @page {
-                    size: A4 portrait;
-                    margin: 10mm;
-                  }
-  
-                  #ot-form {
-                    width: 100%;
-                    padding: 15px;
-                    box-sizing: border-box;
-                    page-break-before: always;
-                    page-break-after: always;
-                    display: block;
-                  }
-  
-                  .product-list {
-                    display: block;
-                    margin-top: 20px;
-                  }
-  
-                  .product-item {
-                    width: 100%;
-                    font-size: 9pt;
-                    margin-bottom: 5px;
-                    display: flex;
-                    justify-content: space-between;
-                  }
-  
-                  .checkbox-container {
-                    text-align: center;
-                  }
-  
-                  /* Ensure checkbox appearance during print */
-                  .checkbox-container input[type="checkbox"] {
-                    pointer-events: none;
-                  }
-                }
-              </style>
+              ${externalStyles}
+              ${styles}
             </head>
-          <body>
-            <div id="ot-form">
-              <!-- Header Section with Doctor, Date, Time, etc. -->
-              <h3 class="title">Ahmmad Medicine List</h3>
-              
-              <div class="section">
-                <div class="section-title">Doctor Name:</div>
-                <div class="section-content">${this.otForm.value.doctorName}</div>
+            <body>
+              <div class="header">
+                <h2>Ahmmad Pharmacy</h2>
+                <h4>OT Medicine List</h4>
               </div>
-              
+  
               <div class="section">
-                <div class="section-title">Date:</div>
-                <div class="section-content">${this.otForm.value.operationDate}</div>
+                <h4>Operation Details</h4>
+                <div class="info-row"><span class="label">Doctor:</span> ${this.otForm.value.doctorName}</div>
+                <div class="info-row"><span class="label">Date:</span> ${this.otForm.value.operationDate}</div>
+                <div class="info-row"><span class="label">Time:</span> ${this.otForm.value.operationTime}</div>
+                <div class="info-row"><span class="label">Room:</span> ${this.otForm.value.roomNumber}</div>
+                <div class="info-row"><span class="label">Medicine Header:</span> ${this.otForm.value.includeMedicineHeader }</div>
               </div>
-              
+  
               <div class="section">
-                <div class="section-title">Time:</div>
-                <div class="section-content">${this.otForm.value.operationTime}</div>
-              </div>
-
-              <div class="section">
-                <div class="section-title">Room:</div>
-                <div class="section-content">${this.otForm.value.roomNumber}</div>
-              </div>
-
-              <div class="section">
-                <div class="section-title">Include Medicine Header:</div>
-                <div class="section-content">${this.otForm.value.includeMedicineHeader}</div>
-              </div>
-
-              <!-- Products List Section -->
-              <div class="section">
-                <div class="section-title">Medicine List:</div>
-                <div class="section-content">
-                  <div class="product-list">
-                    ${this.getSelectedProductsForPrint()}
-                  </div>
+                <h4>Selected Products</h4>
+                <div class="products-list">
+                  ${this.getSelectedProductsForPrint()}
                 </div>
               </div>
-            </div>
-          </body>
+  
+              <div class="footer">
+                Printed on: ${new Date().toLocaleString()}
+              </div>
+            </body>
           </html>
         `);
-        WindowPrt.document.close();
-        WindowPrt.focus();
+  
+        win.document.close();
         setTimeout(() => {
-          WindowPrt.print();
-          WindowPrt.close();
+          win.print();
+          win.close();
         }, 500);
       }
     }
   }
   
-  getSelectedProductsForPrint(): string {
-    const formValue = this.otForm.value;
-    const selectedProducts = formValue.products
-      .map((item: any, index: number) => ({
-        name: this.products[index],
-        quantity: item.quantity,
-        selected: item.selected // Assuming 'selected' is the checkbox state
-      }))
-      .filter((item: { quantity: number; }) => item.quantity && item.quantity > 0);
   
-    return `
-      <div class="product-container">
-        ${selectedProducts
-          .map((product: any) => `
+  
+
+  getSelectedProductsForPrint(): string {
+    return this.productControls.controls
+      .map((ctrl, i) => {
+        const { selected, quantity } = ctrl.value;
+        if (selected && quantity) {
+          // Creating two items per row with styling for a professional look
+          return `
             <div class="product-item">
-              <div class="product-name">${product.name}</div>
-              <div class="quantity">${product.quantity}</div>
-              <div class="checkbox-container">
-                <input type="checkbox" ${product.selected ? 'checked' : ''} disabled />
-                <label class="checkbox-label">${product.selected ? 'Selected' : 'Unselected'}</label>
-              </div>
+              <span class="product-name">${this.products[i]}</span>
+              <span class="product-quantity">Quantity: ${quantity}</span>
             </div>
-          `)
-          .join('')}
-      </div>
-    `;
+          `;
+        }
+        return '';
+      })
+      .filter(item => item) // Remove empty items
+      .join('');
   }
+  
+  
+  
 }

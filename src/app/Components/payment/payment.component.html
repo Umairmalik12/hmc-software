@@ -1,0 +1,142 @@
+<div class="payment-dashboard">
+    <mat-card class="payment-card">
+      <!-- <mat-card-header class="payment-card-header"> -->
+        <!-- <mat-card-title class="payment-card-title">Payment Dashboard</mat-card-title> -->
+      <!-- </mat-card-header> -->
+  
+      <!-- Payment Form -->
+      <form [formGroup]="paymentForm" (ngSubmit)="processPayment()" class="payment-form">
+        <!-- <mat-card class="payment-card"> -->
+          <mat-card-header class="payment-card-header">
+            <mat-card-title class="payment-title">Point of Sale</mat-card-title>
+          </mat-card-header>
+      
+          <mat-card-content class="form-content">
+            <!-- Patient Name -->
+            <div class="form-field">
+              <mat-form-field appearance="fill" class="full-width">
+                <mat-label>Patient Name</mat-label>
+                <input matInput formControlName="patientName" required class="input-field"/>
+              </mat-form-field>
+            </div>
+      
+            <!-- Auto-generated Patient ID -->
+            <div class="form-field">
+              <mat-form-field appearance="fill" class="full-width">
+                <mat-label>Patient ID</mat-label>
+                <input matInput [value]="patientId" formControlName="patientId" disabled class="input-field"/>
+              </mat-form-field>
+            </div>
+      
+            <!-- Amount -->
+            <div class="form-field">
+              <mat-form-field appearance="fill" class="full-width">
+                <mat-label class="amount-label">Amount</mat-label>
+                <input matInput type="number" formControlName="amount" required class="input-field" />
+              </mat-form-field>
+            </div>
+      
+            <!-- Cash Given -->
+            <div class="form-field">
+              <mat-form-field appearance="fill" class="full-width">
+                <mat-label class="cash-label">Cash Given</mat-label>
+                <input matInput type="number" formControlName="cashGiven" (input)="calculateCashReturn()" required class="input-field" />
+              </mat-form-field>
+            </div>
+      
+            <!-- Payment Method -->
+            <div class="form-field">
+              <mat-form-field appearance="fill" class="full-width">
+                <mat-label>Payment Method</mat-label>
+                <mat-select formControlName="paymentMethod" required>
+                  <mat-option value="cash">Cash</mat-option>
+                  <mat-option value="card">Card</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+      
+            <!-- Payment Status -->
+            <div class="form-field">
+              <mat-form-field appearance="fill" class="full-width">
+                <mat-label>Payment Status</mat-label>
+                <mat-select formControlName="paymentStatus" required>
+                  <mat-option value="completed">Completed</mat-option>
+                  <mat-option value="pending">Pending</mat-option>
+                  <mat-option value="failed">Failed</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+      
+            <!-- Cash Return -->
+            <div class="form-field" *ngIf="cashReturn >= 0">
+              <mat-form-field appearance="fill" class="full-width">
+                <mat-label>Cash Return</mat-label>
+                <input matInput [value]="cashReturn" disabled class="input-field" />
+              </mat-form-field>
+            </div>
+      
+            <!-- Action Buttons -->
+            <div class="form-actions">
+              <button mat-raised-button color="primary" type="submit" [disabled]="paymentForm.invalid" class="submit-btn">
+                Process Payment
+              </button>
+              <button mat-raised-button color="warn" (click)="resetForm()" class="cancel-btn">Cancel</button>
+            </div>
+          </mat-card-content>
+        <!-- </mat-card> -->
+      </form>
+  
+      <!-- Payment History -->
+      <mat-card-content *ngIf="payments.length > 0" class="payment-history">
+        <h3>Payment History</h3>
+        <table mat-table [dataSource]="payments" class="payment-table">
+          <ng-container matColumnDef="patientName">
+            <th mat-header-cell *matHeaderCellDef> Patient Name </th>
+            <td mat-cell *matCellDef="let payment"> {{payment.patientName}} </td>
+          </ng-container>
+  
+          <ng-container matColumnDef="amount">
+            <th mat-header-cell *matHeaderCellDef> Amount </th>
+            <td mat-cell *matCellDef="let payment"> Rs{{payment.amount}} </td>
+          </ng-container>
+  
+          <ng-container matColumnDef="cashGiven">
+            <th mat-header-cell *matHeaderCellDef> Cash Given </th>
+            <td mat-cell *matCellDef="let payment"> RS{{payment.cashGiven}} </td>
+          </ng-container>
+  
+          <ng-container matColumnDef="cashReturn">
+            <th mat-header-cell *matHeaderCellDef> Cash Return </th>
+            <td mat-cell *matCellDef="let payment"> Rs{{payment.cashReturn}} </td>
+          </ng-container>
+  
+          <ng-container matColumnDef="paymentMethod">
+            <th mat-header-cell *matHeaderCellDef> Payment Method </th>
+            <td mat-cell *matCellDef="let payment"> {{payment.paymentMethod}} </td>
+          </ng-container>
+  
+          <ng-container matColumnDef="paymentStatus">
+            <th mat-header-cell *matHeaderCellDef> Status </th>
+            <td mat-cell *matCellDef="let payment">
+              <mat-select [(ngModel)]="payment.paymentStatus" (selectionChange)="updatePaymentStatus(payment.id, $event.value)">
+                <mat-option value="completed">Completed</mat-option>
+                <mat-option value="pending">Pending</mat-option>
+                <mat-option value="failed">Failed</mat-option>
+              </mat-select>
+            </td>
+          </ng-container>
+  
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef> Actions </th>
+            <td mat-cell *matCellDef="let payment">
+              <button mat-button (click)="showReceipt(payment)" class="print-receipt-btn">Print Receipt</button>
+            </td>
+          </ng-container>
+  
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  

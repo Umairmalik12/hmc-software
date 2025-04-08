@@ -64,6 +64,7 @@ export class HomeComponent implements OnInit {
   @ViewChild("placeholder", { read: ViewContainerRef }) alertContainer!: ViewContainerRef;
   isShowOtList: boolean = false;
   otPatientId: any;
+  isShowPayment: boolean = false;;
 
   constructor(private dialog: MatDialog, private notifyUpdate: NotifyUpdateService,
     private patientService: PatientService,
@@ -95,6 +96,13 @@ export class HomeComponent implements OnInit {
       if(this.otPatientId){
         this.isShowOtSlips = true;
         this.isShowOtList = false;
+        this.isShowLabSlips = false;
+        this.isShowPatients = false;
+        this.isShowOpdPatients = false;
+      }
+      else{
+        this.isShowOtSlips = false;
+        this.isShowOtList = true;
         this.isShowLabSlips = false;
         this.isShowPatients = false;
         this.isShowOpdPatients = false;
@@ -139,13 +147,16 @@ export class HomeComponent implements OnInit {
     this.isShowOpdPatients = false;
     this.isShowLabSlips = false;
     this.isShowOtSlips = false;
+    this.isShowPayment = false;
   }
 
   showOpdList() {
     this.isShowOpdPatients = true;
     this.isShowPatients = false;
     this.isShowLabSlips = false;
+    this.isShowOtList = false;
     this.isShowOtSlips = false;
+    this.isShowPayment = false;
 
   }
 
@@ -154,6 +165,9 @@ export class HomeComponent implements OnInit {
     this.isShowPatients = false;
     this.isShowOpdPatients = false;
     this.isShowOtSlips = false;
+    this.isShowOtList = false;
+    this.isShowPayment = false;
+
   }
   showOtSlip(){
     this.isShowOtSlips = true;
@@ -161,6 +175,8 @@ export class HomeComponent implements OnInit {
     this.isShowLabSlips = false;
     this.isShowPatients = false;
     this.isShowOpdPatients = false;
+    this.isShowPayment = false;
+
   }
 
   showOtListSlip() {
@@ -169,9 +185,30 @@ export class HomeComponent implements OnInit {
     this.isShowPatients = false;
     this.isShowOpdPatients = false;
     this.isShowOtList = true;
+    this.isShowPayment = false;
+
 
   }
 
+  showPayment(){
+    this.isShowPayment = true;
+    this.isShowOtSlips = false;
+    this.isShowOtList = false
+    this.isShowLabSlips = false;
+    this.isShowPatients = false;
+    this.isShowOpdPatients = false;
+  }
+
+
+  close(){
+    this.isShowOtList = true;
+    this.isShowLabSlips = false;
+    this.isShowPatients = false;
+    this.isShowOpdPatients = false;
+    this.isShowOtSlips = false;
+    this.isShowPayment = false;
+
+  }
 
  
 }
