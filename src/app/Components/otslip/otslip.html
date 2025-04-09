@@ -59,8 +59,8 @@
   </div>
 
   <mat-card-actions>
-    <button mat-raised-button *ngIf="!isEditMode" color="primary" (click)="submitForm(false)">Submit</button>
-    <button *ngIf="isEditMode" mat-raised-button color="accent" (click)="submitForm(true)">Update</button>
+    <button mat-raised-button *ngIf="!isEditMode" color="primary" (click)="submitForm()">Submit</button>
+    <button *ngIf="isEditMode" mat-raised-button color="accent" (click)="submitForm()">Update</button>
     <button mat-raised-button color="warn" (click)="cancelForm()">Cancel</button>
   </mat-card-actions>
 </form>
