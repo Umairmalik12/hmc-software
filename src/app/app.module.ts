@@ -27,7 +27,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialogModule } from '@angular/material/dialog';
 import {MatDatepickerModule} from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
+import { MatNativeDateModule, MatOptionModule } from '@angular/material/core';
 import { AuthGuardService } from './Services/Guard-Services/auth-guard.service';
 import { UserLoginService } from './Services/user-login.service';
 import { AlertboxComponent } from './Components/alertbox/alertbox.component';
@@ -42,6 +42,7 @@ import { LabEditComponent } from './Components/lab/lab-edit/lab-edit.component';
 import { OtFormComponent } from './Components/otslip/otslip.component';
 import { OtlistComponent } from './Components/otlist/otlist.component';
 import { PaymentComponent } from './Components/payment/payment.component';
+import {  PreciptionComponent } from './Components/precipion/precipion.component';
 
 
 
@@ -63,7 +64,8 @@ import { PaymentComponent } from './Components/payment/payment.component';
     OtFormComponent,
     AgePipePipe,
     OtlistComponent,
-    PaymentComponent
+    PaymentComponent,
+    PreciptionComponent
   ],
   imports: [
     BrowserModule,
@@ -89,6 +91,7 @@ import { PaymentComponent } from './Components/payment/payment.component';
     MatDialogModule,
     MatDatepickerModule,
     MatNativeDateModule,
+    MatOptionModule,
   ],
   providers: [UserLoginService, AuthGuardService, CookieService],
   bootstrap: [AppComponent]

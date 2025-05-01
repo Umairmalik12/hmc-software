@@ -1,0 +1,94 @@
+/* Prescription Container with Background Image */
+.prescription-container {
+    padding: 30px;
+    background-image: url('../../../assets/images/prescription-bg.jpeg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: top center;
+    min-height: 1000px;
+    font-family: 'Arial', sans-serif; /* Ensure consistency in font */
+    color: #333; /* Default text color for readability */
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft shadow for non-print views */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+  
+  /* Heading */
+  .heading {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    color: #2c3e50;
+  }
+  
+  /* Medicine Row Background */
+  .medicine-row {
+    background-color: rgba(255, 255, 255, 0.9);  /* Slight transparency for a softer effect */
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  /* Form Field Styling */
+  .mat-form-field {
+    margin-bottom: 15px;
+    width: 100%;
+    max-width: 300px; /* Adjust max width for smaller form size */
+    padding: 5px;
+  }
+  
+  /* Time Checkboxes Styling */
+  .time-checkboxes {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  
+  /* Button Section Styling */
+  .buttons {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center; /* Center the buttons */
+  }
+  
+  /* Center the Add Medicine Form */
+  .add-medicine-form {
+    width: 80%; /* Adjust width of the form */
+    max-width: 500px; /* Limit max width */
+    margin: 0 auto; /* Center the form horizontally */
+  }
+  
+  @media print {
+    body {
+      background-image: url('../../../assets/images/prescription-bg.jpeg') !important;  /* Ensure the path is correct */
+      background-size: cover; /* Ensure the image covers the whole page */
+      background-repeat: no-repeat; /* Avoid repetition of the image */
+      background-position: top center; /* Position the background image at the top center */
+      -webkit-print-color-adjust: exact !important; /* Adjust colors for printing in webkit-based browsers */
+      print-color-adjust: exact !important; /* Ensure colors are properly rendered */
+    }
+
+    /* Additional adjustments for the layout during print */
+  .prescription-container {
+    padding: 20px;
+    background-color: transparent !important; /* Make the container transparent so the background image shows */
+  }
+
+  /* Ensure content does not break awkwardly */
+  .medicine-row, .mat-form-field, .time-checkboxes {
+    page-break-inside: avoid;
+  }
+
+  /* Hiding buttons and non-essential elements for print */
+  .buttons, .no-print {
+    display: none !important;
+  }
+}

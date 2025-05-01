@@ -60,6 +60,7 @@ export class HomeComponent implements OnInit {
   isShowOpdPatients: boolean = false;
   isShowLabSlips: boolean = false;
   isShowOtSlips: boolean = false;
+  isShowPrecption = false
 
   @ViewChild("placeholder", { read: ViewContainerRef }) alertContainer!: ViewContainerRef;
   isShowOtList: boolean = false;
@@ -99,6 +100,7 @@ export class HomeComponent implements OnInit {
         this.isShowLabSlips = false;
         this.isShowPatients = false;
         this.isShowOpdPatients = false;
+        this.isShowPrecption = false
       }
       else{
         this.isShowOtSlips = false;
@@ -106,6 +108,8 @@ export class HomeComponent implements OnInit {
         this.isShowLabSlips = false;
         this.isShowPatients = false;
         this.isShowOpdPatients = false;
+        this.isShowPrecption = false
+
       }
 
     });
@@ -148,6 +152,8 @@ export class HomeComponent implements OnInit {
     this.isShowLabSlips = false;
     this.isShowOtSlips = false;
     this.isShowPayment = false;
+    this.isShowPrecption = false
+
   }
 
   showOpdList() {
@@ -157,6 +163,8 @@ export class HomeComponent implements OnInit {
     this.isShowOtList = false;
     this.isShowOtSlips = false;
     this.isShowPayment = false;
+    this.isShowPrecption = false
+
 
   }
 
@@ -167,6 +175,8 @@ export class HomeComponent implements OnInit {
     this.isShowOtSlips = false;
     this.isShowOtList = false;
     this.isShowPayment = false;
+    this.isShowPrecption = false
+
 
   }
   showOtSlip(){
@@ -176,6 +186,8 @@ export class HomeComponent implements OnInit {
     this.isShowPatients = false;
     this.isShowOpdPatients = false;
     this.isShowPayment = false;
+    this.isShowPrecption = false
+
 
   }
 
@@ -186,6 +198,8 @@ export class HomeComponent implements OnInit {
     this.isShowOpdPatients = false;
     this.isShowOtList = true;
     this.isShowPayment = false;
+    this.isShowPrecption = false
+
 
 
   }
@@ -197,6 +211,8 @@ export class HomeComponent implements OnInit {
     this.isShowLabSlips = false;
     this.isShowPatients = false;
     this.isShowOpdPatients = false;
+    this.isShowPrecption = false
+
   }
 
 
@@ -207,7 +223,19 @@ export class HomeComponent implements OnInit {
     this.isShowOpdPatients = false;
     this.isShowOtSlips = false;
     this.isShowPayment = false;
+    this.isShowPrecption = false
 
+
+  }
+
+  showPreception(){
+    this.isShowOtList = false;
+    this.isShowLabSlips = false;
+    this.isShowPatients = false;
+    this.isShowOpdPatients = false;
+    this.isShowOtSlips = false;
+    this.isShowPayment = false;
+    this.isShowPrecption = true
   }
 
  

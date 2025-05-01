@@ -1,0 +1,41 @@
+<div class="prescription-container" id="prescription">
+    <h2 class="heading">Prescription</h2>
+  
+    <div *ngFor="let med of prescribedMedicines; let i = index" class="medicine-row">
+      
+      <!-- Medicine Selection -->
+      <mat-form-field appearance="outline" class="full-field">
+        <mat-label>Medicine</mat-label>
+        <mat-select [(ngModel)]="med.name" (selectionChange)="saveToLocalStorage()">
+          <mat-option *ngFor="let option of medicines" [value]="option">{{ option }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+  
+      <!-- Type: Tablet, Capsule, Injection -->
+      <mat-form-field appearance="outline" class="small-field">
+        <mat-label>Type</mat-label>
+        <mat-select [(ngModel)]="med.type" (selectionChange)="saveToLocalStorage()">
+          <mat-option value="Tablet">Tablet</mat-option>
+          <mat-option value="Capsule">Capsule</mat-option>
+          <mat-option value="Injection">Injection</mat-option>
+        </mat-select>
+      </mat-form-field>
+  
+      <!-- Time Selection: Morning, Afternoon, Evening -->
+      <div class="time-checkboxes">
+        <mat-checkbox [(ngModel)]="med.morning" (change)="saveToLocalStorage()">Morning</mat-checkbox>
+        <mat-checkbox [(ngModel)]="med.afternoon" (change)="saveToLocalStorage()">Afternoon</mat-checkbox>
+        <mat-checkbox [(ngModel)]="med.evening" (change)="saveToLocalStorage()">Evening</mat-checkbox>
+      </div>
+  
+      <button mat-icon-button color="warn" (click)="removeMedicine(i)" class="no-print">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </div>
+  
+    <div class="buttons no-print">
+      <button mat-raised-button color="accent" (click)="addMedicine()">+ Add Medicine</button>
+      <button mat-raised-button color="primary" (click)="print()">Print</button>
+    </div>
+  </div>
+  
