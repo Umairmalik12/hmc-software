@@ -31,8 +31,7 @@ export class LoginComponent implements OnInit {
     if (!localStorage.getItem('hospitalUsers')) {
       const users = [
         { username: 'admin', password: 'admin123' },
-        { username: 'drtanveer', password: 'tanveer' },
-        { username: 'pharmacy', password: 'pharmacy' }
+        { username: 'staff', password: '@Asdf112233' }
       ];
       localStorage.setItem('hospitalUsers', JSON.stringify(users));
     }
