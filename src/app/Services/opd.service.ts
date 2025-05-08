@@ -52,7 +52,7 @@ export class OpdService {
 
   getOpdDetails(id: number): Observable<Opd> {
     return new Observable<Opd>(obs => {
-      let temp = this.opdDetail.find((o: any) => o.patientId == id);
+      let temp:any = this.opdDetail.find((o: any) => o.patientId == id);
       obs.next(temp);
     });
   }

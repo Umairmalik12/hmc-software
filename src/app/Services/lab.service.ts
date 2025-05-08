@@ -53,7 +53,7 @@ export class LabService {
 
   getLabPatientDetails(id: number): Observable<LabPatient> {
     return new Observable<LabPatient>(obs => {
-      let temp = this.labDetail.find((o: any) => o.patientId == id);
+      let temp:any = this.labDetail.find((o: any) => o.patientId == id);
       obs.next(temp);
     });
   }

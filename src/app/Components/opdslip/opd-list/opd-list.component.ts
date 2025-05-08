@@ -89,7 +89,7 @@ export class OpdListComponent implements OnInit, AfterViewInit {
           let msg = 'Something went wrong';
           let type = 'error';
           if (res) {
-            this.notifyUpdate.notify.next();
+            this.notifyUpdate.notify.next(true);
             msg = 'Patient Data Updated Successfully';
             type = 'success';
           }

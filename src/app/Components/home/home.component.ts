@@ -12,7 +12,7 @@ import { LabEditComponent } from '../lab/lab-edit/lab-edit.component';
 import { LabPatient } from 'src/app/Models/lab.model';
 import { LabService } from 'src/app/Services/lab.service';
 import { ActivatedRoute } from '@angular/router';
-
+import { IndexedDbService } from 'src/app/Services/indexed-db.service';
 
 @Component({
   selector: 'app-home',
@@ -21,13 +21,14 @@ import { ActivatedRoute } from '@angular/router';
 })
 export class HomeComponent implements OnInit {
   userName: string = '';
-
   currentDateTime: Date = new Date();
+
   tempPatient: PatientDetail = {
     patientId: 0, firstName: '', lastName: '', drName: '', gender: '', age: 0,
     maritalStatus: '', dob: new Date(), phone: '', email: '',
     state: '', address: ''
   };
+
   tempOpd: Opd = {
     patientId: 0,
     dateTime: '',
@@ -56,75 +57,60 @@ export class HomeComponent implements OnInit {
     testName: '',
   };
 
-  isShowPatients: boolean = true;
-  isShowOpdPatients: boolean = false;
-  isShowLabSlips: boolean = false;
-  isShowOtSlips: boolean = false;
-  isShowPrecption = false
+  isShowPatients = true;
+  isShowOpdPatients = false;
+  isShowLabSlips = false;
+  isShowOtSlips = false;
+  isShowPrecption = false;
+  isShowOtList = false;
+  isShowPayment = false;
+  otPatientId: any;
 
   @ViewChild("placeholder", { read: ViewContainerRef }) alertContainer!: ViewContainerRef;
-  isShowOtList: boolean = false;
-  otPatientId: any;
-  isShowPayment: boolean = false;;
 
-  constructor(private dialog: MatDialog, private notifyUpdate: NotifyUpdateService,
+  constructor(
+    private dialog: MatDialog,
+    private notifyUpdate: NotifyUpdateService,
     private patientService: PatientService,
     private opdService: OpdService,
     private labService: LabService,
     private showAlert: ShowalertService,
-  private route: ActivatedRoute) {
-
+    private route: ActivatedRoute,
+    private dbService: IndexedDbService
+  ) {
     this.notifyUpdate.alertNotify.subscribe(ob => {
       this.showAlert.showAlert(ob.msg, ob.type, this.alertContainer);
     });
-
-    localStorage.getItem('loginUser')
-
-    const loginUser = localStorage.getItem('loginUser');
-    if (loginUser) {
-      this.userName = JSON.parse(loginUser);
-    } 
   }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     setInterval(() => {
       this.currentDateTime = new Date();
     }, 1000);
 
+    const loginUser = await this.dbService.getItem<string>('loginUser');
+    if (loginUser) {
+      this.userName = loginUser;
+    }
+
     this.route.queryParams.subscribe(params => {
       this.otPatientId = params['patientId'];
-      console.log('Received patientId:', this.otPatientId);
-      if(this.otPatientId){
+      if (this.otPatientId) {
         this.isShowOtSlips = true;
         this.isShowOtList = false;
         this.isShowLabSlips = false;
         this.isShowPatients = false;
         this.isShowOpdPatients = false;
-        this.isShowPrecption = false
-      }
-      else{
+        this.isShowPrecption = false;
+      } else {
         this.isShowOtSlips = false;
         this.isShowOtList = true;
         this.isShowLabSlips = false;
         this.isShowPatients = false;
         this.isShowOpdPatients = false;
-        this.isShowPrecption = false
-
+        this.isShowPrecption = false;
       }
-
     });
-  }
-
-  addPatient() {
-    this.openDialog(PatientEditComponent, this.tempPatient, this.patientService.addNewPatient.bind(this.patientService));
-  }
-
-  addOpdSlip() {
-    this.openDialog(OpdEditComponent, this.tempOpd, this.opdService.addNewOpd.bind(this.opdService));
-  }
-
-  addLabTestSlip() {
-    this.openDialog(LabEditComponent, this.tempLabPatient, this.labService.addNewLabPatient.bind(this.labService));
   }
 
   openDialog(component: any, data: any, serviceMethod: (data: any) => boolean) {
@@ -140,103 +126,71 @@ export class HomeComponent implements OnInit {
         let res = serviceMethod(result);
         let msg = res ? "Operation Successful" : "Something went wrong";
         let type = res ? "success" : "error";
-        this.notifyUpdate.notify.next();
+        this.notifyUpdate.notify.next(true);
         this.notifyUpdate.alertNotify.next({ msg, type });
       }
     });
   }
 
   showPatientList() {
+    this.resetViews();
     this.isShowPatients = true;
-    this.isShowOpdPatients = false;
-    this.isShowLabSlips = false;
-    this.isShowOtSlips = false;
-    this.isShowPayment = false;
-    this.isShowPrecption = false
-
   }
 
   showOpdList() {
+    this.resetViews();
     this.isShowOpdPatients = true;
-    this.isShowPatients = false;
-    this.isShowLabSlips = false;
-    this.isShowOtList = false;
-    this.isShowOtSlips = false;
-    this.isShowPayment = false;
-    this.isShowPrecption = false
-
-
   }
 
   showLabTestSlipList() {
+    this.resetViews();
     this.isShowLabSlips = true;
-    this.isShowPatients = false;
-    this.isShowOpdPatients = false;
-    this.isShowOtSlips = false;
-    this.isShowOtList = false;
-    this.isShowPayment = false;
-    this.isShowPrecption = false
-
-
   }
-  showOtSlip(){
+
+  showOtSlip() {
+    this.resetViews();
     this.isShowOtSlips = true;
-    this.isShowOtList = false
-    this.isShowLabSlips = false;
-    this.isShowPatients = false;
-    this.isShowOpdPatients = false;
-    this.isShowPayment = false;
-    this.isShowPrecption = false
-
-
   }
 
   showOtListSlip() {
-    this.isShowOtSlips = false;
-    this.isShowLabSlips = false;
-    this.isShowPatients = false;
-    this.isShowOpdPatients = false;
+    this.resetViews();
     this.isShowOtList = true;
-    this.isShowPayment = false;
-    this.isShowPrecption = false
-
-
-
   }
 
-  showPayment(){
+  showPayment() {
+    this.resetViews();
     this.isShowPayment = true;
-    this.isShowOtSlips = false;
-    this.isShowOtList = false
-    this.isShowLabSlips = false;
-    this.isShowPatients = false;
-    this.isShowOpdPatients = false;
-    this.isShowPrecption = false
-
   }
 
+  showPreception() {
+    this.resetViews();
+    this.isShowPrecption = true;
+  }
 
-  close(){
+  close() {
+    this.resetViews();
     this.isShowOtList = true;
-    this.isShowLabSlips = false;
-    this.isShowPatients = false;
-    this.isShowOpdPatients = false;
-    this.isShowOtSlips = false;
-    this.isShowPayment = false;
-    this.isShowPrecption = false
-
-
   }
 
-  showPreception(){
+  private resetViews() {
+    this.isShowPatients = false;
+    this.isShowOpdPatients = false;
+    this.isShowLabSlips = false;
+    this.isShowOtSlips = false;
     this.isShowOtList = false;
-    this.isShowLabSlips = false;
-    this.isShowPatients = false;
-    this.isShowOpdPatients = false;
-    this.isShowOtSlips = false;
     this.isShowPayment = false;
-    this.isShowPrecption = true
+    this.isShowPrecption = false;
   }
 
- 
+  addPatient() {
+    this.openDialog(PatientEditComponent, this.tempPatient, this.patientService.addNewPatient.bind(this.patientService));
+  }
+
+  addOpdSlip() {
+    this.openDialog(OpdEditComponent, this.tempOpd, this.opdService.addNewOpd.bind(this.opdService));
+  }
+
+  addLabTestSlip() {
+    this.openDialog(LabEditComponent, this.tempLabPatient, this.labService.addNewLabPatient.bind(this.labService));
+  }
 }

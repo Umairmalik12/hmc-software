@@ -55,7 +55,7 @@ export class PatientService {
 
   getPatientDetails(id: number): Observable<PatientDetail> {
     return new Observable<PatientDetail>(obs => {
-      let temp = this.patientDetail.find((o: any) => o.patientId == id);
+      let temp:any = this.patientDetail.find((o: any) => o.patientId == id);
       obs.next(temp);
     });
   }

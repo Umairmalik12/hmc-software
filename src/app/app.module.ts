@@ -43,6 +43,7 @@ import { OtFormComponent } from './Components/otslip/otslip.component';
 import { OtlistComponent } from './Components/otlist/otlist.component';
 import { PaymentComponent } from './Components/payment/payment.component';
 import {  PreciptionComponent } from './Components/precipion/precipion.component';
+import { IndexedDbService } from './Services/indexed-db.service';
 
 
 
@@ -93,7 +94,7 @@ import {  PreciptionComponent } from './Components/precipion/precipion.component
     MatNativeDateModule,
     MatOptionModule,
   ],
-  providers: [UserLoginService, AuthGuardService, CookieService],
+  providers: [UserLoginService, AuthGuardService, CookieService,IndexedDbService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
