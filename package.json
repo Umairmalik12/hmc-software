@@ -47,6 +47,6 @@
     "karma-jasmine": "4.0.2",
     "karma-jasmine-html-reporter": "1.5.0"
   }, "engines": {
-    "node": "16.x"
+    "node": "18.x"
   }
 }
