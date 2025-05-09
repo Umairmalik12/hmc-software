@@ -1,12 +1,18 @@
-import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild, ViewContainerRef } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+  ViewChild
+} from '@angular/core';
 import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
 import { MatPaginator, MatPaginatorIntl } from '@angular/material/paginator';
-import { PatientDetail } from 'src/app/Models/patientDetail.model';
-import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
+
 import { LabEditComponent } from '../lab-edit/lab-edit.component';
 import { LabPatientDataService } from 'src/app/Services/lab-data.service';
 import { LabService } from 'src/app/Services/lab.service';
 import { LabPatient } from 'src/app/Models/lab.model';
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 
 @Component({
   selector: 'app-lab-list',
@@ -14,85 +20,105 @@ import { LabPatient } from 'src/app/Models/lab.model';
   styleUrls: ['./lab-list.component.css']
 })
 export class LabListComponent implements OnInit, AfterViewInit {
+  displayedColumns: string[] = [
+    'patientId',
+    'name',
+    'testName',
+    'price',
+    'suggestedDr',
+    'dateTime',
+    'action'
+  ];
 
-  patient: LabPatient[] = [];
-  dataSource: LabPatientDataService = new LabPatientDataService(this.labService);
-  displayedColumns: string[] = ['patientId', 'name', 'testName', 'price', 'suggestedDr', 'dateTime', 'action'];
+  dataSource: LabPatientDataService;
+  total = 0;
 
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
-  tempLabPatient: LabPatient = {
-    patientId: 0,
-    price: 0,
-    suggestedDr: '',
-    dateTime: new Date(),
-    name: '',
-    phone: '',
-    testName: '',
-  };
-
-
-  @ViewChild(MatPaginator) paginator: MatPaginator;
-
-  total: number = 0;
-
-  constructor(private labService: LabService, private dialog: MatDialog,
-    private intl: MatPaginatorIntl, private changeDetectorRef: ChangeDetectorRef,
-    private notifyUpdate: NotifyUpdateService) {
-
-    this.paginator = new MatPaginator(this.intl, this.changeDetectorRef);
+  constructor(
+    private labService: LabService,
+    private dialog: MatDialog,
+    private intl: MatPaginatorIntl,
+    private cdr: ChangeDetectorRef,
+    private notifyUpdate: NotifyUpdateService
+  ) {
+    this.dataSource = new LabPatientDataService(this.labService);
 
     this.notifyUpdate.notify.subscribe(() => {
-      this.dataActions('', 'asc', 0, 5);
+      this.refreshData(0, 5);
     });
   }
 
   ngOnInit(): void {
-    this.dataActions('', 'asc', 0, 5);
+    this.refreshData(0, 5);
   }
 
   ngAfterViewInit(): void {
     this.paginator.page.subscribe(() => {
-      this.dataActions('', 'asc', this.paginator.pageIndex, this.paginator.pageSize);
+      this.refreshData(this.paginator.pageIndex, this.paginator.pageSize);
     });
+
+    this.cdr.detectChanges(); 
   }
 
-  dataActions(a: string, b: string, c: number, d: number): void {
-    this.dataSource.loadLabPatient(a, b, c, d);
-    this.paginator.pageIndex = c;
-    this.paginator.pageSize = d;
+  refreshData(pageIndex: number, pageSize: number): void {
+    this.dataSource.loadLabPatient('', 'asc', pageIndex, pageSize);
     this.total = this.labService.total;
   }
 
-  editLabPatient(id: number) {
+  editLabPatient(id: number): void {
+    this.labService.getLabPatientDetails(id).subscribe((patient: LabPatient) => {
+      const dialogConfig = new MatDialogConfig();
+      dialogConfig.disableClose = true;
+      dialogConfig.autoFocus = true;
+      dialogConfig.data = patient;
 
-    this.labService.getLabPatientDetails(id).subscribe(data => {
-      this.tempLabPatient = data;
-    });
+      const dialogRef = this.dialog.open(LabEditComponent, dialogConfig);
 
-    const dialogConfig = new MatDialogConfig();
-    dialogConfig.disableClose = true;
-    dialogConfig.autoFocus = true;
-
-    dialogConfig.data = this.tempLabPatient;
-
-    const dialogRef = this.dialog.open(LabEditComponent, dialogConfig);
-
-    dialogRef.afterClosed().subscribe((data: LabPatient) => {
-      if (data) {
-        let res = this.labService.updateLabPatient(data);
-
-        let msg = " Something went wrong";
-        let type = "error";
-        if (res) {
-          this.notifyUpdate.notify.next(true);
-          msg = " Patient Data Updated Successfully";
-          type = "success";
+      dialogRef.afterClosed().subscribe((updated: LabPatient) => {
+        if (updated) {
+          const success = this.labService.updateLabPatient(updated);
+          if (success) {
+            this.notifyUpdate.notify.next(true);
+            this.notifyUpdate.alertNotify.next({
+              msg: 'Patient Data Updated Successfully',
+              type: 'success'
+            });
+          } else {
+            this.notifyUpdate.alertNotify.next({
+              msg: 'Something went wrong',
+              type: 'error'
+            });
+          }
         }
-        this.notifyUpdate.alertNotify.next({ msg, type });
-      }
+      });
     });
-
   }
 
-
+  deleteLabPatient(id: number): void {
+  if (confirm('Are you sure you want to delete this lab patient?')) {
+    this.labService.deleteLabPatient(id).subscribe({
+      next: (success:any) => {
+        if (success) {
+          this.notifyUpdate.notify.next(true);
+          this.notifyUpdate.alertNotify.next({
+            msg: 'Patient deleted successfully',
+            type: 'success'
+          });
+        } else {
+          this.notifyUpdate.alertNotify.next({
+            msg: 'Failed to delete patient',
+            type: 'error'
+          });
+        }
+      },
+      error: () => {
+        this.notifyUpdate.alertNotify.next({
+          msg: 'An error occurred during deletion',
+          type: 'error'
+        });
+      }
+    });
+  }
+}
 }

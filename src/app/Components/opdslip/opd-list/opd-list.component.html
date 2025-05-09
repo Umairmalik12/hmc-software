@@ -1,5 +1,5 @@
 <div class="body">
-    <h1> OPD Patient List</h1>
+    <h1>OPD Patient List</h1>
     <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource">
 
         <ng-container matColumnDef="patientId">
@@ -9,7 +9,7 @@
 
         <ng-container matColumnDef="dateTime">
             <mat-header-cell *matHeaderCellDef>Date & Time</mat-header-cell>
-            <mat-cell *matCellDef="let opd">{{ opd.dateTime }}</mat-cell>
+            <mat-cell *matCellDef="let opd">{{ opd.dateTime | date: 'short' }}</mat-cell>
         </ng-container>
 
         <ng-container matColumnDef="patientName">
@@ -35,13 +35,19 @@
         <ng-container matColumnDef="action">
             <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
             <mat-cell *matCellDef="let opd">
-                <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editOpd(opd.patientId)">Edit</button>
-                <button mat-button class="mat-raised-button mat-warn table-btn">Delete</button>
+                <div class="action-buttons">
+                    <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editOpd(opd.patientId)">
+                        <mat-icon>edit</mat-icon> 
+                    </button>
+                    <button mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteOpd(opd.patientId)">
+                        <mat-icon>delete</mat-icon> 
+                    </button>
+                </div>
             </mat-cell>
         </ng-container>
 
         <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-        <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></mat-row>
     </mat-table>
 </div>
 

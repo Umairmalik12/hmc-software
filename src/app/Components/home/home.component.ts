@@ -191,6 +191,25 @@ export class HomeComponent implements OnInit {
   }
 
   addLabTestSlip() {
-    this.openDialog(LabEditComponent, this.tempLabPatient, this.labService.addNewLabPatient.bind(this.labService));
+    this.openDialog(
+      LabEditComponent,
+      this.tempLabPatient,
+      (patientData: LabPatient) => {
+        this.labService.addNewLabPatient(patientData).subscribe({
+          next: (success) => {
+            if (success) {
+              console.log('Patient added successfully');
+            }
+            return success;  
+          },
+          error: (err) => {
+            console.error('Error adding patient:', err);
+            return false;
+          }
+        });
+        return true; 
+      }
+    );
   }
+
 }

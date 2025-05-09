@@ -19,7 +19,7 @@
 
         <ng-container matColumnDef="price">
             <mat-header-cell *matHeaderCellDef>Price</mat-header-cell>
-            <mat-cell *matCellDef="let lab">{{ lab.price | currency }}</mat-cell>
+            <mat-cell *matCellDef="let lab">{{ lab.price | currency:'PKR':'symbol':'1.0-0' }}</mat-cell>
         </ng-container>
 
         <ng-container matColumnDef="suggestedDr">
@@ -32,16 +32,22 @@
             <mat-cell *matCellDef="let lab">{{ lab.dateTime | date: 'short' }}</mat-cell>
         </ng-container>
 
-        <ng-container matColumnDef="action">
-            <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
-            <mat-cell *matCellDef="let lab">
-                <button mat-button class="mat-raised-button mat-warn table-btn" (click)="editLabPatient(lab.patientId)">Edit</button>
-                <button mat-button class="mat-raised-button mat-warn table-btn">Delete</button>
-            </mat-cell>
-        </ng-container>
+   <ng-container matColumnDef="action">
+    <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
+    <mat-cell *matCellDef="let lab">
+        <div class="action-buttons">
+            <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editLabPatient(lab.patientId)">
+                <mat-icon>edit</mat-icon> 
+            </button>
+            <button mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteLabPatient(lab.patientId)">
+                <mat-icon>delete</mat-icon> 
+            </button>
+        </div>
+    </mat-cell>
+</ng-container>
 
         <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-        <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></mat-row>
     </mat-table>
 </div>
 

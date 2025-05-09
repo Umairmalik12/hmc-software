@@ -1,51 +1,90 @@
-.body{
-    margin: 10px 20px;
-    padding: 20px 30px;
+/* Overall Body Styling */
+.body {
+    margin: 20px;
+    padding: 20px;
     overflow-x: auto;
-}
-.patient-table{
-    padding: 0 30px;
-    min-width: 550px;
-}
-.patient-table mat-row > mat-cell{
-    margin-left: 6vw;
+    background-color: #f9f9f9;
+    border-radius: 8px;
 }
 
-.patient-table mat-header-row > mat-header-cell{
-    margin-left: 6vw;
+/* Table Styling */
+.patient-table {
+    width: 100%;
+    min-width: 600px;
+    border-collapse: collapse;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-/* Add padding to the last column */
-.patient-table mat-cell:last-of-type,
-.patient-table mat-header-cell:last-of-type,
-.patient-table mat-footer-cell:last-of-type {
-    padding-right: 70px;
+/* Header Cell Styling */
+.mat-header-cell {
+    padding: 14px 16px;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(90deg, #ff6f61, #ff8a65);
+    text-align: left;
+    border-bottom: 2px solid #ddd;
 }
 
-.page{
-    margin: 10px auto;
+/* Pagination Styling */
+.page {
+    margin: 20px auto;
     display: flex;
     justify-content: center;
 }
 
-.mat-header-cell{
-    font-size: 13px;
-    font-weight: bolder;
-    color: black;
+/* Action Column Buttons */
+.mat-cell .action-buttons {
+    display: flex;
+    justify-content: flex-start; /* Align buttons to the left */
+    gap: 8px; /* Add space between the buttons */
+    white-space: nowrap; /* Prevent wrapping */
 }
 
-.table-btn{
-    font-size: 15px;
-    margin-right: 5px;
+/* Button Styling */
+.table-btn {
+    font-size: 14px;
+    padding: 8px 16px;
+    min-width: 100px;
+    text-align: center !important;
+    border-radius: 6px;
+    text-transform: uppercase;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    display: inline-block;
 }
 
-@media screen and (max-width : 840px){
-    
-    .patient-table mat-row > mat-cell{
-        margin-left: 0;
+/* Ensure buttons do not break out of the cell */
+.mat-cell {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #555;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Adjust for smaller screens */
+@media screen and (max-width: 840px) {
+    .patient-table {
+        min-width: 100%;
     }
-    
-    .patient-table mat-header-row > mat-header-cell{
-        margin-left: 0;
-    }       
+
+    .mat-header-cell, .mat-cell {
+        padding: 8px;
+        font-size: 12px;
+    }
+
+    .table-btn {
+        font-size: 12px;
+        padding: 6px 12px;
+        min-width: 80px;
+    }
+
+    .mat-cell .action-buttons {
+        flex-direction: column; /* Stack the buttons vertically on smaller screens */
+        gap: 12px; /* Increase gap between buttons when stacked */
+    }
 }

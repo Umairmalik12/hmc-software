@@ -119,4 +119,20 @@ console.log("opds",opds)
 
     return opdList;
   }
+
+  deleteOpd(id: number): boolean {
+  try {
+    const index = this.opdDetail.findIndex(opd => opd.patientId === id);
+    if (index !== -1) {
+      // Remove the item from the list
+      this.opdDetail.splice(index, 1);
+      this.savePatientOpdData(); // Save updated data to localStorage
+      return true;
+    }
+    return false;
+  } catch (e) {
+    console.error('Error deleting opd:', e);
+    return false;
+  }
+}
 }

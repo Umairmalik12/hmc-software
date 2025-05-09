@@ -98,4 +98,20 @@ export class OpdListComponent implements OnInit, AfterViewInit {
       });
     });
   }
+
+deleteOpd(id: number): void {
+  const result = this.opdService.deleteOpd(id);
+  let msg = 'Something went wrong';
+  let type = 'error';
+  
+  if (result) {
+    this.notifyUpdate.notify.next(true);
+    msg = 'Patient Data Deleted Successfully';
+    type = 'success';
+  }
+
+  this.notifyUpdate.alertNotify.next({ msg, type });
+              window.location.reload();
+
+}
 }
