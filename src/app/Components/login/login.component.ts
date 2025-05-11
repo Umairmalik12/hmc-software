@@ -32,7 +32,7 @@ export class LoginComponent implements OnInit {
 
   private async initializeUsers() {
     const existing = await this.dbService.getItem<any[]>('hospitalUsers');
-
+console.log(existing,"qsddf")
     if (!existing) {
       const users = [
         { username: 'admin', password: 'admin123' },

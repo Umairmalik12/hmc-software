@@ -6,6 +6,7 @@ import { OpdEditComponent } from '../opd-edit/opd-edit.component';
 import { OpdService } from 'src/app/Services/opd.service';
 import { OpdDataService } from 'src/app/Services/opd-data.service';
 import { Opd } from 'src/app/Models/opd.model';
+import { IndexedDbService } from 'src/app/Services/indexed-db.service';
 
 @Component({
   selector: 'app-opd-list',
@@ -35,27 +36,35 @@ export class OpdListComponent implements OnInit, AfterViewInit {
     followUp: '', 
     patientCategory: '', 
     amount: 0
-};
+  };
 
-  @ViewChild(MatPaginator) paginator: MatPaginator;
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
   total: number = 0;
+  isSuperAdmin: boolean = false;
 
   constructor(
     private opdService: OpdService,
     private dialog: MatDialog,
     private intl: MatPaginatorIntl,
     private changeDetectorRef: ChangeDetectorRef,
-    private notifyUpdate: NotifyUpdateService
+    private notifyUpdate: NotifyUpdateService,
+    private indexDb: IndexedDbService
   ) {
-    this.paginator = new MatPaginator(this.intl, this.changeDetectorRef);
-
     this.notifyUpdate.notify.subscribe(() => {
       this.dataActions('', 'asc', 0, 5);
     });
   }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.dataActions('', 'asc', 0, 5);
+       const loginUser = await this.indexDb.getItem<string>('loginUser');
+    if (loginUser == 'admin') {
+      this.isSuperAdmin = true;
+
+      console.log(loginUser, "loginUser")
+    } else {
+      this.isSuperAdmin = false;
+    }
   }
 
   ngAfterViewInit(): void {
@@ -82,10 +91,9 @@ export class OpdListComponent implements OnInit, AfterViewInit {
 
       const dialogRef = this.dialog.open(OpdEditComponent, dialogConfig);
 
-      dialogRef.afterClosed().subscribe((data: Opd) => {
-        if (data) {
-          console.log(data,"data")
-          const res = this.opdService.updateOpd(data);
+      dialogRef.afterClosed().subscribe(async (updatedOpd: Opd) => {
+        if (updatedOpd) {
+          const res = await this.opdService.updateOpd(updatedOpd);
           let msg = 'Something went wrong';
           let type = 'error';
           if (res) {
@@ -99,19 +107,18 @@ export class OpdListComponent implements OnInit, AfterViewInit {
     });
   }
 
-deleteOpd(id: number): void {
-  const result = this.opdService.deleteOpd(id);
-  let msg = 'Something went wrong';
-  let type = 'error';
-  
-  if (result) {
-    this.notifyUpdate.notify.next(true);
-    msg = 'Patient Data Deleted Successfully';
-    type = 'success';
+  async deleteOpd(id: number): Promise<void> {
+    const result = await this.opdService.deleteOpd(id);
+    let msg = 'Something went wrong';
+    let type = 'error';
+
+    if (result) {
+      this.notifyUpdate.notify.next(true);
+      msg = 'Patient Data Deleted Successfully';
+      type = 'success';
+    }
+
+    this.notifyUpdate.alertNotify.next({ msg, type });
+    window.location.reload();
   }
-
-  this.notifyUpdate.alertNotify.next({ msg, type });
-              window.location.reload();
-
-}
 }

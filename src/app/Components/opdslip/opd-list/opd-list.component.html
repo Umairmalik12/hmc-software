@@ -36,10 +36,10 @@
             <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
             <mat-cell *matCellDef="let opd">
                 <div class="action-buttons">
-                    <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editOpd(opd.patientId)">
+                    <button *ngIf="isSuperAdmin" mat-button class="mat-raised-button mat-primary table-btn" (click)="editOpd(opd.patientId)">
                         <mat-icon>edit</mat-icon> 
                     </button>
-                    <button mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteOpd(opd.patientId)">
+                    <button *ngIf="isSuperAdmin" mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteOpd(opd.patientId)">
                         <mat-icon>delete</mat-icon> 
                     </button>
                 </div>

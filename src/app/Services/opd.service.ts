@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, defer, from } from 'rxjs';
 import { Opd } from '../Models/opd.model';
+import { IndexedDbService } from './indexed-db.service';
 
 @Injectable({
   providedIn: 'root'
@@ -9,130 +10,91 @@ export class OpdService {
   total: number = 0;
   opdDetail: Opd[] = [];
 
-  constructor() {
-    this.loadOpdData();
+  constructor(private dbService: IndexedDbService) {}
+
+  private async loadOpdData(): Promise<void> {
+    const storedOpd = await this.dbService.getItem<Opd[]>('opdDetails');
+    this.opdDetail = storedOpd ?? [];
   }
 
-  private loadOpdData() {
-    const storedOpd = localStorage.getItem('opdDetails');
-    if (storedOpd) {
-      this.opdDetail = JSON.parse(storedOpd);
-    } else {
-      this.opdDetail = [];
-    }
-  }
-
-  private savePatientOpdData() {
-    console.log("this.opdDetail",this.opdDetail)
-    localStorage.setItem('opdDetails', JSON.stringify(this.opdDetail));
+  private async savePatientOpdData(): Promise<void> {
+    console.log("this.opdDetail", this.opdDetail);
+    await this.dbService.setItem('opdDetails', this.opdDetail);
   }
 
   getAllOpd(): Observable<Opd[]> {
-    let OpdList: Opd[] = this.getOpdBrief();
-    this.total = this.opdDetail.length;
-
-    return new Observable<Opd[]>(obs => {
-      obs.next(OpdList);
+    return defer(async () => {
+      await this.loadOpdData();
+      this.total = this.opdDetail.length;
+      return this.opdDetail;
     });
   }
 
   findOpds(filter = '', sortOrder = 'asc', pageNumber = 0, pageSize = 5): Observable<Opd[]> {
-    this.total = this.opdDetail.length;
-    let opd: Opd[] = this.getOpdBrief();
+    return defer(async () => {
+      await this.loadOpdData();
+      this.total = this.opdDetail.length;
 
-    let start = pageNumber * pageSize;
-    let n = start + pageSize;
-    let end = (n < opd.length) ? n : opd.length;
-    let temp = opd.slice(start, end);
-
-    return new Observable<Opd[]>(obs => {
-      obs.next(temp);
+      const start = pageNumber * pageSize;
+      const end = Math.min(start + pageSize, this.opdDetail.length);
+      return this.opdDetail.slice(start, end);
     });
   }
 
   getOpdDetails(id: number): Observable<Opd> {
-    return new Observable<Opd>(obs => {
-      let temp:any = this.opdDetail.find((o: any) => o.patientId == id);
-      obs.next(temp);
+    return defer(async () => {
+      await this.loadOpdData();
+      const opd = this.opdDetail.find(o => o.patientId === id);
+      return opd!;
     });
   }
 
-  addNewOpd(data: Opd): boolean {
-    try {
-      let id: number = this.opdDetail.length > 0 ? this.opdDetail[this.opdDetail.length - 1].patientId + 1 : 1;
-      data.patientId = id;
-      this.opdDetail.push(data);
-      this.savePatientOpdData();
-
-      return true;
-    } catch (e) {
-      console.error('Error adding new opd:', e);
-      return false;
-    }
-  }
-
-  updateOpd(data: Opd): boolean {
-    try {
-      let i: number = this.opdDetail.findIndex((o: any) => o.patientId == data.patientId);
-      if (i !== -1) {
-        this.opdDetail[i] = data;
-        console.log("this.opdDetail[i]",this.opdDetail[i])
-        this.savePatientOpdData();
-        return true;
+  addNewOpd(data: Opd | any): Promise<boolean> {
+    return this.loadOpdData().then(() => {
+      try {
+        const id = this.opdDetail.length > 0
+          ? this.opdDetail[this.opdDetail.length - 1].patientId + 1
+          : 1;
+        data.patientId = id;
+        this.opdDetail.push(data);
+        return this.savePatientOpdData().then(() => true);
+      } catch (e) {
+        console.error('Error adding new OPD:', e);
+        return false;
       }
-      return false;
-    } catch (e) {
-      console.error('Error updating patient:', e);
-      return false;
-    }
+    });
   }
 
-  getOpdBrief(): Opd[] {
-    let opdList: Opd[] = [];
-
-    // Load patient data from localStorage if available
-    const storedOpd: any = localStorage.getItem('opdDetails');
-    const opds: any = storedOpd ? JSON.parse(storedOpd) : [];
-console.log("opds",opds)
-    opds.forEach((data: any) =>
-      opdList.push({
-        patientId: data.patientId,
-        patientName: data.patientName,
-        phone: data.phone,
-        drName: data.drName,
-        sex: data.sex,
-        age: data.age,
-        bp: data.bp,
-        temp: data.temp,
-        weight: data.weight,
-        patientCategory: data.patientCategory,
-        address: data.address,
-        history: data.history,
-        amount: data.amount,
-        dateTime: data.dateTime,
-        followUp: data.followUp
-
-      })
-    );
-
-    this.opdDetail = opds;
-
-    return opdList;
+  updateOpd(data: Opd): Promise<boolean> {
+    return this.loadOpdData().then(() => {
+      try {
+        const index = this.opdDetail.findIndex(o => o.patientId === data.patientId);
+        if (index !== -1) {
+          this.opdDetail[index] = data;
+          console.log("Updated OPD:", this.opdDetail[index]);
+          return this.savePatientOpdData().then(() => true);
+        }
+        return false;
+      } catch (e) {
+        console.error('Error updating OPD:', e);
+        return false;
+      }
+    });
   }
 
-  deleteOpd(id: number): boolean {
-  try {
-    const index = this.opdDetail.findIndex(opd => opd.patientId === id);
-    if (index !== -1) {
-      // Remove the item from the list
-      this.opdDetail.splice(index, 1);
-      this.savePatientOpdData(); // Save updated data to localStorage
-      return true;
-    }
-    return false;
-  } catch (e) {
-    console.error('Error deleting opd:', e);
-    return false;
+  deleteOpd(id: number): Promise<boolean> {
+    return this.loadOpdData().then(() => {
+      try {
+        const index = this.opdDetail.findIndex(opd => opd.patientId === id);
+        if (index !== -1) {
+          this.opdDetail.splice(index, 1);
+          return this.savePatientOpdData().then(() => true);
+        }
+        return false;
+      } catch (e) {
+        console.error('Error deleting OPD:', e);
+        return false;
+      }
+    });
   }
-}
 }

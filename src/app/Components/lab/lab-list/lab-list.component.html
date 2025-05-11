@@ -32,14 +32,14 @@
             <mat-cell *matCellDef="let lab">{{ lab.dateTime | date: 'short' }}</mat-cell>
         </ng-container>
 
-   <ng-container matColumnDef="action">
+   <ng-container matColumnDef="action" *ngIf="isSuperAdmin" >
     <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
     <mat-cell *matCellDef="let lab">
         <div class="action-buttons">
             <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editLabPatient(lab.patientId)">
                 <mat-icon>edit</mat-icon> 
             </button>
-            <button mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteLabPatient(lab.patientId)">
+            <button  mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteLabPatient(lab.patientId)">
                 <mat-icon>delete</mat-icon> 
             </button>
         </div>

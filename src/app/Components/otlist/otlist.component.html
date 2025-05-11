@@ -1,44 +1,52 @@
 <div class="body">
-    <h1>OT Medicine Patient List</h1>
-    
-    <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource">
-    
-      <ng-container matColumnDef="patientName">
-        <mat-header-cell *matHeaderCellDef>Name</mat-header-cell>
-        <mat-cell *matCellDef="let ot">{{ ot.patientName }}</mat-cell>
-      </ng-container>
-    
-      <ng-container matColumnDef="operationDate">
-        <mat-header-cell *matHeaderCellDef>Date</mat-header-cell>
-        <mat-cell *matCellDef="let ot">{{ ot.operationDate }}</mat-cell>
-      </ng-container>
-    
-      <ng-container matColumnDef="operationTime">
-        <mat-header-cell *matHeaderCellDef>Time</mat-header-cell>
-        <mat-cell *matCellDef="let ot">{{ ot.operationTime }}</mat-cell>
-      </ng-container>
-    
-      <ng-container matColumnDef="doctorName">
-        <mat-header-cell *matHeaderCellDef>Doctor Name</mat-header-cell>
-        <mat-cell *matCellDef="let ot">{{ ot.doctorName }}</mat-cell>
-      </ng-container>
-    
-      <ng-container matColumnDef="action">
-        <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
-        <mat-cell *matCellDef="let ot">
-          <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editOt(ot.id)">Edit</button>
-          <button mat-button class="mat-raised-button mat-warn table-btn">Delete</button>
-        </mat-cell>
-      </ng-container>
-    
-      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-      <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
-    </mat-table>
-  </div>
-  
+  <h1>OT Medicine Patient List</h1>
+
+  <table mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource" multiTemplateDataRows>
+
+    <!-- Patient Name Column -->
+    <ng-container matColumnDef="patientName">
+      <th mat-header-cell *matHeaderCellDef>Name</th>
+      <td mat-cell *matCellDef="let ot">{{ ot.patientName }}</td>
+    </ng-container>
+
+    <!-- Operation Date Column -->
+    <ng-container matColumnDef="operationDate">
+      <th mat-header-cell *matHeaderCellDef>Date</th>
+      <td mat-cell *matCellDef="let ot">{{ ot.operationDate }}</td>
+    </ng-container>
+
+    <!-- Operation Time Column -->
+    <ng-container matColumnDef="operationTime">
+      <th mat-header-cell *matHeaderCellDef>Time</th>
+      <td mat-cell *matCellDef="let ot">{{ ot.operationTime }}</td>
+    </ng-container>
+
+    <!-- Doctor Name Column -->
+    <ng-container matColumnDef="doctorName">
+      <th mat-header-cell *matHeaderCellDef>Doctor Name</th>
+      <td mat-cell *matCellDef="let ot">{{ ot.doctorName }}</td>
+    </ng-container>
+
+    <!-- Action Column -->
+    <ng-container matColumnDef="action">
+      <th mat-header-cell *matHeaderCellDef>Action</th>
+      <td mat-cell *matCellDef="let ot">
+        <div class="action-buttons" *ngIf="isSuperAdmin">
+          <button mat-raised-button color="primary" (click)="editOt(ot.id)">Edit</button>
+          <button mat-raised-button color="warn" (click)="deleteOt(ot.id)">Delete</button>
+        </div>
+      </td>
+    </ng-container>
+
+    <!-- Header and Row Declarations -->
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+  </table>
+
   <mat-paginator class="page"
                  [length]="total"
                  [pageSize]="5"
                  [pageSizeOptions]="[5, 10, 15, 20]">
   </mat-paginator>
-  
+</div>

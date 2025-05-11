@@ -65,6 +65,8 @@ export class HomeComponent implements OnInit {
   isShowOtList = false;
   isShowPayment = false;
   otPatientId: any;
+  isAdmin: boolean = false;
+  isSuperAdmin: boolean = false;
 
   @ViewChild("placeholder", { read: ViewContainerRef }) alertContainer!: ViewContainerRef;
 
@@ -91,6 +93,7 @@ export class HomeComponent implements OnInit {
     const loginUser = await this.dbService.getItem<string>('loginUser');
     if (loginUser) {
       this.userName = loginUser;
+ console.log(loginUser,"loginUser")
     }
 
     this.route.queryParams.subscribe(params => {
@@ -186,9 +189,24 @@ export class HomeComponent implements OnInit {
     this.openDialog(PatientEditComponent, this.tempPatient, this.patientService.addNewPatient.bind(this.patientService));
   }
 
-  addOpdSlip() {
-    this.openDialog(OpdEditComponent, this.tempOpd, this.opdService.addNewOpd.bind(this.opdService));
-  }
+addOpdSlip() {
+  this.openDialog(
+    OpdEditComponent,
+    this.tempOpd,
+    (opdPatientData: Opd) => {
+      this.opdService.addNewOpd(opdPatientData).then((success: any) => {
+        if (success) {
+          console.log('Patient added successfully');
+        }
+        return success;
+      }).catch((err) => {
+        console.error('Error adding patient:', err);
+        return false;
+      });
+      return true;
+    }
+  );
+}
 
   addLabTestSlip() {
     this.openDialog(
