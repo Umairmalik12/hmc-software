@@ -1,4 +1,4 @@
-.header{
+.header {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -8,29 +8,43 @@
     word-spacing: 1px;
     color: #ffffff;
 }
-.login-box{
+
+.login-box {
     margin: 20px 20px;
-    padding: 10px  20px;
+    padding: 10px 20px;
 }
-.login-form{
+
+.login-form {
     padding: 10px 20px;
     display: flex;
-    flex-direction: column;   
+    flex-direction: column;
 }
-.form-content{
+
+.form-content {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
 }
-.card-title{
+
+.card-title {
     text-align: center;
 }
-.form-actions *{
+
+.form-actions * {
     margin: 10px 10px;
 }
-.form-actions button{
+
+.form-actions button {
     width: fit-content;
 }
-.form-actions a{
+
+.form-actions a {
     text-decoration: none;
+}
+
+.footer-credit {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 14px;
+    color: #888;
 }
