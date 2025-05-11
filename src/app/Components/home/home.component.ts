@@ -90,12 +90,6 @@ export class HomeComponent implements OnInit {
       this.currentDateTime = new Date();
     }, 1000);
 
-    const loginUser = await this.dbService.getItem<string>('loginUser');
-    if (loginUser) {
-      this.userName = loginUser;
- console.log(loginUser,"loginUser")
-    }
-
     this.route.queryParams.subscribe(params => {
       this.otPatientId = params['patientId'];
       if (this.otPatientId) {

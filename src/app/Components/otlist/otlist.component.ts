@@ -9,7 +9,7 @@ import { IndexedDbService } from 'src/app/Services/indexed-db.service';
   styleUrls: ['./otlist.component.css']
 })
 export class OtlistComponent implements OnInit {
-  displayedColumns: string[] = ['patientName', 'operationDate', 'operationTime', 'doctorName', 'action'];
+  displayedColumns: string[] = [];
   dataSource = new MatTableDataSource<any>();
   total: number = 0;
   isSuperAdmin: boolean = false;
@@ -17,14 +17,17 @@ export class OtlistComponent implements OnInit {
   constructor(private router: Router, private indexedDbService: IndexedDbService) {}
 
   async ngOnInit(): Promise<void> {
-          const loginUser = await this.indexedDbService.getItem<string>('loginUser');
-    if (loginUser == 'admin') {
-      this.isSuperAdmin = true;
 
-      console.log(loginUser, "loginUser")
-    } else {
-      this.isSuperAdmin = false;
+      this.indexedDbService.getItem<string>('loginUser').then((loginUser) => {
+    this.isSuperAdmin = loginUser === 'admin';
+
+    this.displayedColumns =['patientName', 'operationDate', 'operationTime', 'doctorName'];
+
+    if (this.isSuperAdmin) {
+      this.displayedColumns.push('action');
     }
+
+  });
     this.loadDataFromIndexedDB();
   }
 
@@ -44,13 +47,13 @@ export class OtlistComponent implements OnInit {
     this.router.navigate(['/home'], { queryParams: { patientId } });
   }
 
-  async deleteOt(index: number): Promise<void> {
-    const data = await this.indexedDbService.getItem<any[]>('otFormData');
-    if (data) {
-      const updated = data.filter((_, i) => i !== index);
-      await this.indexedDbService.setItem('otFormData', updated);
-      this.dataSource.data = updated;
-      this.total = updated.length;
-    }
+async deleteOt(id: string): Promise<void> {
+  const data = await this.indexedDbService.getItem<any[]>('otFormData');
+  if (data) {
+    const updated = data.filter(ot => ot.id !== id);
+    await this.indexedDbService.setItem('otFormData', updated);
+    this.dataSource.data = [...updated]; // triggers Angular change detection
+    this.total = updated.length;
   }
+}
 }
