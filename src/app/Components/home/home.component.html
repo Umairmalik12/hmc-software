@@ -90,7 +90,7 @@
             <app-ot-form *ngIf="isShowOtSlips" (isCancelForm)="close()" [selectedPatientId]="otPatientId"></app-ot-form>
             <app-otlist *ngIf="isShowOtList"></app-otlist>
             <app-payment *ngIf="isShowPayment"></app-payment>
-            <app-preciption *ngIf="isShowPrecption"></app-preciption>
+            <app-preciption *ngIf="isSuperAdmin && isShowPrecption"></app-preciption>
 
             <!-- Welcome Message -->
             <div *ngIf="!isShowPatients && !isShowOpdPatients && !isShowLabSlips" class="welcome">

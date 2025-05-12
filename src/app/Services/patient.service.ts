@@ -2,6 +2,9 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Patient } from '../Models/patient.model';
 import { PatientDetail } from '../Models/patientDetail.model';
+import { IndexedDbService } from './indexed-db.service';
+
+const STORAGE_KEY = 'patientDetails';
 
 @Injectable({
   providedIn: 'root'
@@ -10,68 +13,66 @@ export class PatientService {
   total: number = 0;
   patientDetail: PatientDetail[] = [];
 
-  constructor() {
-    // On initialization, load data from localStorage
+  constructor(private indexedDb: IndexedDbService) {
     this.loadPatientData();
   }
 
-  // Method to load data from localStorage
-  private loadPatientData() {
-    const storedPatients = localStorage.getItem('patientDetails');
-    if (storedPatients) {
-      this.patientDetail = JSON.parse(storedPatients);
-    } else {
-      this.patientDetail = [];  // Fallback if nothing is in localStorage
-    }
+  private async loadPatientData(): Promise<void> {
+    const storedPatients = await this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY);
+    this.patientDetail = storedPatients || [];
   }
 
-  // Method to save data to localStorage
-  private savePatientData() {
-    localStorage.setItem('patientDetails', JSON.stringify(this.patientDetail));
+  private async savePatientData(): Promise<void> {
+    await this.indexedDb.setItem(STORAGE_KEY, this.patientDetail);
   }
 
   getAllPatient(): Observable<Patient[]> {
-    let patientList: Patient[] = this.getPatientBrief();
-    this.total = this.patientDetail.length;
-
-    return new Observable<Patient[]>(obs => {
-      obs.next(patientList);
+    return new Observable<Patient[]>(observer => {
+      this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY).then(data => {
+        const patients = data || [];
+        this.patientDetail = patients;
+        this.total = patients.length;
+        observer.next(this.getPatientBrief(patients));
+        observer.complete();
+      });
     });
   }
 
   findPatients(filter = '', sortOrder = 'asc', pageNumber = 0, pageSize = 5): Observable<Patient[]> {
-    this.total = this.patientDetail.length;
-    let patient: Patient[] = this.getPatientBrief();
+    return new Observable<Patient[]>(observer => {
+      this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY).then(data => {
+        const patients = data || [];
+        this.patientDetail = patients;
+        this.total = patients.length;
 
-    let start = pageNumber * pageSize;
-    let n = start + pageSize;
-    let end = (n < patient.length) ? n : patient.length;
-    let temp = patient.slice(start, end);
-
-    return new Observable<Patient[]>(obs => {
-      obs.next(temp);
+        const all = this.getPatientBrief(patients);
+        const start = pageNumber * pageSize;
+        const end = Math.min(start + pageSize, all.length);
+        observer.next(all.slice(start, end));
+        observer.complete();
+      });
     });
   }
 
-  getPatientDetails(id: number): Observable<PatientDetail> {
-    return new Observable<PatientDetail>(obs => {
-      let temp:any = this.patientDetail.find((o: any) => o.patientId == id);
-      obs.next(temp);
+  getPatientDetails(id: number): Observable<PatientDetail | undefined> {
+    return new Observable<PatientDetail>(observer => {
+      this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY).then(data => {
+        const patient:any = (data || []).find(p => p.patientId === id);
+        observer.next(patient);
+        observer.complete();
+      });
     });
   }
 
-  addNewPatient(data: PatientDetail): boolean {
+  async addNewPatient(data: PatientDetail): Promise<boolean> {
     try {
-      // Generate a new patient ID
-      let id: number = this.patientDetail.length > 0 ? this.patientDetail[this.patientDetail.length - 1].patientId + 1 : 1;
+      const storedPatients = await this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY) || [];
+      const id = storedPatients.length > 0 ? storedPatients[storedPatients.length - 1].patientId + 1 : 1;
       data.patientId = id;
 
-      // Add the new patient to the list
-      this.patientDetail.push(data);
-
-      // Save the updated list to localStorage
-      this.savePatientData();
-
+      storedPatients.push(data);
+      await this.indexedDb.setItem(STORAGE_KEY, storedPatients);
+      this.patientDetail = storedPatients;
       return true;
     } catch (e) {
       console.error('Error adding new patient:', e);
@@ -79,12 +80,14 @@ export class PatientService {
     }
   }
 
-  updatePatient(data: PatientDetail): boolean {
+  async updatePatient(data: PatientDetail): Promise<boolean> {
     try {
-      let i: number = this.patientDetail.findIndex((o: any) => o.patientId == data.patientId);
-      if (i !== -1) {
-        this.patientDetail[i] = data;
-        this.savePatientData();
+      const storedPatients = await this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY) || [];
+      const index = storedPatients.findIndex(p => p.patientId === data.patientId);
+      if (index !== -1) {
+        storedPatients[index] = data;
+        await this.indexedDb.setItem(STORAGE_KEY, storedPatients);
+        this.patientDetail = storedPatients;
         return true;
       }
       return false;
@@ -94,32 +97,38 @@ export class PatientService {
     }
   }
 
-  getPatientBrief(): Patient[] {
-    let patientList: Patient[] = [];
-
-    // Load patient data from localStorage if available
-    const storedPatients: any = localStorage.getItem('patientDetails');
-    const patients: any = storedPatients ? JSON.parse(storedPatients) : [];
-
-    patients.forEach((data: any) =>
-      patientList.push({
-        patientId: data.patientId,
-        name: data.firstName + " " + data.lastName,
-        contact: data.phone,
-        drName: data.drName,
-        gender: data.gender,
-        age: data.age,
-        maritalStatus: data.maritalStatus,
-        dob: data.dob,
-        email: data.email,
-        state: data.state,
-        address: data.address
-      })
-    );
-
-    // Update patientDetail array after loading data
-    this.patientDetail = patients;
-
-    return patientList;
+  private getPatientBrief(patients: PatientDetail[]): Patient[] {
+    return patients.map(p => ({
+      patientId: p.patientId,
+      name: `${p.firstName} ${p.lastName}`,
+      contact: p.phone,
+      drName: p.drName,
+      gender: p.gender,
+      age: p.age,
+      maritalStatus: p.maritalStatus,
+      dob: p.dob,
+      email: p.email,
+      state: p.state,
+      address: p.address
+    }));
   }
+
+  async deletePatient(id: number): Promise<boolean> {
+  try {
+    const storedPatients = await this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY) || [];
+    const updatedPatients = storedPatients.filter(p => p.patientId !== id);
+
+    if (updatedPatients.length === storedPatients.length) {
+      return false;
+    }
+
+    await this.indexedDb.setItem(STORAGE_KEY, updatedPatients);
+    this.patientDetail = updatedPatients;
+    return true;
+  } catch (e) {
+    console.error('Error deleting patient:', e);
+    return false;
+  }
+}
+
 }

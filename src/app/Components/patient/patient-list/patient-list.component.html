@@ -22,11 +22,13 @@
             <mat-cell *matCellDef="let patient">{{patient.contact}}</mat-cell>
         </ng-container>
       
-        <ng-container matColumnDef="action">
+        <ng-container matColumnDef="action" *ngIf="isSuperAdmin">
             <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
             <mat-cell  *matCellDef="let patient">
-                <button mat-button class="mat-raised-button mat-warn table-btn" (click)="editPatient(patient.patientId)">Edit</button>
-                <button mat-button class="mat-raised-button mat-warn table-btn" >Delete</button>
+                      <div class="action-buttons">
+                <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editPatient(patient.patientId)">  <mat-icon>edit</mat-icon> </button>
+                <button mat-button class="mat-raised-button mat-warn table-btn" (click)="deletePatient(patient.patientId)">  <mat-icon>delete</mat-icon> </button>
+                </div>
             </mat-cell>
         </ng-container>
         <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>

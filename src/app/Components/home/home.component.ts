@@ -86,6 +86,10 @@ export class HomeComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+
+      this.dbService.getItem<string>('loginUser').then((loginUser) => {
+    this.isSuperAdmin = loginUser === 'admin';
+  });
     setInterval(() => {
       this.currentDateTime = new Date();
     }, 1000);
@@ -180,8 +184,24 @@ export class HomeComponent implements OnInit {
   }
 
   addPatient() {
-    this.openDialog(PatientEditComponent, this.tempPatient, this.patientService.addNewPatient.bind(this.patientService));
-  }
+  this.openDialog(
+    PatientEditComponent,
+    this.tempPatient,
+    (patientData: any) => {
+      this.patientService.addNewPatient(patientData).then((success: any) => {
+        if (success) {
+          console.log('Operation Patient added successfully');
+        }
+        return success;
+      }).catch((err) => {
+        console.error('Error adding patient:', err);
+        return false;
+      });
+      return true;
+    }
+  );
+}
+
 
 addOpdSlip() {
   this.openDialog(
@@ -190,7 +210,7 @@ addOpdSlip() {
     (opdPatientData: Opd) => {
       this.opdService.addNewOpd(opdPatientData).then((success: any) => {
         if (success) {
-          console.log('Patient added successfully');
+          console.log('Opd Patient added successfully');
         }
         return success;
       }).catch((err) => {

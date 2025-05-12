@@ -16,9 +16,7 @@ import { IndexedDbService } from 'src/app/Services/indexed-db.service';
 export class OpdListComponent implements OnInit, AfterViewInit {
 
   dataSource: OpdDataService = new OpdDataService(this.opdService);
-  displayedColumns: string[] = [
-    'patientId', 'patientName', 'dateTime', 'sex', 'drName', 'followUp', 'action'
-  ];
+  displayedColumns: string[] = [];
 
   tempOpd: Opd = {
     patientId: 0, 
@@ -56,19 +54,26 @@ export class OpdListComponent implements OnInit, AfterViewInit {
   }
 
   async ngOnInit(): Promise<void> {
-    this.dataActions('', 'asc', 0, 5);
-       const loginUser = await this.indexDb.getItem<string>('loginUser');
-    if (loginUser == 'admin') {
-      this.isSuperAdmin = true;
+          this.indexDb.getItem<string>('loginUser').then((loginUser) => {
+    this.isSuperAdmin = loginUser === 'admin';
 
-      console.log(loginUser, "loginUser")
-    } else {
-      this.isSuperAdmin = false;
+    this.displayedColumns =  [
+    'patientId', 'patientName', 'dateTime', 'sex', 'drName', 'followUp', 
+  ];
+
+
+    if (this.isSuperAdmin) {
+      this.displayedColumns.push('action');
     }
+        this.dataActions('', 'asc', 0, 5);
+
+  });
+
+    
   }
 
   ngAfterViewInit(): void {
-    this.paginator.page.subscribe(() => {
+    this.paginator?.page.subscribe(() => {
       this.dataActions('', 'asc', this.paginator.pageIndex, this.paginator.pageSize);
     });
   }

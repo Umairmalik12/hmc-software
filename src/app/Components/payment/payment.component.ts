@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { IndexedDbService } from 'src/app/Services/indexed-db.service';
 
 @Component({
   selector: 'app-payment',
@@ -13,107 +14,117 @@ export class PaymentComponent implements OnInit {
   cashReturn: number = 0;
   patientId: string = '';
 
-  constructor(private fb: FormBuilder) {}
+  constructor(
+    private fb: FormBuilder,
+    private indexedDbService: IndexedDbService
+  ) {}
 
-  ngOnInit(): void {
-    // Load payments from localStorage on component load
-    this.loadPayments();
-
-    // Initialize payment form
+  async ngOnInit(): Promise<void> {
     this.paymentForm = this.fb.group({
       patientName: ['', Validators.required],
-      patientId: [{ value: this.generatePatientId(), disabled: true }, Validators.required], // Auto-generated Patient ID
+      patientId: [{ value: this.generatePatientId(), disabled: true }, Validators.required],
       amount: [null, [Validators.required, Validators.min(0)]],
       cashGiven: [null, [Validators.required, Validators.min(0)]],
       paymentMethod: ['', Validators.required],
       paymentStatus: ['', Validators.required]
     });
 
-    // Refresh payment list whenever the form is reset
+    // Load payments from IndexedDB
+    await this.loadPayments();
+
     this.paymentForm.valueChanges.subscribe(() => {
       this.refreshPaymentList();
     });
   }
 
-  // Automatically generate a unique Patient ID
   generatePatientId(): string {
-    const randomId = 'P-' + Math.random().toString(36).substr(2, 9); // Generate a random ID prefixed with 'P-'
+    const randomId = 'P-' + Math.random().toString(36).substr(2, 9);
     this.patientId = randomId;
     return this.patientId;
   }
 
-  // Load payments from localStorage
-  loadPayments(): void {
-    const storedPayments = localStorage.getItem('payments');
-    if (storedPayments) {
-      this.payments = JSON.parse(storedPayments);
-    }
+  async loadPayments(): Promise<void> {
+    const storedPayments = await this.indexedDbService.getItem<any[]>('payments');
+    this.payments = storedPayments || [];
   }
 
-  // Calculate cash return when Cash Given changes
   calculateCashReturn(): void {
     const amount = this.paymentForm.get('amount')?.value || 0;
     const cashGiven = this.paymentForm.get('cashGiven')?.value || 0;
 
-    if (cashGiven >= amount) {
-      this.cashReturn = cashGiven - amount;
-    } else {
-      this.cashReturn = 0;
-    }
+    this.cashReturn = cashGiven >= amount ? cashGiven - amount : 0;
   }
 
-  // Process Payment
-  processPayment(): void {
+  async processPayment(): Promise<void> {
     if (this.paymentForm.valid) {
-      const paymentData = this.paymentForm.value;
-
-      // Create a unique ID for the payment
-      const paymentId = 'pay-' + Math.random().toString(36).substr(2, 9);
-
-      // Calculate the cash return
+      const paymentData = this.paymentForm.getRawValue(); // Includes disabled fields
       paymentData.cashReturn = this.cashReturn;
+      paymentData.id = 'pay-' + Math.random().toString(36).substr(2, 9);
 
-      const newPayment = { ...paymentData, id: paymentId };
+      this.payments.push(paymentData);
+      await this.indexedDbService.setItem('payments', this.payments);
 
-      // Add payment to the payments list
-      this.payments.push(newPayment);
-
-      // Save payments to localStorage
-      localStorage.setItem('payments', JSON.stringify(this.payments));
-
-      // Reset form
       this.paymentForm.reset();
       this.cashReturn = 0;
 
-      // Refresh payment list
-      this.refreshPaymentList();
+      await this.refreshPaymentList();
 
-      // Display receipt automatically (you can trigger this elsewhere too)
-      this.showReceipt(newPayment);
+      this.showReceipt(paymentData);
     }
   }
 
-  // Refresh the payment list after a new payment is processed
-  refreshPaymentList(): void {
-    // If you are using Angular's data-binding, it will automatically update the UI after changes.
-    this.loadPayments(); // Ensure you reload the list of payments from localStorage
+  async refreshPaymentList(): Promise<void> {
+    await this.loadPayments();
   }
 
-  // Show Receipt
   showReceipt(payment: any): void {
-    const receiptHTML = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; width: 300px; margin: 0 auto; border: 1px solid #ccc; text-align: center; background: #f9f9f9; border-radius: 8px;">
-        <h2 style="color: #0066cc;">Haqq Medical Center</h2>
-        <p><strong>Payment Receipt</strong></p>
-        <p><strong>Patient Name:</strong> ${payment.patientName}</p>
-        <p><strong>Amount Paid:</strong> Rs${payment.amount}</p>
-        <p><strong>Payment Method:</strong> ${payment.paymentMethod}</p>
-        <p><strong>Payment Status:</strong> ${payment.paymentStatus}</p>
-        <p><strong>Payment Date:</strong> ${new Date().toLocaleString()}</p>
-      </div>
-    `;
+   const receiptHTML = `
+  <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; width: 350px; margin: 0 auto; border: 2px dashed #0066cc; background: #ffffff; border-radius: 10px; text-align: center;">
+    <h2 style="color: #0066cc; margin-bottom: 5px;">Haq Medical Center</h2>
+    
+    <hr style="margin: 20px 0; border: none; border-top: 1px solid #ccc;" />
 
-    const newWindow = window.open('', '', 'width=600, height=600');
+    <h3 style="margin: 10px 0; color: #333;">Payment Receipt</h3>
+
+    <table style="width: 100%; font-size: 14px; color: #333; margin-top: 10px; text-align: left;">
+      <tr>
+        <td><strong>Patient Name:</strong></td>
+        <td>${payment.patientName}</td>
+      </tr>
+      <tr>
+        <td><strong>Amount Paid:</strong></td>
+        <td>Rs ${payment.amount}</td>
+      </tr>
+      <tr>
+        <td><strong>Cash Given:</strong></td>
+        <td>Rs ${payment.cashGiven}</td>
+      </tr>
+      <tr>
+        <td><strong>Cash Return:</strong></td>
+        <td>Rs ${payment.cashReturn}</td>
+      </tr>
+      <tr>
+        <td><strong>Payment Method:</strong></td>
+        <td>${payment.paymentMethod}</td>
+      </tr>
+      <tr>
+        <td><strong>Payment Status:</strong></td>
+        <td>${payment.paymentStatus}</td>
+      </tr>
+      <tr>
+        <td><strong>Date:</strong></td>
+        <td>${new Date().toLocaleString()}</td>
+      </tr>
+    </table>
+
+    <hr style="margin: 20px 0; border: none; border-top: 1px solid #ccc;" />
+
+    <p style="font-size: 13px; color: #888;">Providing quality healthcare with excellence</p>
+  </div>
+`;
+
+
+    const newWindow = window.open('', '', 'width=600,height=600');
     if (newWindow) {
       newWindow.document.write(receiptHTML);
       newWindow.document.close();
@@ -121,22 +132,15 @@ export class PaymentComponent implements OnInit {
     }
   }
 
-  updatePaymentStatus(paymentId: string, newStatus: string): void {
-    const paymentIndex = this.payments.findIndex(payment => payment.id === paymentId);
-    
-    if (paymentIndex !== -1) {
-      // Update the payment status
-      this.payments[paymentIndex].paymentStatus = newStatus;
-  
-      // Save updated payments list to localStorage
-      localStorage.setItem('payments', JSON.stringify(this.payments));
-  
-      // Refresh the payment list
-      this.refreshPaymentList();
+  async updatePaymentStatus(paymentId: string, newStatus: string): Promise<void> {
+    const index = this.payments.findIndex(p => p.id === paymentId);
+    if (index !== -1) {
+      this.payments[index].paymentStatus = newStatus;
+      await this.indexedDbService.setItem('payments', this.payments);
+      await this.refreshPaymentList();
     }
   }
 
-  // Reset Form
   resetForm(): void {
     this.paymentForm.reset();
     this.cashReturn = 0;

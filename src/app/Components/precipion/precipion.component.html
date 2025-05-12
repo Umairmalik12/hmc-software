@@ -1,41 +1,47 @@
-<div class="prescription-container" id="prescription">
-    <h2 class="heading">Prescription</h2>
-  
-    <div *ngFor="let med of prescribedMedicines; let i = index" class="medicine-row">
-      
-      <!-- Medicine Selection -->
-      <mat-form-field appearance="outline" class="full-field">
-        <mat-label>Medicine</mat-label>
-        <mat-select [(ngModel)]="med.name" (selectionChange)="saveToLocalStorage()">
-          <mat-option *ngFor="let option of medicines" [value]="option">{{ option }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-  
-      <!-- Type: Tablet, Capsule, Injection -->
-      <mat-form-field appearance="outline" class="small-field">
-        <mat-label>Type</mat-label>
-        <mat-select [(ngModel)]="med.type" (selectionChange)="saveToLocalStorage()">
-          <mat-option value="Tablet">Tablet</mat-option>
-          <mat-option value="Capsule">Capsule</mat-option>
-          <mat-option value="Injection">Injection</mat-option>
-        </mat-select>
-      </mat-form-field>
-  
-      <!-- Time Selection: Morning, Afternoon, Evening -->
-      <div class="time-checkboxes">
-        <mat-checkbox [(ngModel)]="med.morning" (change)="saveToLocalStorage()">Morning</mat-checkbox>
-        <mat-checkbox [(ngModel)]="med.afternoon" (change)="saveToLocalStorage()">Afternoon</mat-checkbox>
-        <mat-checkbox [(ngModel)]="med.evening" (change)="saveToLocalStorage()">Evening</mat-checkbox>
-      </div>
-  
-      <button mat-icon-button color="warn" (click)="removeMedicine(i)" class="no-print">
-        <mat-icon>delete</mat-icon>
-      </button>
-    </div>
-  
-    <div class="buttons no-print">
-      <button mat-raised-button color="accent" (click)="addMedicine()">+ Add Medicine</button>
-      <button mat-raised-button color="primary" (click)="print()">Print</button>
+<div class="prescription" id="prescription">
+  <div class="header">
+    <div class="urdu-title">بسم الله الرحمن الرحيم</div>
+    <div class="doc-info">
+      <h2>ڈاکٹر تنویر الحق</h2>
+      <p>M.B.B.S, F.C.P.S (Urology)</p>
+      <p>Senior Consultant – Urology</p>
+      <p>Multan Institute of Kidney Diseases</p>
+      <p>PHC Reg #: 290710</p>
     </div>
   </div>
-  
+
+  <div class="section">
+    <p><strong>Ref ID:</strong> <input [(ngModel)]="patient.refId" /> 
+       &nbsp;&nbsp; <strong>Date:</strong> {{ today }} 
+       &nbsp;&nbsp; <strong>No. of Visit:</strong> <input [(ngModel)]="patient.visit" /></p>
+    <p><strong>Patient Name:</strong> <input [(ngModel)]="patient.name" />
+       &nbsp;&nbsp; <strong>S/D/W of:</strong> <input [(ngModel)]="patient.relation" /></p>
+    <p><strong>Age:</strong> <input [(ngModel)]="patient.age" />
+       &nbsp;&nbsp; <strong>Sex:</strong> <input [(ngModel)]="patient.sex" />
+       &nbsp;&nbsp; <strong>Weight:</strong> <input [(ngModel)]="patient.weight" />
+       &nbsp;&nbsp; <strong>Contact:</strong> <input [(ngModel)]="patient.contact" /></p>
+    <p><strong>Allergies:</strong> <input [(ngModel)]="patient.allergies" style="width: 60%" /></p>
+    <p><strong>Symptoms:</strong> <input [(ngModel)]="patient.symptoms" style="width: 70%" /></p>
+    <p><strong>Findings:</strong> <input [(ngModel)]="patient.findings" style="width: 70%" /></p>
+    <p><strong>Provisional / Diagnosis:</strong> <input [(ngModel)]="patient.diagnosis" style="width: 80%" /></p>
+  </div>
+
+  <hr />
+
+  <div class="section">
+    <h3>Rx:</h3>
+    <div *ngFor="let med of prescribedMedicines; let i = index" class="medicine-line">
+      <input [(ngModel)]="med.name" placeholder="Medicine name" />
+      <label><input type="checkbox" [(ngModel)]="med.morning" /> صبح</label>
+      <label><input type="checkbox" [(ngModel)]="med.afternoon" /> دوپہر</label>
+      <label><input type="checkbox" [(ngModel)]="med.evening" /> شام</label>
+      <button class="no-print" (click)="removeMedicine(i)">🗑</button>
+    </div>
+    <button class="no-print" (click)="addMedicine()">+ Add Medicine</button>
+  </div>
+
+  <div class="no-print actions">
+    <button (click)="save()">💾 Save</button>
+    <button (click)="print()">🖨 Print</button>
+  </div>
+</div>
