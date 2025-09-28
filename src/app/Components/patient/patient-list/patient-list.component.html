@@ -1,5 +1,29 @@
 <div class="body">
     <h1> Operation Patient List</h1>
+    <div class="search-bar" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+        <mat-form-field appearance="outline">
+            <mat-label>Patient ID</mat-label>
+            <input matInput [(ngModel)]="searchPatientId" placeholder="Search by ID">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput [(ngModel)]="searchName" placeholder="Search by Name">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Phone</mat-label>
+            <input matInput [(ngModel)]="searchPhone" placeholder="Search by Phone">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>City</mat-label>
+            <input matInput [(ngModel)]="searchCity" placeholder="Search by City">
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="onSearch()">Search</button>
+        <button mat-raised-button color="accent" (click)="onClearSearch()">Clear</button>
+        <span style="flex: 1 1 auto;"></span>
+        <button mat-raised-button color="primary" (click)="exportToExcel()">Export to Excel</button>
+        <input type="file" accept=".xlsx, .xls" style="display:none" #importInput (change)="importFromExcel($event)">
+        <button mat-raised-button color="accent" (click)="importInput.click()">Import from Excel</button>
+    </div>
     <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource">
         <ng-container matColumnDef="patientId">
             <mat-header-cell *matHeaderCellDef >PatientId</mat-header-cell>
@@ -20,6 +44,10 @@
         <ng-container matColumnDef="phone">
             <mat-header-cell *matHeaderCellDef>phone</mat-header-cell>
             <mat-cell *matCellDef="let patient">{{patient.contact}}</mat-cell>
+        </ng-container>
+              <ng-container matColumnDef="city">
+            <mat-header-cell *matHeaderCellDef>city</mat-header-cell>
+            <mat-cell *matCellDef="let patient">{{patient.city}}</mat-cell>
         </ng-container>
       
         <ng-container matColumnDef="action" *ngIf="isSuperAdmin">

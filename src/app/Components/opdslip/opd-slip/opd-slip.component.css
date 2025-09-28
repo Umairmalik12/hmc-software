@@ -1,0 +1,54 @@
+.slip-container {
+  padding: 10px;
+}
+
+.toolbar {
+  margin-bottom: 15px;
+}
+
+.slips {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 2 per row */
+  grid-gap: 20px;
+}
+
+.slip {
+  border: 1px solid #333;
+  padding: 10px;
+  font-size: 12px;
+  height: 250px; /* fits 4 per page */
+}
+
+.title {
+  text-align: center;
+  margin: 0;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.subtitle {
+  text-align: center;
+  margin: 0;
+  font-size: 14px;
+}
+
+.info p {
+  margin: 3px 0;
+  font-size: 12px;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body, html {
+    margin: 0;
+    padding: 0;
+  }
+  .slips {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .slip {
+    page-break-inside: avoid;
+  }
+}

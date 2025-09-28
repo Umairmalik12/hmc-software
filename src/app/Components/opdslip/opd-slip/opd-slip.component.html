@@ -1,0 +1,23 @@
+<div class="slip-container">
+  <div class="toolbar no-print">
+    <button mat-raised-button color="primary" (click)="print()">🖨 Print</button>
+    <button mat-raised-button color="warn" (click)="close()">Close</button>
+  </div>
+
+  <div class="slips">
+    <div class="slip" *ngFor="let opd of data.opds">
+      <h2 class="title">Haq Medical Center</h2>
+      <h3 class="subtitle">OPD Slip</h3>
+      <hr>
+      <div class="info">
+        <p><strong>ID:</strong> {{ opd.patientId }}</p>
+        <p><strong>Name:</strong> {{ opd.patientName }}</p>
+        <p><strong>Sex:</strong> {{ opd.sex }}</p>
+        <p><strong>Date:</strong> {{ opd.date | date:'dd/MM/yyyy' }}</p>
+        <p><strong>Time:</strong> {{ opd.time }}</p>
+        <p><strong>Doctor:</strong> {{ opd.drName }}</p>
+        <p><strong>Follow Up:</strong> {{ opd.followUp }}</p>
+      </div>
+    </div>
+  </div>
+</div>

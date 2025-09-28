@@ -26,7 +26,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialogModule } from '@angular/material/dialog';
-import {MatDatepickerModule} from '@angular/material/datepicker';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, MatOptionModule } from '@angular/material/core';
 import { AuthGuardService } from './Services/Guard-Services/auth-guard.service';
 import { UserLoginService } from './Services/user-login.service';
@@ -42,10 +42,9 @@ import { LabEditComponent } from './Components/lab/lab-edit/lab-edit.component';
 import { OtFormComponent } from './Components/otslip/otslip.component';
 import { OtlistComponent } from './Components/otlist/otlist.component';
 import { PaymentComponent } from './Components/payment/payment.component';
-import {  PreciptionComponent } from './Components/precipion/precipion.component';
+import { PreciptionComponent } from './Components/precipion/precipion.component';
 import { IndexedDbService } from './Services/indexed-db.service';
-
-
+import { OpdSlipComponent } from './Components/opdslip/opd-slip/opd-slip.component';
 
 @NgModule({
   declarations: [
@@ -58,6 +57,7 @@ import { IndexedDbService } from './Services/indexed-db.service';
     OpdComponent,
     OpdListComponent,
     OpdEditComponent,
+    OpdSlipComponent,
     LabComponent,
     LabListComponent,
     LabEditComponent,
@@ -66,7 +66,7 @@ import { IndexedDbService } from './Services/indexed-db.service';
     AgePipePipe,
     OtlistComponent,
     PaymentComponent,
-    PreciptionComponent
+    PreciptionComponent,
   ],
   imports: [
     BrowserModule,
@@ -94,7 +94,12 @@ import { IndexedDbService } from './Services/indexed-db.service';
     MatNativeDateModule,
     MatOptionModule,
   ],
-  providers: [UserLoginService, AuthGuardService, CookieService,IndexedDbService],
-  bootstrap: [AppComponent]
+  providers: [
+    UserLoginService,
+    AuthGuardService,
+    CookieService,
+    IndexedDbService,
+  ],
+  bootstrap: [AppComponent],
 })
-export class AppModule { }
+export class AppModule {}

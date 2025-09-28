@@ -6,9 +6,7 @@ export interface PatientDetail{
     gender: string;
     age: number;
     maritalStatus: string;
-    dob: Date;
     phone: string;
-    email: string;
-    state: string;
+    city: string;
     address: string;
 }

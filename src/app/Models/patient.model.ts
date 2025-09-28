@@ -5,9 +5,7 @@
         gender: string;
         age: number;
         maritalStatus: string;
-        dob: Date;
         contact: string;
-        email: string;
-        state: string;
+        city: string;
         address: string;
     }

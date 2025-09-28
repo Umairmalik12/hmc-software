@@ -1,6 +1,7 @@
 export interface Opd {
     patientId: number;
-    dateTime: string;
+    date: string;
+    time: string;
     patientName: string;
     age: number;
     sex: string;

@@ -33,18 +33,12 @@
                     <mat-radio-button value="Male">Male</mat-radio-button>
                     <mat-radio-button value="Female">Female</mat-radio-button>
                 </mat-radio-group>
-                <mat-form-field appearance="fill">
-                    <mat-label>Date Of Birth</mat-label>
-                    <input matInput [matDatepicker]="picker" formControlName="dob">
-                    <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-                    <mat-datepicker #picker></mat-datepicker>
-                    <mat-error *ngIf="d.dob.errors?.required">date of birth is required</mat-error>
-                    <mat-error *ngIf="d.dob.errors?.invalidDOB">invalid date of birth</mat-error>
-                </mat-form-field>
+        
                 <mat-form-field appearance="fill">
                     <mat-label>Age</mat-label>
-                    <input matInput type="number" [value]="d.dob.value | agePipe" formControlName="age">
+                    <input matInput type="number" formControlName="age">
                     <mat-error *ngIf="d.age.errors?.required">age is required</mat-error>
+                    <mat-error *ngIf="d.age.errors?.min || d.age.errors?.max">age must be between 0 and 120</mat-error>
                 </mat-form-field>
             </div>
             <div formGroupName="familyStatus" class="input-section">
@@ -64,19 +58,13 @@
                     <mat-error *ngIf="f.phone.errors?.required">phone No. is required</mat-error>
                     <mat-error *ngIf="f.phone.errors?.pattern">inavlid number</mat-error>
                 </mat-form-field>
-                <mat-form-field appearance="fill">
-                    <mat-label>Email Address</mat-label>
-                    <input matInput type="email" formControlName="email">
-                    <mat-error *ngIf="f.email.errors?.required">email is required</mat-error>
-                    <mat-error *ngIf="f.email.errors?.pattern">email is not valid</mat-error>
-                </mat-form-field>
             </div>
             <div formGroupName="addressDetail" class="input-section">
                 <mat-form-field appearance="fill">
-                    <mat-label>State</mat-label>
-                    <input matInput type="text" formControlName="state">
-                    <mat-error *ngIf="g.state.errors?.required">state is required</mat-error>
-                    <mat-error *ngIf="g.state.errors?.pattern">only alphabets are allowed</mat-error>
+                    <mat-label>City</mat-label>
+                    <input matInput type="text" formControlName="city">
+                    <mat-error *ngIf="g.city.errors?.required">city is required</mat-error>
+                    <mat-error *ngIf="g.city.errors?.pattern">only alphabets are allowed</mat-error>
                 </mat-form-field>
                 <mat-form-field appearance="fill">
                     <mat-label>Address</mat-label>

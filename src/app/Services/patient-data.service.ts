@@ -12,6 +12,11 @@ export class PatientDataService implements DataSource<Patient>{
 
   private patientSubject= new BehaviorSubject<Patient[]>([]);
 
+  // Allow updating the subject for filtering
+  public updatePatients(patients: Patient[]) {
+    this.patientSubject.next(patients);
+  }
+
   constructor(private patientService: PatientService){ }
   
   loadPatient(filter: string, sortDirection: string,

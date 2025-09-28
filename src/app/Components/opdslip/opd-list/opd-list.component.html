@@ -1,58 +1,90 @@
 <div class="body">
-    <h1>OPD Patient List</h1>
-    <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource">
+  <h1>OPD Patient List</h1>
 
-        <ng-container matColumnDef="patientId">
-            <mat-header-cell *matHeaderCellDef>Patient ID</mat-header-cell>
-            <mat-cell *matCellDef="let opd">{{ opd.patientId }}</mat-cell>
-        </ng-container>
+  <!-- 🔍 Search + Import/Export -->
+  <div class="search-bar" style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
+    <mat-form-field appearance="outline">
+      <mat-label>Patient ID</mat-label>
+      <input matInput [(ngModel)]="searchPatientId" placeholder="Search by ID">
+    </mat-form-field>
 
-        <ng-container matColumnDef="dateTime">
-            <mat-header-cell *matHeaderCellDef>Date & Time</mat-header-cell>
-            <mat-cell *matCellDef="let opd">{{ opd.dateTime | date: 'short' }}</mat-cell>
-        </ng-container>
+    <mat-form-field appearance="outline">
+      <mat-label>Name</mat-label>
+      <input matInput [(ngModel)]="searchName" placeholder="Search by Name">
+    </mat-form-field>
 
-        <ng-container matColumnDef="patientName">
-            <mat-header-cell *matHeaderCellDef>Name</mat-header-cell>
-            <mat-cell *matCellDef="let opd">{{ opd.patientName }}</mat-cell>
-        </ng-container>
+    <button mat-raised-button color="primary" (click)="onSearch()">Search</button>
+    <button mat-raised-button color="accent" (click)="onClearSearch()">Clear</button>
 
-        <ng-container matColumnDef="sex">
-            <mat-header-cell *matHeaderCellDef>Sex</mat-header-cell>
-            <mat-cell *matCellDef="let opd">{{ opd.sex }}</mat-cell>
-        </ng-container>
+    <span style="flex:1 1 auto;"></span>
 
-        <ng-container matColumnDef="drName">
-            <mat-header-cell *matHeaderCellDef>Doctor Name</mat-header-cell>
-            <mat-cell *matCellDef="let opd">{{ opd.drName }}</mat-cell>
-        </ng-container>
+    <button mat-raised-button color="primary" (click)="exportToExcel()">Export to Excel</button>
+    <input type="file" accept=".xlsx, .xls" style="display:none" #importInput (change)="importFromExcel($event)">
+    <button mat-raised-button color="accent" (click)="importInput.click()">Import from Excel</button>
 
-        <ng-container matColumnDef="followUp">
-            <mat-header-cell *matHeaderCellDef>Follow Up</mat-header-cell>
-            <mat-cell *matCellDef="let opd">{{ opd.followUp }}</mat-cell>
-        </ng-container>
+   <button mat-raised-button color="primary" (click)="printAllSlips()">Print All Slips</button>
 
-        <ng-container matColumnDef="action" *ngIf="isSuperAdmin">
-            <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
-            <mat-cell *matCellDef="let opd">
-                <div class="action-buttons">
-                    <button  mat-button class="mat-raised-button mat-primary table-btn" (click)="editOpd(opd.patientId)">
-                        <mat-icon>edit</mat-icon> 
-                    </button>
-                    <button  mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteOpd(opd.patientId)">
-                        <mat-icon>delete</mat-icon> 
-                    </button>
-                </div>
-            </mat-cell>
-        </ng-container>
+  </div>
 
-        <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-        <mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></mat-row>
-    </mat-table>
+  <!-- 📋 OPD Table -->
+  <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource">
+
+    <ng-container matColumnDef="patientId">
+      <mat-header-cell *matHeaderCellDef>Patient ID</mat-header-cell>
+      <mat-cell *matCellDef="let opd">{{ opd.patientId }}</mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="dateTime">
+      <mat-header-cell *matHeaderCellDef>Date & Time</mat-header-cell>
+      <mat-cell *matCellDef="let opd">
+        {{ opd.date | date:'dd/MM/yyyy' }} {{ opd.time }}
+      </mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="patientName">
+      <mat-header-cell *matHeaderCellDef>Name</mat-header-cell>
+      <mat-cell *matCellDef="let opd">{{ opd.patientName }}</mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="sex">
+      <mat-header-cell *matHeaderCellDef>Sex</mat-header-cell>
+      <mat-cell *matCellDef="let opd">{{ opd.sex }}</mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="drName">
+      <mat-header-cell *matHeaderCellDef>Doctor Name</mat-header-cell>
+      <mat-cell *matCellDef="let opd">{{ opd.drName }}</mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="followUp">
+      <mat-header-cell *matHeaderCellDef>Follow Up</mat-header-cell>
+      <mat-cell *matCellDef="let opd">{{ opd.followUp }}</mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="action" *ngIf="isSuperAdmin">
+      <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
+      <mat-cell *matCellDef="let opd">
+        <div class="action-buttons">
+          <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editOpd(opd.patientId)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteOpd(opd.patientId)">
+            <mat-icon>delete</mat-icon>
+          </button>
+          <button mat-button class="mat-raised-button mat-accent table-btn" (click)="printSlip(opd)">
+  <mat-icon>print</mat-icon>
+</button>
+        </div>
+      </mat-cell>
+    </ng-container>
+
+    <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+    <mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></mat-row>
+  </mat-table>
 </div>
 
 <mat-paginator class="page"
-               [length]="total"
-               [pageSize]="5"
-               [pageSizeOptions]="[5, 10, 15, 20]">
+  [length]="total"
+  [pageSize]="5"
+  [pageSizeOptions]="[5, 10, 15, 20]">
 </mat-paginator>

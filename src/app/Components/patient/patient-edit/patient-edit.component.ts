@@ -27,7 +27,6 @@ export class PatientEditComponent {
     if (patientDetails.patientId) {
       this.edit = true;
       this.tempAge = this.patientDetails.age;
-      this.tempDate = formatDate(this.patientDetails.dob, 'yyyy-MM-dd', 'en');
     }
     else {
       this.patientDetails.gender = "Male";
@@ -45,17 +44,15 @@ export class PatientEditComponent {
         bioDetail: this.fb.group({
           gender: [this.patientDetails.gender, Validators.required],
           age: [ this.tempAge , Validators.required],
-          dob: [this.tempDate, [Validators.required, this.fv.invalidDOB.bind(this)]]
         }),
         familyStatus: this.fb.group({
           maritalStatus: [this.patientDetails.maritalStatus, Validators.required],
         }),
         socialDetail: this.fb.group({
           phone: [this.patientDetails.phone, [Validators.required]],
-          email: [this.patientDetails.email, [Validators.required, Validators.pattern('[a-zA-Z0-9]+@[a-zA-Z]+[.]{1}[a-zA-Z]+')]]
         }),
         addressDetail: this.fb.group({
-          state: [this.patientDetails.state, [Validators.required, Validators.pattern('[a-z A-Z]+')]],
+          city: [this.patientDetails.city, [Validators.required, Validators.pattern('[a-z A-Z]+')]],
           address: [this.patientDetails.address, Validators.required]
         })
       })
@@ -100,9 +97,9 @@ export class PatientEditComponent {
       patientId: this.b['patientId'].value,
       firstName: this.c['firstName'].value, lastName: this.c['lastName'].value, drName: this.c['drName'].value,
       gender: this.d['gender'].value, age: this.d['age'].value,
-      maritalStatus: this.e['maritalStatus'].value, dob: this.d['dob'].value,
-      phone: this.f['phone'].value, email: this.f['email'].value,
-      state: this.g['state'].value,
+      maritalStatus: this.e['maritalStatus'].value,
+      phone: this.f['phone'].value,
+      city: this.g['city'].value,
       address: this.g['address'].value
     };
 

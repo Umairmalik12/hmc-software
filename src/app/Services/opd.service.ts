@@ -30,6 +30,15 @@ export class OpdService {
     });
   }
 
+  getAllOpds(): Observable<Opd[]> {
+  return defer(async () => {
+    await this.loadOpdData();
+    this.total = this.opdDetail.length;
+    return this.opdDetail;
+  });
+}
+
+
   findOpds(filter = '', sortOrder = 'asc', pageNumber = 0, pageSize = 5): Observable<Opd[]> {
     return defer(async () => {
       await this.loadOpdData();

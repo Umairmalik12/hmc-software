@@ -29,4 +29,8 @@ export class OpdDataService implements DataSource<Opd> {
   disconnect(collectionViewer: CollectionViewer): void {
     this.opdSubject.complete();
   }
+
+  public updatePatients(opds: Opd[]) {
+  this.opdSubject.next(opds);
+}
 }

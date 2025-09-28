@@ -25,13 +25,14 @@ export class HomeComponent implements OnInit {
 
   tempPatient: PatientDetail = {
     patientId: 0, firstName: '', lastName: '', drName: '', gender: '', age: 0,
-    maritalStatus: '', dob: new Date(), phone: '', email: '',
-    state: '', address: ''
+    maritalStatus: '', phone: '',
+    city: '', address: ''
   };
 
   tempOpd: Opd = {
     patientId: 0,
-    dateTime: '',
+    date: '',
+    time: '',
     patientName: '',
     age: 0,
     sex: '',

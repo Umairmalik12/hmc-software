@@ -106,9 +106,7 @@ export class PatientService {
       gender: p.gender,
       age: p.age,
       maritalStatus: p.maritalStatus,
-      dob: p.dob,
-      email: p.email,
-      state: p.state,
+      city: p.city,
       address: p.address
     }));
   }
