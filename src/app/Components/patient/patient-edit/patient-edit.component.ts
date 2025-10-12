@@ -34,7 +34,7 @@ export class PatientEditComponent {
 
     this.patientForm = this.fb.group({
       patientDetail: this.fb.group({
-           patientId: [{ value: this.patientDetails.patientId || Math.floor(100000 + Math.random() * 900000), disabled: true }],
+           patientId: [{ value: this.patientDetails.patientId }],
         fullName: this.fb.group({
           firstName: [this.patientDetails.firstName, [Validators.required]],
           lastName: [this.patientDetails.lastName, [Validators.required]],

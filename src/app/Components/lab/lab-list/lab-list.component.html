@@ -3,7 +3,7 @@
     <mat-table class="lab-table mat-elevation-z8" [dataSource]="dataSource">
         
         <ng-container matColumnDef="patientId">
-            <mat-header-cell *matHeaderCellDef>Patient ID</mat-header-cell>
+            <mat-header-cell *matHeaderCellDef>Mr No.</mat-header-cell>
             <mat-cell *matCellDef="let lab">{{ lab.patientId }}</mat-cell>
         </ng-container>
 
@@ -23,7 +23,7 @@
         </ng-container>
 
         <ng-container matColumnDef="suggestedDr">
-            <mat-header-cell *matHeaderCellDef>Suggested Dr</mat-header-cell>
+            <mat-header-cell *matHeaderCellDef>Dr. Name</mat-header-cell>
             <mat-cell *matCellDef="let lab">{{ lab.suggestedDr }}</mat-cell>
         </ng-container>
 
@@ -41,6 +41,9 @@
             </button>
             <button  mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteLabPatient(lab.patientId)">
                 <mat-icon>delete</mat-icon> 
+            </button>
+             <button mat-button class="mat-raised-button mat-accent table-btn" (click)="printLabSlip(lab.patientId)">
+                <mat-icon>print</mat-icon>
             </button>
         </div>
     </mat-cell>

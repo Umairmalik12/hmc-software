@@ -26,7 +26,7 @@ export class OpdEditComponent {
     this.edit = !!opdDetails.patientId;
 
     this.opdForm = this.fb.group({
-      patientId: [{ value: this.opdDetails.patientId || Math.floor(100000 + Math.random() * 900000), disabled: true }],
+      patientId: [{ value: this.opdDetails.patientId }],
       date: [this.opdDetails.date ? formatDate(this.opdDetails.date, 'yyyy-MM-dd', 'en') : '', Validators.required],
       time: [this.opdDetails.time || '', Validators.required],
       patientName: [this.opdDetails.patientName || '', Validators.required],

@@ -62,25 +62,27 @@ export class LabService {
     });
   }
 
-  addNewLabPatient(data: LabPatient): Observable<boolean> {
-    return new Observable<boolean>(observer => {
-      this.indexedDbService.getItem<LabPatient[]>('labDetails').then(stored => {
-        this.labDetail = stored ?? [];
+ addNewLabPatient(data: LabPatient): Observable<boolean> {
+  return new Observable<boolean>(observer => {
+    this.indexedDbService.getItem<LabPatient[]>('labDetails').then(stored => {
+      this.labDetail = stored ?? [];
 
-        const id = this.labDetail.length > 0
-          ? (this.labDetail[this.labDetail.length - 1].patientId ?? 0) + 1
-          : 1;
-        data.patientId = id;
+      // Only assign a new ID if not provided
+      if (!data.patientId) {
+        const maxId = this.labDetail.length > 0
+          ? Math.max(...this.labDetail.map(p => p.patientId ?? 0))
+          : 0;
+        data.patientId = maxId + 1;
+      }
 
-        this.labDetail.push(data);
-        this.saveLabData().then(() => {
-          observer.next(true);
-          observer.complete();
-        }).catch(err => observer.error(err));
+      this.labDetail.push(data);
+      this.saveLabData().then(() => {
+        observer.next(true);
+        observer.complete();
       }).catch(err => observer.error(err));
-    });
-  }
-
+    }).catch(err => observer.error(err));
+  });
+}
   updateLabPatient(data: LabPatient): Observable<boolean> {
     return new Observable<boolean>(observer => {
       this.indexedDbService.getItem<LabPatient[]>('labDetails').then(stored => {

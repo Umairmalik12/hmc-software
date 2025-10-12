@@ -42,11 +42,11 @@ export class LabEditComponent {
     this.edit = !!labTestDetails?.patientId; // Check if editing
 
     this.labPatientForm = this.fb.group({
-      patientId: [{ value: this.labTestDetails.patientId || Math.floor(100000 + Math.random() * 900000), disabled: true }],
+  patientId: [this.labTestDetails?.patientId || '', [Validators.required]], // Always editable input
 
       name: [this.labTestDetails?.name || '', [Validators.required, Validators.pattern('[a-zA-Z ]+')]],
       phone: [this.labTestDetails?.phone || '', [Validators.required, Validators.pattern('^[0-9]{10,15}$')]],
-      testName: [this.labTestDetails?.testName || '', Validators.required],
+  testName: [this.labTestDetails?.testName || [], Validators.required], // <-- changed to array
       price: [this.labTestDetails?.price || '', Validators.required],
       suggestedDr: [this.labTestDetails?.suggestedDr || '', [Validators.required, Validators.pattern('[a-zA-Z ]+')]],
       dateTime: [this.labTestDetails?.dateTime ? formatDate(this.labTestDetails.dateTime, 'yyyy-MM-dd', 'en') : '', Validators.required]

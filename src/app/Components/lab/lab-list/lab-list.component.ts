@@ -133,4 +133,92 @@ ngOnInit(): void {
     });
   }
 }
+
+printLabSlip(patientId: string): void {
+  // Get current lab data safely from BehaviorSubject
+  const labs = this.dataSource['labSubject'].getValue(); // Direct access to BehaviorSubject value
+
+  const lab = labs.find(item => String(item.patientId) === String(patientId));
+  if (!lab) {
+    this.notifyUpdate.alertNotify.next({
+      msg: 'Lab data not found for printing.',
+      type: 'error'
+    });
+    return;
+  }
+
+  // Format date properly
+  const formattedDate = new Date(lab.dateTime).toLocaleString();
+
+  // Generate printable HTML
+const slipHtml = `
+<html>
+  <head>
+    <title>Lab Patient Slip</title>
+    <style>
+      body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f8fb; margin: 0; padding: 0; }
+      .slip-container { background: #fff; border-radius: 12px; box-shadow: 0 4px 24px #1976d233; max-width: 650px; margin: 40px auto; padding: 36px 40px; }
+      .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+      .logo { font-size: 32px; font-weight: bold; color: #1976d2; letter-spacing: 2px; }
+      .lab-info { text-align: right; font-size: 14px; color: #555; }
+      h2 { text-align: center; margin-bottom: 28px; color: #1976d2; font-size: 28px; font-weight: 600; }
+      table { width: 100%; border-collapse: separate; border-spacing: 0 8px; margin-bottom: 24px; }
+      th, td { padding: 12px 16px; font-size: 17px; border-radius: 6px; }
+      th { background: #e3f2fd; color: #1976d2; text-align: left; width: 38%; font-weight: 500; }
+      td { background: #f9f9f9; color: #222; }
+      .section-title { font-weight: bold; color: #1976d2; margin-top: 24px; margin-bottom: 8px; font-size: 18px; }
+      .footer { text-align: center; margin-top: 40px; color: #888; font-size: 15px; }
+      @media print {
+        body { background: #fff; }
+        .slip-container { box-shadow: none; margin: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="slip-container">
+      <div class="header">
+        <div class="logo">Haq Medical Center Lab</div>
+        <div class="lab-info">
+          <div>Haq Medical Center</div>
+          <div>${new Date().toLocaleDateString()}</div>
+        </div>
+      </div>
+      <h2>Patient Test Slip</h2>
+      <table>
+        <tr><th>MR No.</th><td>${lab.patientId}</td></tr>
+        <tr><th>Date</th><td>${new Date(lab.dateTime).toLocaleDateString()}</td></tr>
+        <tr><th>Time</th><td>${new Date(lab.dateTime).toLocaleTimeString()}</td></tr>
+        <tr><th>Patient Name</th><td>${lab.name}</td></tr>
+        <tr><th>Phone</th><td>${lab.phone || '-'}</td></tr>
+        <tr><th>Test Name</th><td>${lab.testName}</td></tr>
+        <tr><th>Price</th><td>Rs. ${lab.price}</td></tr>
+        <tr><th>Doctor Name</th><td>${lab.suggestedDr}</td></tr>
+      </table>
+      <div class="footer">
+        Printed by  HMC Software &mdash; ${new Date().toLocaleString()}
+      </div>
+    </div>
+    <script>
+      window.onload = function() {
+        window.print();
+        setTimeout(() => window.close(), 1000);
+      };
+    </script>
+  </body>
+</html>
+`;
+
+  // Open a print window
+  const printWindow = window.open('', '_blank', 'width=800,height=600');
+  if (printWindow) {
+    printWindow.document.open();
+    printWindow.document.write(slipHtml);
+    printWindow.document.close();
+  } else {
+    this.notifyUpdate.alertNotify.next({
+      msg: 'Popup blocked. Please allow popups to print.',
+      type: 'error'
+    });
+  }
+}
 }
