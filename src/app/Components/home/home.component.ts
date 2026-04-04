@@ -13,6 +13,9 @@ import { LabPatient } from 'src/app/Models/lab.model';
 import { LabService } from 'src/app/Services/lab.service';
 import { ActivatedRoute } from '@angular/router';
 import { IndexedDbService } from 'src/app/Services/indexed-db.service';
+import { InpatientEditComponent } from '../inpatient/inpatient-edit/inpatient-edit.component';
+import { InpatientService } from 'src/app/Services/inpatient.service';
+import { InPatient } from 'src/app/Models/inpatient.model';
 
 @Component({
   selector: 'app-home',
@@ -22,6 +25,11 @@ import { IndexedDbService } from 'src/app/Services/indexed-db.service';
 export class HomeComponent implements OnInit {
   userName: string = '';
   currentDateTime: Date = new Date();
+
+  otPatientId: number = 0;
+  isShowOtList = false;
+  isShowPayment = false;
+  isShowPrecption = false;
 
   tempPatient: PatientDetail = {
     patientId: 0, firstName: '', lastName: '', drName: '', gender: '', age: 0,
@@ -58,15 +66,21 @@ export class HomeComponent implements OnInit {
     testName: '',
   };
 
+  tempInnPatient: any = {
+    inpatientId: 0,
+    patientName: '',
+    procedure: '',
+    admissionDate: '',
+    dischargeDate: '',
+    surgeonName: ''
+  };
+
   isShowPatients = true;
   isShowOpdPatients = false;
   isShowLabSlips = false;
   isShowOtSlips = false;
-  isShowPrecption = false;
-  isShowOtList = false;
-  isShowPayment = false;
-  otPatientId: any;
-  isAdmin: boolean = false;
+  isShowInnPatients = false;
+
   isSuperAdmin: boolean = false;
 
   @ViewChild("placeholder", { read: ViewContainerRef }) alertContainer!: ViewContainerRef;
@@ -77,6 +91,7 @@ export class HomeComponent implements OnInit {
     private patientService: PatientService,
     private opdService: OpdService,
     private labService: LabService,
+    private inpatientService: InpatientService,
     private showAlert: ShowalertService,
     private route: ActivatedRoute,
     private dbService: IndexedDbService
@@ -87,10 +102,9 @@ export class HomeComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-
-      this.dbService.getItem<string>('loginUser').then((loginUser) => {
-    this.isSuperAdmin = loginUser === 'admin';
-  });
+    this.dbService.getItem<string>('loginUser').then((loginUser) => {
+      this.isSuperAdmin = loginUser === 'admin';
+    });
     setInterval(() => {
       this.currentDateTime = new Date();
     }, 1000);
@@ -115,7 +129,7 @@ export class HomeComponent implements OnInit {
     });
   }
 
-  openDialog(component: any, data: any, serviceMethod: (data: any) => boolean) {
+  openDialog(component: any, data: any, serviceMethod: (data: any) => any) {
     const dialogConfig = new MatDialogConfig();
     dialogConfig.disableClose = true;
     dialogConfig.autoFocus = true;
@@ -125,9 +139,9 @@ export class HomeComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((result: any) => {
       if (result) {
-        let res = serviceMethod(result);
-        let msg = res ? "Operation Successful" : "Something went wrong";
-        let type = res ? "success" : "error";
+        const res = serviceMethod(result);
+        let msg = "Operation Successful";
+        let type = "success";
         this.notifyUpdate.notify.next(true);
         this.notifyUpdate.alertNotify.next({ msg, type });
       }
@@ -147,6 +161,11 @@ export class HomeComponent implements OnInit {
   showLabTestSlipList() {
     this.resetViews();
     this.isShowLabSlips = true;
+  }
+
+  showInnPatientList() {
+    this.resetViews();
+    this.isShowInnPatients = true;
   }
 
   showOtSlip() {
@@ -179,70 +198,34 @@ export class HomeComponent implements OnInit {
     this.isShowOpdPatients = false;
     this.isShowLabSlips = false;
     this.isShowOtSlips = false;
+    this.isShowInnPatients = false;
     this.isShowOtList = false;
     this.isShowPayment = false;
     this.isShowPrecption = false;
   }
 
   addPatient() {
-  this.openDialog(
-    PatientEditComponent,
-    this.tempPatient,
-    (patientData: any) => {
-      this.patientService.addNewPatient(patientData).then((success: any) => {
-        if (success) {
-          console.log('Operation Patient added successfully');
-        }
-        return success;
-      }).catch((err) => {
-        console.error('Error adding patient:', err);
-        return false;
-      });
-      return true;
-    }
-  );
-}
-
-
-addOpdSlip() {
-  this.openDialog(
-    OpdEditComponent,
-    this.tempOpd,
-    (opdPatientData: Opd) => {
-      this.opdService.addNewOpd(opdPatientData).then((success: any) => {
-        if (success) {
-          console.log('Opd Patient added successfully');
-        }
-        return success;
-      }).catch((err) => {
-        console.error('Error adding patient:', err);
-        return false;
-      });
-      return true;
-    }
-  );
-}
-
-  addLabTestSlip() {
-    this.openDialog(
-      LabEditComponent,
-      this.tempLabPatient,
-      (patientData: LabPatient) => {
-        this.labService.addNewLabPatient(patientData).subscribe({
-          next: (success) => {
-            if (success) {
-              console.log('Patient added successfully');
-            }
-            return success;  
-          },
-          error: (err) => {
-            console.error('Error adding patient:', err);
-            return false;
-          }
-        });
-        return true; 
-      }
-    );
+    this.openDialog(PatientEditComponent, this.tempPatient, (patientData: any) => {
+      return this.patientService.addNewPatient(patientData);
+    });
   }
 
+  addOpdSlip() {
+    this.openDialog(OpdEditComponent, this.tempOpd, (opdPatientData: Opd) => {
+      return this.opdService.addNewOpd(opdPatientData);
+    });
+  }
+
+  addLabTestSlip() {
+    this.openDialog(LabEditComponent, this.tempLabPatient, (patientData: LabPatient) => {
+      this.labService.addNewLabPatient(patientData);
+      return true;
+    });
+  }
+
+  addInnPatient() {
+    this.openDialog(InpatientEditComponent, this.tempInnPatient, (innPatientData: any) => {
+      return this.inpatientService.addNewInpatient(innPatientData);
+    });
+  }
 }

@@ -23,6 +23,14 @@
                 <span>OPD Slips</span>
             </a>
 
+            <a mat-list-item (click)="addInnPatient()">
+                <mat-icon>local_hospital</mat-icon>
+                <span>Add Inn Patient</span>
+            </a>
+            <a mat-list-item (click)="showInnPatientList()">
+                <mat-icon>local_hospital</mat-icon>
+                <span>Inn Patients</span>
+            </a>
             <a mat-list-item (click)="addLabTestSlip()">
                 <mat-icon>biotech</mat-icon>
                 <span>Add Lab Slip</span>
@@ -87,6 +95,7 @@
             <app-patient *ngIf="isShowPatients"></app-patient>
             <app-opd *ngIf="isShowOpdPatients"></app-opd>
             <app-lab *ngIf="isShowLabSlips"></app-lab>
+            <app-inpatient *ngIf="isShowInnPatients"></app-inpatient>
             <app-ot-form *ngIf="isShowOtSlips" (isCancelForm)="close()" [selectedPatientId]="otPatientId"></app-ot-form>
             <app-otlist *ngIf="isShowOtList"></app-otlist>
             <app-payment *ngIf="isShowPayment"></app-payment>

@@ -43,6 +43,9 @@ import { OtFormComponent } from './Components/otslip/otslip.component';
 import { OtlistComponent } from './Components/otlist/otlist.component';
 import { PaymentComponent } from './Components/payment/payment.component';
 import { PreciptionComponent } from './Components/precipion/precipion.component';
+import { InpatientComponent } from './Components/inpatient/inpatient.component';
+import { InpatientListComponent } from './Components/inpatient/inpatient-list/inpatient-list.component';
+import { InpatientEditComponent } from './Components/inpatient/inpatient-edit/inpatient-edit.component';
 import { IndexedDbService } from './Services/indexed-db.service';
 import { OpdSlipComponent } from './Components/opdslip/opd-slip/opd-slip.component';
 
@@ -66,7 +69,10 @@ import { OpdSlipComponent } from './Components/opdslip/opd-slip/opd-slip.compone
     AgePipePipe,
     OtlistComponent,
     PaymentComponent,
-    PreciptionComponent,
+PreciptionComponent,
+    InpatientComponent,
+    InpatientListComponent,
+    InpatientEditComponent,
   ],
   imports: [
     BrowserModule,
