@@ -1,0 +1,1 @@
+# TODO: Fix InpatientComponent import error&#10;&#10;- [ ] Step 1: Add import { InpatientComponent } from './Components/inpatient/inpatient.component'; to src/app/app-routing.module.ts&#10;- [ ] Step 2: Verify no other errors (check VSCode/ ng serve)&#10;- [ ] Step 3: Mark complete

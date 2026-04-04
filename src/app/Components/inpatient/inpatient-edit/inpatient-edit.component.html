@@ -1,0 +1,51 @@
+<h2 mat-dialog-title>{{edit ? 'Update Inn Patient Data' : 'Add New Inn Patient'}}</h2>
+
+<form [formGroup]="inpatientForm" (ngSubmit)="onSubmit()" novalidate>
+    <mat-dialog-content>
+        <div formGroupName="inpatientDetail" class="outer-input-section">
+            <mat-form-field appearance="fill">
+                <mat-label>Inpatient ID</mat-label>
+                <input matInput type="number" formControlName="inpatientId">
+            </mat-form-field>
+            <div formGroupName="basicInfo" class="input-section">
+                <mat-form-field appearance="fill">
+                    <mat-label>Patient Name</mat-label>
+                    <input matInput type="text" formControlName="patientName">
+<mat-error *ngIf="c['patientName']?.errors?.required">Patient name is required</mat-error>
+                </mat-form-field>
+                <mat-form-field appearance="fill">
+                    <mat-label>Surgeon Name</mat-label>
+                    <input matInput type="text" formControlName="surgeonName">
+                    <mat-error *ngIf="c['surgeonName']?.errors?.required">Surgeon name is required</mat-error>
+                </mat-form-field>
+            </div>
+            <div formGroupName="procedureInfo" class="input-section">
+                <mat-form-field appearance="fill">
+                    <mat-label>Procedure</mat-label>
+                    <input matInput type="text" formControlName="procedure">
+                    <mat-error *ngIf="d['procedure']?.errors?.required">Procedure is required</mat-error>
+                </mat-form-field>
+            </div>
+            <div formGroupName="dates" class="input-section">
+                <mat-form-field appearance="fill">
+                    <mat-label>Admission Date</mat-label>
+                    <input matInput [matDatepicker]="admissionPicker" formControlName="admissionDate">
+                    <mat-datepicker-toggle matSuffix [for]="admissionPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #admissionPicker></mat-datepicker>
+                    <mat-error *ngIf="e['admissionDate']?.errors?.required">Admission date is required</mat-error>
+                </mat-form-field>
+                <mat-form-field appearance="fill">
+                    <mat-label>Discharge Date</mat-label>
+                    <input matInput [matDatepicker]="dischargePicker" formControlName="dischargeDate">
+                    <mat-datepicker-toggle matSuffix [for]="dischargePicker"></mat-datepicker-toggle>
+                    <mat-datepicker #dischargePicker></mat-datepicker>
+                    <mat-error *ngIf="b.dates?.get('dischargeDate')?.errors?.required">Discharge date is required</mat-error>
+                </mat-form-field>
+            </div>
+        </div>
+    </mat-dialog-content>
+    <mat-dialog-actions>
+        <button mat-raised-button color="primary" type="submit" [disabled]="inpatientForm.invalid">Submit</button>
+        <button mat-raised-button color="warn" type="button" (click)="close()">Cancel</button>
+    </mat-dialog-actions>
+</form>

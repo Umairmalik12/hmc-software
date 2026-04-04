@@ -1,0 +1,70 @@
+<div class="body">
+    <h1>Inn Patient List</h1>
+    <div class="search-bar" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+        <mat-form-field appearance="outline">
+            <mat-label>Inpatient ID</mat-label>
+            <input matInput [(ngModel)]="searchInpatientId" placeholder="Search by ID">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Patient Name</mat-label>
+            <input matInput [(ngModel)]="searchPatientName" placeholder="Search by Patient Name">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Procedure</mat-label>
+            <input matInput [(ngModel)]="searchProcedure" placeholder="Search by Procedure">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Surgeon</mat-label>
+            <input matInput [(ngModel)]="searchSurgeonName" placeholder="Search by Surgeon Name">
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="onSearch()">Search</button>
+        <button mat-raised-button color="accent" (click)="onClearSearch()">Clear</button>
+        <span style="flex: 1 1 auto;"></span>
+        <button mat-raised-button color="primary" (click)="exportToExcel()">Export to Excel</button>
+        <input type="file" accept=".xlsx, .xls" style="display:none" #importInput (change)="importFromExcel($event)">
+        <button mat-raised-button color="accent" (click)="importInput.click()">Import from Excel</button>
+    </div>
+    <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource">
+        <ng-container matColumnDef="inpatientId">
+            <mat-header-cell *matHeaderCellDef >Sr No</mat-header-cell>
+            <mat-cell *matCellDef="let inpatient">{{inpatient.inpatientId}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="patientName">
+            <mat-header-cell *matHeaderCellDef>P/Name</mat-header-cell>
+            <mat-cell *matCellDef="let inpatient">{{inpatient.patientName}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="procedure">
+            <mat-header-cell *matHeaderCellDef>Procedure</mat-header-cell>
+            <mat-cell *matCellDef="let inpatient">{{inpatient.procedure}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="admissionDate">
+            <mat-header-cell *matHeaderCellDef>Admission Date</mat-header-cell>
+            <mat-cell *matCellDef="let inpatient">{{inpatient.admissionDate | date:'mediumDate'}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="dischargeDate">
+            <mat-header-cell *matHeaderCellDef>Discharge Date</mat-header-cell>
+            <mat-cell *matCellDef="let inpatient">{{inpatient.dischargeDate | date:'mediumDate'}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="surgeonName">
+            <mat-header-cell *matHeaderCellDef>Surgeon Name</mat-header-cell>
+            <mat-cell *matCellDef="let inpatient">{{inpatient.surgeonName}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="action" *ngIf="isSuperAdmin">
+            <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
+            <mat-cell *matCellDef="let inpatient">
+                <div class="action-buttons">
+                    <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editInpatient(inpatient.inpatientId)"><mat-icon>edit</mat-icon></button>
+                    <button mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteInpatient(inpatient.inpatientId)"><mat-icon>delete</mat-icon></button>
+                </div>
+            </mat-cell>
+        </ng-container>
+        <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+    </mat-table>
+</div>
+
+<mat-paginator class="page"
+                [length]="total"
+                [pageSize]="5"
+                [pageSizeOptions]="[5, 10, 15, 20]">
+</mat-paginator>

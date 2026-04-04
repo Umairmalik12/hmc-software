@@ -1,0 +1,21 @@
+.outer-input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-section {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.input-section mat-form-field {
+  flex: 1;
+  min-width: 250px;
+}
+
+.radio-group {
+  display: flex;
+  gap: 16px;
+}
