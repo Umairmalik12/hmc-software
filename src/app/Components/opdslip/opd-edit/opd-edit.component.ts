@@ -11,17 +11,18 @@ import { Opd } from 'src/app/Models/opd.model';
 })
 export class OpdEditComponent {
   edit: boolean = false;
+  oldPatientId: number | undefined;
   opdDetails: Opd;
   opdForm: FormGroup;
 
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<OpdEditComponent>,
-    @Inject(MAT_DIALOG_DATA) opdDetails: Opd
+    @Inject(MAT_DIALOG_DATA) opdDetails: Opd & {oldPatientId?: number}
   ) {
 
-    
     this.opdDetails = opdDetails;
+    this.oldPatientId = opdDetails.oldPatientId || opdDetails.patientId;
 
     this.edit = !!opdDetails.patientId;
 
@@ -34,7 +35,6 @@ export class OpdEditComponent {
       sex: [this.opdDetails.sex, Validators.required],
       bp: [this.opdDetails.bp, Validators.required],
       temp: [this.opdDetails.temp, Validators.required],
-      weight: [this.opdDetails.weight, Validators.required],
       patientCategory: [this.opdDetails.patientCategory, Validators.required],
       amount: [this.opdDetails.amount, [Validators.required, Validators.pattern('^[0-9]+$')]],
       phone: [this.opdDetails.phone || '', [Validators.required, Validators.pattern('^[0-9]+$')]],
@@ -50,7 +50,7 @@ export class OpdEditComponent {
       let confirmSubmit = confirm("Submit OPD form?");
       if (confirmSubmit) {
         this.opdForm.get('patientId')?.enable();
-        const opdData = this.opdForm.value;
+        const opdData = { ...this.opdForm.value, oldPatientId: this.oldPatientId };
         this.opdForm.get('patientId')?.disable();
         this.dialogRef.close(opdData);
       }

@@ -4,8 +4,8 @@
     <mat-dialog-content>
         <div formGroupName="patientDetail" class="outer-input-section">
             <mat-form-field appearance="fill">
-                <mat-label>Mr no.</mat-label>
-                <input matInput type="number" formControlName="patientId">
+                <mat-label>MR No.</mat-label>
+                <input matInput type="number" formControlName="patientId" [readonly]="edit">
             </mat-form-field>
             <div formGroupName="fullName" class="input-section">
                 <mat-form-field appearance="fill">

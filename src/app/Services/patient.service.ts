@@ -67,8 +67,17 @@ export class PatientService {
   async addNewPatient(data: PatientDetail): Promise<boolean> {
     try {
       const storedPatients = await this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY) || [];
-      const id = storedPatients.length > 0 ? storedPatients[storedPatients.length - 1].patientId + 1 : 1;
-      data.patientId = id;
+      if (data.patientId > 0) {
+        // Check for duplicate MR No
+        if (storedPatients.some(p => p.patientId === data.patientId)) {
+          console.error('Duplicate MR No (patientId) exists');
+          return false;
+        }
+      } else {
+        // Auto-generate new ID
+        const maxId = storedPatients.length > 0 ? Math.max(...storedPatients.map(p => p.patientId)) : 0;
+        data.patientId = maxId + 1;
+      }
 
       storedPatients.push(data);
       await this.indexedDb.setItem(STORAGE_KEY, storedPatients);
@@ -80,12 +89,19 @@ export class PatientService {
     }
   }
 
-  async updatePatient(data: PatientDetail): Promise<boolean> {
+  async updatePatient(data: any): Promise<boolean> {
     try {
       const storedPatients = await this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY) || [];
-      const index = storedPatients.findIndex(p => p.patientId === data.patientId);
+      const oldId = data.oldId;
+      const index = oldId ? storedPatients.findIndex(p => p.patientId === oldId) : -1;
       if (index !== -1) {
+        const newId = data.patientId;
+        if (newId !== oldId && storedPatients.some(p => p.patientId === newId)) {
+          console.error('New MR No already exists');
+          return false;
+        }
         storedPatients[index] = data;
+        delete data.oldId;
         await this.indexedDb.setItem(STORAGE_KEY, storedPatients);
         this.patientDetail = storedPatients;
         return true;

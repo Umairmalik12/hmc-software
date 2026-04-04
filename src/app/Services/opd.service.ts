@@ -58,37 +58,50 @@ export class OpdService {
     });
   }
 
-  addNewOpd(data: Opd | any): Promise<boolean> {
-    return this.loadOpdData().then(() => {
-      try {
-        const id = this.opdDetail.length > 0
-          ? this.opdDetail[this.opdDetail.length - 1].patientId + 1
-          : 1;
-        data.patientId = id;
-        this.opdDetail.push(data);
-        return this.savePatientOpdData().then(() => true);
-      } catch (e) {
-        console.error('Error adding new OPD:', e);
-        return false;
+  async addNewOpd(data: Opd): Promise<boolean> {
+    try {
+      await this.loadOpdData();
+      if (data.patientId > 0) {
+        // Check for duplicate MR No
+        if (this.opdDetail.some(o => o.patientId === data.patientId)) {
+          console.error('Duplicate MR No (patientId) exists');
+          return false;
+        }
+      } else {
+        // Auto-generate new ID
+        const maxId = this.opdDetail.length > 0 ? Math.max(...this.opdDetail.map(o => o.patientId)) : 0;
+        data.patientId = maxId + 1;
       }
-    });
+      this.opdDetail.push(data);
+      await this.savePatientOpdData();
+      return true;
+    } catch (e) {
+      console.error('Error adding new OPD:', e);
+      return false;
+    }
   }
 
-  updateOpd(data: Opd): Promise<boolean> {
-    return this.loadOpdData().then(() => {
-      try {
-        const index = this.opdDetail.findIndex(o => o.patientId === data.patientId);
-        if (index !== -1) {
-          this.opdDetail[index] = data;
-          console.log("Updated OPD:", this.opdDetail[index]);
-          return this.savePatientOpdData().then(() => true);
+  async updateOpd(data: Opd & {oldPatientId?: number}): Promise<boolean> {
+    try {
+      await this.loadOpdData();
+      const oldId = data.oldPatientId;
+      const index = oldId ? this.opdDetail.findIndex(o => o.patientId === oldId) : -1;
+      if (index !== -1) {
+        const newId = data.patientId;
+        if (newId !== oldId && this.opdDetail.some(o => o.patientId === newId)) {
+          console.error('New MR No already exists');
+          return false;
         }
-        return false;
-      } catch (e) {
-        console.error('Error updating OPD:', e);
-        return false;
+        this.opdDetail[index] = data;
+        console.log("Updated OPD:", this.opdDetail[index]);
+        await this.savePatientOpdData();
+        return true;
       }
-    });
+      return false;
+    } catch (e) {
+      console.error('Error updating OPD:', e);
+      return false;
+    }
   }
 
   deleteOpd(id: number): Promise<boolean> {

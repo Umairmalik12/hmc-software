@@ -179,6 +179,7 @@ export class PatientListComponent implements OnInit, AfterViewInit {
     this.patientService.getPatientDetails(id).subscribe(data => {
       if (data) {
         this.tempPatient = data;
+        (this.tempPatient as any).oldId = id;
 
         const dialogConfig = new MatDialogConfig();
         dialogConfig.disableClose = true;

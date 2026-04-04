@@ -1,1 +1,8 @@
-# TODO: Fix InpatientComponent import error&#10;&#10;- [ ] Step 1: Add import { InpatientComponent } from './Components/inpatient/inpatient.component'; to src/app/app-routing.module.ts&#10;- [ ] Step 2: Verify no other errors (check VSCode/ ng serve)&#10;- [ ] Step 3: Mark complete
+# TODO: Hide Save/Print/Add buttons on print click in precipion component
+
+1. ✅ Create TODO.md
+2. ✅ Add isPrinting flag to precipion.component.ts
+3. ✅ Update print() method in precipion.component.ts
+4. ✅ Update actions div in precipion.component.html with *ngIf
+5. ✅ Test functionality
+6. ✅ Complete

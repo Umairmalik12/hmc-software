@@ -157,13 +157,14 @@ export class OpdListComponent implements OnInit, AfterViewInit {
     this.opdService.getOpdDetails(id).subscribe((data: Opd) => {
       if (data) {
         this.tempOpd = data;
+        const dialogData = { ...data, oldPatientId: data.patientId } as any;
         const dialogConfig = new MatDialogConfig();
         dialogConfig.disableClose = true;
         dialogConfig.autoFocus = true;
-        dialogConfig.data = this.tempOpd;
+        dialogConfig.data = dialogData;
         const dialogRef = this.dialog.open(OpdEditComponent, dialogConfig);
 
-        dialogRef.afterClosed().subscribe(async (updatedOpd: Opd) => {
+        dialogRef.afterClosed().subscribe(async (updatedOpd: any) => {
           if (updatedOpd) {
             const res = await this.opdService.updateOpd(updatedOpd);
             const msg = res ? "OPD Updated Successfully" : "Something went wrong";

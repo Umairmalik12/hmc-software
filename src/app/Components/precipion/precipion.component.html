@@ -1,47 +1,86 @@
 <div class="prescription" id="prescription">
-  <div class="header">
+  <!-- Medicine Datalist (hidden) -->
+  <datalist id="medicineDatalist">
+    <option *ngFor="let med of customMedicines" [value]="med"></option>
+    <option *ngFor="let med of commonMedicines" [value]="med"></option>
+  </datalist>
+
+  <!-- Header -->
+<div class="header">
     <div class="urdu-title">بسم الله الرحمن الرحيم</div>
+    <div class="clinic-title">Haq Medical Center</div>
     <div class="doc-info">
       <h2>ڈاکٹر تنویر الحق</h2>
       <p>M.B.B.S, F.C.P.S (Urology)</p>
       <p>Senior Consultant – Urology</p>
-      <p>Multan Institute of Kidney Diseases</p>
-      <p>PHC Reg #: 290710</p>
+      <p>Multan Institute of Kidney Diseases (MIKD)</p>
+      <p>PHC Reg #: 290710 | Contact: 0300-1234567</p>
     </div>
   </div>
 
-  <div class="section">
-    <p><strong>Ref ID:</strong> <input [(ngModel)]="patient.refId" /> 
-       &nbsp;&nbsp; <strong>Date:</strong> {{ today }} 
-       &nbsp;&nbsp; <strong>No. of Visit:</strong> <input [(ngModel)]="patient.visit" /></p>
-    <p><strong>Patient Name:</strong> <input [(ngModel)]="patient.name" />
-       &nbsp;&nbsp; <strong>S/D/W of:</strong> <input [(ngModel)]="patient.relation" /></p>
-    <p><strong>Age:</strong> <input [(ngModel)]="patient.age" />
-       &nbsp;&nbsp; <strong>Sex:</strong> <input [(ngModel)]="patient.sex" />
-       &nbsp;&nbsp; <strong>Weight:</strong> <input [(ngModel)]="patient.weight" />
-       &nbsp;&nbsp; <strong>Contact:</strong> <input [(ngModel)]="patient.contact" /></p>
-    <p><strong>Allergies:</strong> <input [(ngModel)]="patient.allergies" style="width: 60%" /></p>
-    <p><strong>Symptoms:</strong> <input [(ngModel)]="patient.symptoms" style="width: 70%" /></p>
-    <p><strong>Findings:</strong> <input [(ngModel)]="patient.findings" style="width: 70%" /></p>
-    <p><strong>Provisional / Diagnosis:</strong> <input [(ngModel)]="patient.diagnosis" style="width: 80%" /></p>
-  </div>
-
-  <hr />
-
-  <div class="section">
-    <h3>Rx:</h3>
-    <div *ngFor="let med of prescribedMedicines; let i = index" class="medicine-line">
-      <input [(ngModel)]="med.name" placeholder="Medicine name" />
-      <label><input type="checkbox" [(ngModel)]="med.morning" /> صبح</label>
-      <label><input type="checkbox" [(ngModel)]="med.afternoon" /> دوپہر</label>
-      <label><input type="checkbox" [(ngModel)]="med.evening" /> شام</label>
-      <button class="no-print" (click)="removeMedicine(i)">🗑</button>
+  <!-- Patient Information -->
+  <div class="patient-section">
+    <h3>Patient Information</h3>
+    <table class="info-table">
+      <tr><td>Ref ID:</td><td><input [(ngModel)]="patient.refId" class="form-input" /></td><td>Date:</td><td>{{ today }}</td></tr>
+      <tr><td>Visit No:</td><td><input [(ngModel)]="patient.visit" class="form-input" /></td><td>Name:</td><td><input [(ngModel)]="patient.name" class="form-input wide" /></td></tr>
+      <tr><td>S/D/W of:</td><td><input [(ngModel)]="patient.relation" class="form-input" /></td><td>Age/Sex:</td><td><input [(ngModel)]="patient.age" class="form-input small" /> / <input [(ngModel)]="patient.sex" class="form-input small" /></td></tr>
+      <tr><td>Weight:</td><td><input [(ngModel)]="patient.weight" class="form-input small" /></td><td>Contact:</td><td><input [(ngModel)]="patient.contact" class="form-input" /></td></tr>
+    </table>
+    <div class="complaints">
+      <label>Allergies:</label> <input [(ngModel)]="patient.allergies" class="form-input wide" />
     </div>
-    <button class="no-print" (click)="addMedicine()">+ Add Medicine</button>
+    <div class="complaints">
+      <label>Symptoms:</label> <input [(ngModel)]="patient.symptoms" class="form-input extra-wide" />
+    </div>
+    <div class="complaints">
+      <label>Findings:</label> <input [(ngModel)]="patient.findings" class="form-input extra-wide" />
+    </div>
+    <div class="diagnosis">
+      <label>Provisional Diagnosis:</label> <input [(ngModel)]="patient.diagnosis" class="form-input extra-wide" />
+    </div>
   </div>
 
-  <div class="no-print actions">
-    <button (click)="save()">💾 Save</button>
-    <button (click)="print()">🖨 Print</button>
+  <hr style="margin: 25px 0;" />
+
+  <!-- Medicines -->
+  <div class="rx-section">
+    <h3>Prescription (Rx)</h3>
+    <table class="medicine-table">
+      <thead>
+        <tr>
+          <th>Medicine</th>
+          <th>صبح (Morning)</th>
+          <th>دوپہر (Afternoon)</th>
+          <th>شام (Evening)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let med of prescribedMedicines; let i = index" class="medicine-row">
+          <td><input list="medicineDatalist" type="text" [(ngModel)]="med.name" class="form-input medicine-input" placeholder="Type to search/select medicine + dosage..." (input)="onMedicineInput($event, med.name)" (blur)="addCustomMedicine(med.name)" /></td>
+          <td><label class="dose-checkbox"><input type="checkbox" [(ngModel)]="med.morning" /> ✓</label></td>
+          <td><label class="dose-checkbox"><input type="checkbox" [(ngModel)]="med.afternoon" /> ✓</label></td>
+          <td><label class="dose-checkbox"><input type="checkbox" [(ngModel)]="med.evening" /> ✓</label></td>
+        </tr>
+      </tbody>
+    </table>
+    <small class="dropdown-hint no-print">💡 Type to see dropdown suggestions from common/custom medicines</small>
   </div>
+
+  <!-- Instructions & Signature -->
+  <div class="footer-section">
+    <div class="instructions">
+      <strong>Instructions:</strong> Take medicines as prescribed. Complete full course. Return for follow-up after 7 days. Report any side effects or allergies immediately. Keep away from children.
+    </div>
+    <div class="signature-area">
+      <div class="signature-box">
+        <p>Dr. Tanveer ul Haq</p>
+        <p>Senior Consultant Urologist<br>Multan Institute of Kidney Diseases</p>
+      </div>
+      <div class="stamp-box">🔴 Doctor's Stamp & Signature</div>
+    </div>
+  </div>
+
+    <div class="no-print actions" *ngIf="!isPrinting">    <button class="btn-save" (click)="save()">💾 Save Prescription</button>  <button class="btn-print" (click)="print()">🖨 Print</button>   <button class="btn-add" (click)="addMedicine()">➕ Add Medicine Row</button>  </div>
 </div>
+
