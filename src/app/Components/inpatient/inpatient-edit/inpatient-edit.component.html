@@ -7,6 +7,12 @@
                 <mat-label>Inpatient ID</mat-label>
                 <input matInput type="number" formControlName="inpatientId">
             </mat-form-field>
+            <mat-form-field appearance="fill">
+
+                <mat-label>Created At</mat-label>
+                <input matInput readonly [value]="f.value | date:'dd/M/yy h:mm a'">
+            </mat-form-field>
+
             <div formGroupName="basicInfo" class="input-section">
                 <mat-form-field appearance="fill">
                     <mat-label>Patient Name</mat-label>

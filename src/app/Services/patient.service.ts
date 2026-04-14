@@ -66,6 +66,9 @@ export class PatientService {
 
   async addNewPatient(data: PatientDetail): Promise<boolean> {
     try {
+      if (!data.createdAt) {
+        data.createdAt = new Date().toISOString();
+      }
       const storedPatients = await this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY) || [];
       if (data.patientId > 0) {
         // Check for duplicate MR No
@@ -123,7 +126,8 @@ export class PatientService {
       age: p.age,
       maritalStatus: p.maritalStatus,
       city: p.city,
-      address: p.address
+      address: p.address,
+      createdAt: p.createdAt
     }));
   }
 

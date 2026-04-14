@@ -12,6 +12,7 @@ export interface InPatientDetail {
   admissionDate: string;
   dischargeDate: string;
   surgeonName: string;
+  createdAt: string;
 }
 
 @Injectable({
@@ -78,6 +79,10 @@ export class InpatientService {
       const id = storedInpatients.length > 0 ? storedInpatients[storedInpatients.length - 1].inpatientId + 1 : 1;
       data.inpatientId = id;
 
+      if (!data.createdAt) {
+        data.createdAt = new Date().toISOString();
+      }
+
       storedInpatients.push(data);
       await this.indexedDb.setItem(STORAGE_KEY, storedInpatients);
       this.inpatientDetail = storedInpatients;
@@ -112,8 +117,10 @@ export class InpatientService {
       procedure: p.procedure,
       admissionDate: p.admissionDate,
       dischargeDate: p.dischargeDate,
-      surgeonName: p.surgeonName
+      surgeonName: p.surgeonName,
+      createdAt: p.createdAt
     }));
+
   }
 
   async deleteInpatient(id: number): Promise<boolean> {

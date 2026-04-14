@@ -26,10 +26,13 @@ export class OpdEditComponent {
 
     this.edit = !!opdDetails.patientId;
 
+    if (!this.edit && !this.opdDetails.createdAt) {
+      this.opdDetails.createdAt = new Date().toISOString();
+    }
+
     this.opdForm = this.fb.group({
       patientId: [{ value: this.opdDetails.patientId }],
-      date: [this.opdDetails.date ? formatDate(this.opdDetails.date, 'yyyy-MM-dd', 'en') : '', Validators.required],
-      time: [this.opdDetails.time || '', Validators.required],
+      createdAt: [this.opdDetails.createdAt || ''],
       patientName: [this.opdDetails.patientName || '', Validators.required],
       age: [this.opdDetails.age || '', Validators.required],
       sex: [this.opdDetails.sex, Validators.required],

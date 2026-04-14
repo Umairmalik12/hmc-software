@@ -9,4 +9,5 @@ export interface PatientDetail{
     phone: string;
     city: string;
     address: string;
+    createdAt: string;
 }

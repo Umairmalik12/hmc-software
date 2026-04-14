@@ -28,6 +28,7 @@ export class PatientListComponent implements OnInit, AfterViewInit {
   searchName: string = '';
   searchPhone: string = '';
   searchCity: string = '';
+  dateFilter: string = 'all';
 
   tempPatient: PatientDetail = {
     patientId: 0,
@@ -39,7 +40,8 @@ export class PatientListComponent implements OnInit, AfterViewInit {
     maritalStatus: '',
     phone: '',
     city: '',
-    address: ''
+    address: '',
+    createdAt: ''
   };
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -63,7 +65,7 @@ export class PatientListComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.indexedDbService.getItem<string>('loginUser').then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
-      this.displayedColumns = ['patientId', 'name', 'drName', 'gender', 'phone', 'city'];
+      this.displayedColumns = ['patientId', 'name', 'drName', 'gender', 'phone', 'city' , 'createdAt'];
       if (this.isSuperAdmin) {
         this.displayedColumns.push('action');
       }
@@ -90,13 +92,46 @@ export class PatientListComponent implements OnInit, AfterViewInit {
     this.patientService.getAllPatient().subscribe((patients) => {
       this.patient = patients;
       this.filteredPatients = patients;
+      this.onDateFilter();
       this.dataSource.updatePatients(this.filteredPatients);
     });
   }
 
   // 🔍 Search
-  onSearch() {
-    this.filteredPatients = this.patient.filter(p => {
+  onDateFilter() {
+    let tempList = this.patient;
+    const now = new Date();
+
+    switch (this.dateFilter) {
+      case 'today':
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        tempList = tempList.filter(p => {
+          const createdDate = new Date(p.createdAt);
+          return createdDate >= today;
+        });
+        break;
+      case 'yesterday':
+        const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        const yesterdayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        tempList = tempList.filter(p => {
+          const createdDate = new Date(p.createdAt);
+          return createdDate >= yesterdayStart && createdDate < yesterdayEnd;
+        });
+        break;
+      case 'seven':
+        const sevenDaysAgo = new Date(now);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        tempList = tempList.filter(p => new Date(p.createdAt) >= sevenDaysAgo);
+        break;
+      case 'thirty':
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        tempList = tempList.filter(p => new Date(p.createdAt) >= thirtyDaysAgo);
+        break;
+    }
+
+    // Apply search filters
+    this.filteredPatients = tempList.filter(p => {
       const matchesId = this.searchPatientId ? p.patientId.toString().includes(this.searchPatientId) : true;
       const matchesName = this.searchName ? p.name.toLowerCase().includes(this.searchName.toLowerCase()) : true;
       const matchesPhone = this.searchPhone ? (p.contact || '').toString().includes(this.searchPhone) : true;
@@ -107,11 +142,16 @@ export class PatientListComponent implements OnInit, AfterViewInit {
     this.dataSource.updatePatients(this.filteredPatients);
   }
 
+  onSearch() {
+    this.onDateFilter();
+  }
+
   onClearSearch() {
     this.searchPatientId = '';
     this.searchName = '';
     this.searchPhone = '';
     this.searchCity = '';
+    this.dateFilter = 'all';
     this.filteredPatients = this.patient;
     this.dataSource.updatePatients(this.filteredPatients);
   }
@@ -153,7 +193,8 @@ export class PatientListComponent implements OnInit, AfterViewInit {
           maritalStatus: rec.maritalStatus || '',
           phone: rec.phone || rec.contact || '',
           city: rec.city || '',
-          address: rec.address || ''
+          address: rec.address || '',
+          createdAt: rec.createdAt || new Date().toISOString()
         };
 
         if (!storedPatients.some(p => p.patientId == patientDetail.patientId)) {
@@ -167,9 +208,11 @@ export class PatientListComponent implements OnInit, AfterViewInit {
         this.notifyUpdate.notify.next(true);
       }
 
-      this.patient = storedPatients;
-      this.filteredPatients = this.patient;
-      this.dataSource.updatePatients(this.filteredPatients);
+      this.patientService.getAllPatient().subscribe(patients => {
+        this.patient = patients;
+        this.filteredPatients = this.patient;
+        this.dataSource.updatePatients(this.filteredPatients);
+      });
     };
     reader.readAsBinaryString(target.files[0]);
   }

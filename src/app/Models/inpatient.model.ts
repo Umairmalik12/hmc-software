@@ -5,4 +5,5 @@ export interface InPatient {
   admissionDate: string;
   dischargeDate: string;
   surgeonName: string;
+  createdAt: string;
 }

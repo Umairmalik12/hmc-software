@@ -17,6 +17,14 @@
             <mat-label>Surgeon</mat-label>
             <input matInput [(ngModel)]="searchSurgeonName" placeholder="Search by Surgeon Name">
         </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Date Filter</mat-label>
+            <mat-select [(ngModel)]="dateFilter" (selectionChange)="onDateFilter()">
+                <mat-option value="all">All</mat-option>
+                <mat-option value="today">Today</mat-option>
+                <mat-option value="yesterday">Yesterday</mat-option>
+            </mat-select>
+        </mat-form-field>
         <button mat-raised-button color="primary" (click)="onSearch()">Search</button>
         <button mat-raised-button color="accent" (click)="onClearSearch()">Clear</button>
         <span style="flex: 1 1 auto;"></span>
@@ -49,6 +57,10 @@
             <mat-header-cell *matHeaderCellDef>Surgeon Name</mat-header-cell>
             <mat-cell *matCellDef="let inpatient">{{inpatient.surgeonName}}</mat-cell>
         </ng-container>
+        <ng-container matColumnDef="createdAt">
+            <mat-header-cell *matHeaderCellDef>Created At</mat-header-cell>
+            <mat-cell *matCellDef="let inpatient">{{inpatient.createdAt | date:'dd/M/yy h:mm a'}}</mat-cell>
+        </ng-container>
         <ng-container matColumnDef="action" *ngIf="isSuperAdmin">
             <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
             <mat-cell *matCellDef="let inpatient">
@@ -59,7 +71,7 @@
             </mat-cell>
         </ng-container>
         <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-        <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
     </mat-table>
 </div>
 

@@ -2,10 +2,15 @@
 
 <form [formGroup]="patientForm" (ngSubmit)="onSubmit()" novalidate>
     <mat-dialog-content>
-        <div formGroupName="patientDetail" class="outer-input-section">
+<div formGroupName="patientDetail" class="outer-input-section">
             <mat-form-field appearance="fill">
                 <mat-label>MR No.</mat-label>
                 <input matInput type="number" formControlName="patientId" [readonly]="edit">
+            </mat-form-field>
+         
+            <mat-form-field appearance="fill">
+                <mat-label>Created At</mat-label>
+                <input matInput type="text" [value]="(b['createdAt'].value | date:'dd/MM/yy HH:mm') || ''" readonly>
             </mat-form-field>
             <div formGroupName="fullName" class="input-section">
                 <mat-form-field appearance="fill">

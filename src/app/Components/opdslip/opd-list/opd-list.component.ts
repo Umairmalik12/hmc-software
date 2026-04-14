@@ -27,6 +27,7 @@ export class OpdListComponent implements OnInit, AfterViewInit {
   searchName: string = '';
   searchPhone: string = '';
   searchCity: string = '';
+  dateFilter: string = 'all';
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   total: number = 0;
@@ -48,7 +49,7 @@ export class OpdListComponent implements OnInit, AfterViewInit {
   async ngOnInit(): Promise<void> {
     this.indexDb.getItem<string>('loginUser').then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
-      this.displayedColumns = ['patientId', 'patientName', 'dateTime', 'sex', 'drName', 'followUp'];
+      this.displayedColumns = ['patientId', 'patientName', 'dateTime', 'sex', 'drName', 'followUp', 'createdAt'];
       if (this.isSuperAdmin) {
         this.displayedColumns.push('action');
       }
@@ -76,15 +77,52 @@ export class OpdListComponent implements OnInit, AfterViewInit {
   }
 
   // 🔍 Search
-  onSearch() {
-    this.filteredOpds = this.opd.filter(o => {
+  onDateFilter() {
+    let tempList = this.opd;
+    const now = new Date();
+
+    switch (this.dateFilter) {
+      case 'today':
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        tempList = tempList.filter(o => {
+          const createdDate = new Date(o.createdAt);
+          return createdDate >= today;
+        });
+        break;
+      case 'yesterday':
+        const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        const yesterdayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        tempList = tempList.filter(o => {
+          const createdDate = new Date(o.createdAt);
+          return createdDate >= yesterdayStart && createdDate < yesterdayEnd;
+        });
+        break;
+      case 'seven':
+        const sevenDaysAgo = new Date(now);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        tempList = tempList.filter(o => new Date(o.createdAt) >= sevenDaysAgo);
+        break;
+      case 'thirty':
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        tempList = tempList.filter(o => new Date(o.createdAt) >= thirtyDaysAgo);
+        break;
+    }
+
+    // Apply search filters
+    this.filteredOpds = tempList.filter(o => {
       const matchesId = this.searchPatientId ? o.patientId.toString().includes(this.searchPatientId) : true;
       const matchesName = this.searchName ? o.patientName.toLowerCase().includes(this.searchName.toLowerCase()) : true;
       const matchesPhone = this.searchPhone ? (o.phone || '').toString().includes(this.searchPhone) : true;
       const matchesCity = this.searchCity ? (o.address || '').toLowerCase().includes(this.searchCity.toLowerCase()) : true;
       return matchesId && matchesName && matchesPhone && matchesCity;
     });
+
     this.dataSource.updatePatients(this.filteredOpds);
+  }
+
+  onSearch() {
+    this.onDateFilter();
   }
 
   onClearSearch() {
@@ -92,6 +130,7 @@ export class OpdListComponent implements OnInit, AfterViewInit {
     this.searchName = '';
     this.searchPhone = '';
     this.searchCity = '';
+    this.dateFilter = 'all';
     this.filteredOpds = this.opd;
     this.dataSource.updatePatients(this.filteredOpds);
   }

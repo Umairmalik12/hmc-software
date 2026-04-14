@@ -13,6 +13,17 @@
       <input matInput [(ngModel)]="searchName" placeholder="Search by Name">
     </mat-form-field>
 
+    <mat-form-field appearance="outline">
+      <mat-label>Date Filter</mat-label>
+      <mat-select [(ngModel)]="dateFilter" (selectionChange)="onDateFilter()">
+        <mat-option value="all">All</mat-option>
+        <mat-option value="today">Today</mat-option>
+        <mat-option value="yesterday">Yesterday</mat-option>
+        <mat-option value="seven">Last 7 Days</mat-option>
+        <mat-option value="thirty">Last 30 Days</mat-option>
+      </mat-select>
+    </mat-form-field>
+
     <button mat-raised-button color="primary" (click)="onSearch()">Search</button>
     <button mat-raised-button color="accent" (click)="onClearSearch()">Clear</button>
 
@@ -59,6 +70,11 @@
     <ng-container matColumnDef="followUp">
       <mat-header-cell *matHeaderCellDef>Follow Up</mat-header-cell>
       <mat-cell *matCellDef="let opd">{{ opd.followUp }}</mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="createdAt">
+      <mat-header-cell *matHeaderCellDef>Created</mat-header-cell>
+      <mat-cell *matCellDef="let opd">{{opd.createdAt | date:'dd/MM/yy HH:mm'}}</mat-cell>
     </ng-container>
 
     <ng-container matColumnDef="action" *ngIf="isSuperAdmin">

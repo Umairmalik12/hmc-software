@@ -1,4 +1,4 @@
-    export interface Patient {
+export interface Patient {
         patientId: number;
         name: string;
         drName: string;
@@ -8,4 +8,5 @@
         contact: string;
         city: string;
         address: string;
+        createdAt: string;
     }

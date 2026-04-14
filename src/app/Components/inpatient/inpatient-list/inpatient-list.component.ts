@@ -27,8 +27,10 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
   searchPatientName: string = '';
   searchProcedure: string = '';
   searchSurgeonName: string = '';
+  dateFilter: string = 'all';
 
   tempInpatient: any = {
+
     inpatientId: 0,
     patientName: '',
     procedure: '',
@@ -58,10 +60,12 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.indexedDbService.getItem<string>('loginUser').then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
+      this.displayedColumns.push('createdAt');
       if (this.isSuperAdmin) {
         this.displayedColumns.push('action');
       }
       this.dataActions('', 'asc', 0, 5);
+
     });
   }
 
@@ -105,9 +109,50 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
     this.searchPatientName = '';
     this.searchProcedure = '';
     this.searchSurgeonName = '';
+    this.dateFilter = 'all';
     this.filteredInpatients = this.inpatient;
     this.dataSource.updateInpatients(this.filteredInpatients);
   }
+
+  onDateFilter() {
+    let tempList = [...this.inpatient];
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+  switch (this.dateFilter) {
+      case 'today':
+        const today = new Date(now);
+        tempList = tempList.filter(i => {
+          const createdDate = new Date(i.createdAt);
+          createdDate.setHours(0,0,0,0);
+          return createdDate >= today;
+        });
+        break;
+      case 'yesterday':
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const tomorrow = new Date(now);
+        tempList = tempList.filter(i => {
+          const createdDate = new Date(i.createdAt);
+          createdDate.setHours(0,0,0,0);
+          return createdDate >= yesterday && createdDate < tomorrow;
+        });
+        break;
+      case 'week':
+        const sevenDaysAgo = new Date(now);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        tempList = tempList.filter(i => new Date(i.createdAt) >= sevenDaysAgo);
+        break;
+      case 'month':
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        tempList = tempList.filter(i => new Date(i.createdAt) >= thirtyDaysAgo);
+        break;
+    }
+
+    this.filteredInpatients = tempList;
+    this.dataSource.updateInpatients(this.filteredInpatients);
+  }
+
 
   // Export
   exportToExcel() {
@@ -142,8 +187,10 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
           procedure: rec.procedure || '',
           admissionDate: rec.admissionDate || '',
           dischargeDate: rec.dischargeDate || '',
-          surgeonName: rec.surgeonName || ''
+          surgeonName: rec.surgeonName || '',
+          createdAt: rec.createdAt || new Date().toISOString()
         };
+
 
         if (!storedInpatients.some(p => p.inpatientId == inpatientDetail.inpatientId)) {
           storedInpatients.push(inpatientDetail);
@@ -163,8 +210,10 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
           procedure: item.procedure,
           admissionDate: item.admissionDate,
           dischargeDate: item.dischargeDate,
-          surgeonName: item.surgeonName
+          surgeonName: item.surgeonName,
+          createdAt: item.createdAt
         };
+
         this.inpatient.push(briefItem);
       });
       this.filteredInpatients = [...this.inpatient];

@@ -1,4 +1,4 @@
-import { formatDate } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -30,16 +30,17 @@ export class PatientEditComponent {
     }
     else {
       this.patientDetails.gender = "Male";
+      this.patientDetails.createdAt = new Date().toISOString();
     }
 
     this.patientForm = this.fb.group({
       patientDetail: this.fb.group({
            patientId: [this.patientDetails.patientId || null, [Validators.required, Validators.min(1)]],
+           createdAt: [this.patientDetails.createdAt || '', []],
         fullName: this.fb.group({
           firstName: [this.patientDetails.firstName, [Validators.required]],
           lastName: [this.patientDetails.lastName, [Validators.required]],
           drName: [this.patientDetails.drName, [Validators.required]],
-
         }),
         bioDetail: this.fb.group({
           gender: [this.patientDetails.gender, Validators.required],
@@ -95,6 +96,7 @@ export class PatientEditComponent {
     console.log(this.d['age'].value,"this.d['age'].value")
     let tempPatient: PatientDetail = {
       patientId: this.b['patientId'].value,
+      createdAt: this.b['createdAt'].value,
       firstName: this.c['firstName'].value, lastName: this.c['lastName'].value, drName: this.c['drName'].value,
       gender: this.d['gender'].value, age: this.d['age'].value,
       maritalStatus: this.e['maritalStatus'].value,

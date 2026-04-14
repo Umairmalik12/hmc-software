@@ -34,7 +34,7 @@ export class HomeComponent implements OnInit {
   tempPatient: PatientDetail = {
     patientId: 0, firstName: '', lastName: '', drName: '', gender: '', age: 0,
     maritalStatus: '', phone: '',
-    city: '', address: ''
+    city: '', address: '', createdAt: ''
   };
 
   tempOpd: Opd = {
@@ -53,7 +53,8 @@ export class HomeComponent implements OnInit {
     drName: '',
     followUp: '',
     patientCategory: '',
-    amount: 0
+    amount: 0,
+    createdAt: ''
   };
 
   tempLabPatient: LabPatient = {

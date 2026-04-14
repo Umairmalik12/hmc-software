@@ -15,5 +15,6 @@ export interface Opd {
     history: string;
     drName: string;
     followUp: string;
+    createdAt: string;
   }
   

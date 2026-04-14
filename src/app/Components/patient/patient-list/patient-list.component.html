@@ -14,8 +14,14 @@
             <input matInput [(ngModel)]="searchPhone" placeholder="Search by Phone">
         </mat-form-field>
         <mat-form-field appearance="outline">
-            <mat-label>City</mat-label>
-            <input matInput [(ngModel)]="searchCity" placeholder="Search by City">
+            <mat-label>Date Filter</mat-label>
+            <mat-select [(ngModel)]="dateFilter" (selectionChange)="onDateFilter()">
+                <mat-option value="all">All</mat-option>
+                <mat-option value="today">Today</mat-option>
+                <mat-option value="yesterday">Yesterday</mat-option>
+                <mat-option value="seven">Last 7 Days</mat-option>
+                <mat-option value="thirty">Last 30 Days</mat-option>
+            </mat-select>
         </mat-form-field>
         <button mat-raised-button color="primary" (click)="onSearch()">Search</button>
         <button mat-raised-button color="accent" (click)="onClearSearch()">Clear</button>
@@ -45,11 +51,14 @@
             <mat-header-cell *matHeaderCellDef>phone</mat-header-cell>
             <mat-cell *matCellDef="let patient">{{patient.contact}}</mat-cell>
         </ng-container>
-              <ng-container matColumnDef="city">
+        <ng-container matColumnDef="city">
             <mat-header-cell *matHeaderCellDef>city</mat-header-cell>
             <mat-cell *matCellDef="let patient">{{patient.city}}</mat-cell>
         </ng-container>
-      
+         <ng-container matColumnDef="createdAt">
+      <mat-header-cell *matHeaderCellDef>Created</mat-header-cell>
+      <mat-cell *matCellDef="let patient">{{patient.createdAt | date:'dd/MM/yy HH:mm'}}</mat-cell>
+    </ng-container>
         <ng-container matColumnDef="action" *ngIf="isSuperAdmin">
             <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
             <mat-cell  *matCellDef="let patient">

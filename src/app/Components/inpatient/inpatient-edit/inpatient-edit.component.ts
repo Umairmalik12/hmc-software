@@ -18,7 +18,11 @@ export class InpatientEditComponent {
     private dialogRef: MatDialogRef<InpatientEditComponent>,
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {
-    const defaultData = data || { inpatientId: 0, patientName: '', procedure: '', admissionDate: '', dischargeDate: '', surgeonName: '' };
+    const defaultData = data || { inpatientId: 0, patientName: '', procedure: '', admissionDate: '', dischargeDate: '', surgeonName: '', createdAt: '' };
+
+    if (!defaultData.inpatientId && !defaultData.createdAt) {
+      defaultData.createdAt = new Date().toISOString();
+    }
 
     if (defaultData.inpatientId) {
       this.edit = true;
@@ -27,6 +31,7 @@ export class InpatientEditComponent {
     this.inpatientForm = this.fb.group({
       inpatientDetail: this.fb.group({
         inpatientId: [defaultData.inpatientId],
+        createdAt: [defaultData.createdAt || ''],
         basicInfo: this.fb.group({
           patientName: [defaultData.patientName, Validators.required],
           surgeonName: [defaultData.surgeonName, Validators.required],
@@ -48,6 +53,7 @@ export class InpatientEditComponent {
   get c() { return ((this.inpatientForm.get('inpatientDetail') as FormGroup).get('basicInfo') as FormGroup).controls; }
   get d() { return ((this.inpatientForm.get('inpatientDetail') as FormGroup).get('procedureInfo') as FormGroup).controls; }
   get e() { return ((this.inpatientForm.get('inpatientDetail') as FormGroup).get('dates') as FormGroup).controls; }
+  get f() { return this.b['createdAt']; }
 
   onSubmit() {
     if (this.inpatientForm.valid) {
@@ -74,7 +80,8 @@ export class InpatientEditComponent {
       surgeonName: this.c['surgeonName'].value,
       procedure: this.d['procedure'].value,
       admissionDate: this.e['admissionDate'].value,
-      dischargeDate: this.e['dischargeDate'].value
+      dischargeDate: this.e['dischargeDate'].value,
+      createdAt: this.b['createdAt'].value
     };
   }
 }

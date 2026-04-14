@@ -60,6 +60,9 @@ export class OpdService {
 
   async addNewOpd(data: Opd): Promise<boolean> {
     try {
+      if (!data.createdAt) {
+        data.createdAt = new Date().toISOString();
+      }
       await this.loadOpdData();
       if (data.patientId > 0) {
         // Check for duplicate MR No
