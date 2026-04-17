@@ -83,8 +83,7 @@ export class PatientService {
       }
 
       storedPatients.push(data);
-      await this.indexedDb.setItem(STORAGE_KEY, storedPatients);
-      this.patientDetail = storedPatients;
+      await this.savePatientData();
       return true;
     } catch (e) {
       console.error('Error adding new patient:', e);
@@ -127,6 +126,7 @@ export class PatientService {
       maritalStatus: p.maritalStatus,
       city: p.city,
       address: p.address,
+      procedure: p.procedure,
       createdAt: p.createdAt
     }));
   }

@@ -1,0 +1,22 @@
+::ng-deep mat-dialog-container {
+  max-width: 800px !important;
+  width: 90vw !important;
+  max-height: 90vh !important;
+}
+
+.outer-input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.outer-input-section mat-form-field {
+  width: 100%;
+}
+
+mat-dialog-actions {
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px;
+}

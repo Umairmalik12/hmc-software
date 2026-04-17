@@ -8,5 +8,6 @@ export interface Patient {
         contact: string;
         city: string;
         address: string;
+        procedure: string;
         createdAt: string;
     }

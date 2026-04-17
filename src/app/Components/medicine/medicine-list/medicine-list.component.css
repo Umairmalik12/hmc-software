@@ -1,0 +1,27 @@
+.body {
+  padding: 20px;
+}
+
+.search-bar {
+  margin-bottom: 20px;
+}
+
+.patient-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.table-btn {
+  min-width: 40px;
+  height: 40px;
+  line-height: 20px;
+}
+
+.page {
+  margin-top: 20px;
+}

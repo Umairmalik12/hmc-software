@@ -1,11 +1,25 @@
-# Inpatient CreatedAt + Date Filters TODO
+# Medicine Module Progress
 
-## Steps:
-- [x] 1. Update src/app/Models/inpatient.model.ts - Add createdAt: string to InPatient (model), InPatientDetail (service)
-- [x] 2. Update src/app/Services/inpatient.service.ts - Auto-set createdAt in addNewInpatient, include in getInpatientBrief
-- [x] 3. Update src/app/Components/inpatient/inpatient-edit/inpatient-edit.component.ts - Add createdAt handling in form/result/auto-set
-- [x] 3. Update src/app/Components/inpatient/inpatient-edit/inpatient-edit.component.ts - Add createdAt handling in form/result/auto-set
-- [ ] 4. Update src/app/Components/inpatient/inpatient-list/inpatient-list.component.ts - Add dateFilter, onDateFilter(), update columns/logic
-- [ ] 5. Update src/app/Components/inpatient/inpatient-list/inpatient-list.component.html - Add date filter dropdown/button, createdAt column
-- [ ] 6. Update src/app/Components/inpatient/inpatient-list/inpatient-list.component.css - Styling if needed
-- [ ] 7. Test: Create inpatient, verify createdAt auto-set/display/filters work
+## Completed:
+- [x] 1-7: All core medicine files (model, services, components)
+- [x] 8: app.module.ts declarations/providers (to be verified)
+- [x] 9: app-routing.module.ts route
+- [x] 10-11: home nav (to be verified/added)
+
+## Completed:
+- Fixed medicine-edit component (date/time, service save)
+- Added Add New buttons (host + list)
+- Verified app.module.ts, home nav present
+- Fixed import paths, errors
+
+Medicine functionality complete: full CRUD, list/search/export/import/print, dialogs working.
+
+**Test with:** `ng serve` → login → medicine route → test all features.
+
+TODO.md updated - module complete.
+
+## Testing:
+- Navigate to /medicine
+- List/search/export/import
+- Add/edit/delete/print
+

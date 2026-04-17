@@ -2,12 +2,12 @@ import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 import { HomeComponent } from './Components/home/home.component';
 import { LoginComponent } from './Components/login/login.component';
-import { PatientListComponent } from './Components/patient/patient-list/patient-list.component';
 import { PatientComponent } from './Components/patient/patient.component';
 import { AuthGuardService } from './Services/Guard-Services/auth-guard.service';
 import { OpdComponent } from './Components/opdslip/opd.component';
 import { LabComponent } from './Components/lab/lab.component';
 import { InpatientComponent } from './Components/inpatient/inpatient.component';
+import { MedicineComponent } from './Components/medicine/medicine.component';
 
 const routes: Routes = [
   {
@@ -36,6 +36,11 @@ const routes: Routes = [
     canActivate: [AuthGuardService]
   },
   {
+    path:'medicine', 
+    component: MedicineComponent,
+    canActivate: [AuthGuardService]
+  },
+  {
     path:'inpatient', 
     component: InpatientComponent,
     canActivate: [AuthGuardService]
@@ -51,3 +56,4 @@ const routes: Routes = [
   exports: [RouterModule]
 })
 export class AppRoutingModule { }
+

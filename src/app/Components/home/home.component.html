@@ -40,6 +40,15 @@
                 <span>Lab Test Slips</span>
             </a>
 
+            <a mat-list-item (click)="addMedicine()">
+                <mat-icon>local_pharmacy</mat-icon>
+                <span>Add Medicine Record</span>
+            </a>
+            <a mat-list-item (click)="showMedicineList()">
+                <mat-icon>local_pharmacy</mat-icon>
+                <span>Daily Medicine List</span>
+            </a>
+
             <a mat-list-item (click)="showOtSlip()">
                 <mat-icon>local_pharmacy</mat-icon>
                 <span>OT Medicine Slip</span>
@@ -100,9 +109,10 @@
             <app-otlist *ngIf="isShowOtList"></app-otlist>
             <app-payment *ngIf="isShowPayment"></app-payment>
             <app-preciption *ngIf="isSuperAdmin && isShowPrecption"></app-preciption>
+            <app-medicine *ngIf="isShowMedicine"></app-medicine>
 
             <!-- Welcome Message -->
-            <div *ngIf="!isShowPatients && !isShowOpdPatients && !isShowLabSlips" class="welcome">
+            <div *ngIf="!isShowPatients && !isShowOpdPatients && !isShowLabSlips && !isShowMedicine" class="welcome">
                 <h1>Welcome to Haq Medical Center</h1>
                 <p>Providing quality healthcare with excellence.</p>
             </div>

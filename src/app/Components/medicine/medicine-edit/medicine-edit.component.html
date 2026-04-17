@@ -1,0 +1,61 @@
+<h2 mat-dialog-title>{{edit ? 'Update Medicine Record' : 'Add New Medicine Record'}}</h2>
+
+<form [formGroup]="medicineForm" (ngSubmit)="onSubmit()" novalidate>
+    <mat-dialog-content class="outer-input-section">
+        <mat-form-field appearance="fill">
+            <mat-label>Medicine ID</mat-label>
+            <input matInput type="number" formControlName="medicineId" readonly>
+        </mat-form-field>
+
+    
+
+        <mat-form-field appearance="fill">
+            <mat-label>Room No</mat-label>
+            <input matInput formControlName="roomNo">
+            <mat-error *ngIf="f.get('roomNo')?.errors?.required">Room No is required</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>Patient Name</mat-label>
+            <input matInput formControlName="patientName">
+            <mat-error *ngIf="f.get('patientName')?.errors?.required">Patient name is required</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>Medicine Name</mat-label>
+            <input matInput formControlName="medicineName">
+            <mat-error *ngIf="f.get('medicineName')?.errors?.required">Medicine name is required</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>Quantity</mat-label>
+            <input matInput type="number" formControlName="quantity">
+            <mat-error *ngIf="f.get('quantity')?.errors?.required">Quantity is required</mat-error>
+            <mat-error *ngIf="f.get('quantity')?.errors?.min">Quantity must be positive</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>Dosage</mat-label>
+            <input matInput formControlName="dosage">
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>Doctor Name</mat-label>
+            <input matInput formControlName="doctorName">
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>Notes</mat-label>
+            <textarea matInput rows="3" formControlName="notes"></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>Created At</mat-label>
+            <input matInput readonly [value]="f.get('createdAt')?.value | date:'dd/MM/yy h:mm a'">
+        </mat-form-field>
+    </mat-dialog-content>
+    <mat-dialog-actions>
+        <button mat-raised-button color="primary" type="submit" [disabled]="!f.valid">Submit</button>
+        <button mat-raised-button color="warn" type="button" (click)="close()">Cancel</button>
+    </mat-dialog-actions>
+</form>

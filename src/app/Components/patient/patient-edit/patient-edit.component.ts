@@ -31,6 +31,7 @@ export class PatientEditComponent {
     else {
       this.patientDetails.gender = "Male";
       this.patientDetails.createdAt = new Date().toISOString();
+      this.patientDetails.procedure = '';
     }
 
     this.patientForm = this.fb.group({
@@ -45,6 +46,9 @@ export class PatientEditComponent {
         bioDetail: this.fb.group({
           gender: [this.patientDetails.gender, Validators.required],
           age: [ this.tempAge , Validators.required],
+        }),
+        procedureInfo: this.fb.group({
+          procedure: [this.patientDetails.procedure || '', Validators.required],
         }),
         familyStatus: this.fb.group({
           maritalStatus: [this.patientDetails.maritalStatus, Validators.required],
@@ -70,6 +74,7 @@ export class PatientEditComponent {
   get e() { return ((this.patientForm.get('patientDetail') as FormGroup).get('familyStatus') as FormGroup).controls; }
   get f() { return ((this.patientForm.get('patientDetail') as FormGroup).get('socialDetail') as FormGroup).controls; }
   get g() { return ((this.patientForm.get('patientDetail') as FormGroup).get('addressDetail') as FormGroup).controls; }
+  get h() { return ((this.patientForm.get('patientDetail') as FormGroup).get('procedureInfo') as FormGroup).controls; }
 
   // form submit function
   onSubmit() {
@@ -81,6 +86,7 @@ export class PatientEditComponent {
       if (choice) {
         this.patientForm.enable();
         let result: PatientDetail = this.ResultRefactoring();
+        console.log(result,"result");
         this.dialogRef.close(result);
       }
     }
@@ -102,7 +108,8 @@ export class PatientEditComponent {
       maritalStatus: this.e['maritalStatus'].value,
       phone: this.f['phone'].value,
       city: this.g['city'].value,
-      address: this.g['address'].value
+      address: this.g['address'].value,
+      procedure: this.h['procedure'].value
     };
 
     return tempPatient;

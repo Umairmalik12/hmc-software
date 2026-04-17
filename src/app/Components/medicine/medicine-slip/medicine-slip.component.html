@@ -1,0 +1,25 @@
+<div class="slip-container">
+  <div class="toolbar no-print">
+    <button mat-raised-button color="primary" (click)="print()">🖨 Print</button>
+    <button mat-raised-button color="warn" (click)="close()">Close</button>
+  </div>
+
+  <div class="slips">
+    <div class="slip" *ngFor="let med of data.medicines">
+      <h2 class="title">Haq Medical Center</h2>
+      <h3 class="subtitle">Medicine Slip</h3>
+      <hr>
+      <div class="info">
+        <p><strong>ID:</strong> {{ med.medicineId }}</p>
+        <p><strong>Room:</strong> {{ med.roomNo }}</p>
+        <p><strong>Patient:</strong> {{ med.patientName }}</p>
+        <p><strong>Medicine:</strong> {{ med.medicineName }}</p>
+        <p><strong>Quantity:</strong> {{ med.quantity }}</p>
+        <p><strong>Dosage:</strong> {{ med.dosage }}</p>
+        <p><strong>Doctor:</strong> {{ med.doctorName }}</p>
+        <p><strong>Created At:</strong> {{ med.createdAt | date:'dd/MM/yy h:mm a' }}</p>
+        <p *ngIf="med.notes"><strong>Notes:</strong> {{ med.notes }}</p>
+      </div>
+    </div>
+  </div>
+</div>

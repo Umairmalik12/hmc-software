@@ -27,6 +27,7 @@ export class PatientListComponent implements OnInit, AfterViewInit {
   searchPatientId: string = '';
   searchName: string = '';
   searchPhone: string = '';
+  searchProcedure: string = '';
   searchCity: string = '';
   dateFilter: string = 'all';
 
@@ -41,6 +42,7 @@ export class PatientListComponent implements OnInit, AfterViewInit {
     phone: '',
     city: '',
     address: '',
+    procedure: '',
     createdAt: ''
   };
 
@@ -65,7 +67,7 @@ export class PatientListComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.indexedDbService.getItem<string>('loginUser').then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
-      this.displayedColumns = ['patientId', 'name', 'drName', 'gender', 'phone', 'city' , 'createdAt'];
+      this.displayedColumns = ['patientId', 'name', 'drName', 'gender', 'phone', 'procedure', 'city' , 'createdAt'];
       if (this.isSuperAdmin) {
         this.displayedColumns.push('action');
       }
@@ -135,8 +137,9 @@ export class PatientListComponent implements OnInit, AfterViewInit {
       const matchesId = this.searchPatientId ? p.patientId.toString().includes(this.searchPatientId) : true;
       const matchesName = this.searchName ? p.name.toLowerCase().includes(this.searchName.toLowerCase()) : true;
       const matchesPhone = this.searchPhone ? (p.contact || '').toString().includes(this.searchPhone) : true;
+      const matchesProcedure = this.searchProcedure ? (p.procedure || '').toLowerCase().includes(this.searchProcedure.toLowerCase()) : true;
       const matchesCity = this.searchCity ? (p.city || '').toLowerCase().includes(this.searchCity.toLowerCase()) : true;
-      return matchesId && matchesName && matchesPhone && matchesCity;
+      return matchesId && matchesName && matchesPhone && matchesProcedure && matchesCity;
     });
 
     this.dataSource.updatePatients(this.filteredPatients);
@@ -150,6 +153,7 @@ export class PatientListComponent implements OnInit, AfterViewInit {
     this.searchPatientId = '';
     this.searchName = '';
     this.searchPhone = '';
+    this.searchProcedure = '';
     this.searchCity = '';
     this.dateFilter = 'all';
     this.filteredPatients = this.patient;
@@ -194,6 +198,7 @@ export class PatientListComponent implements OnInit, AfterViewInit {
           phone: rec.phone || rec.contact || '',
           city: rec.city || '',
           address: rec.address || '',
+          procedure: rec.procedure || '',
           createdAt: rec.createdAt || new Date().toISOString()
         };
 
@@ -231,7 +236,8 @@ export class PatientListComponent implements OnInit, AfterViewInit {
 
         const dialogRef = this.dialog.open(PatientEditComponent, dialogConfig);
 
-        dialogRef.afterClosed().subscribe((data: PatientDetail) => {
+        dialogRef.afterClosed().subscribe(async (data: PatientDetail) => {
+          console.log('data: ', data);
           if (data) {
             const res: any = this.patientService.updatePatient(data);
             const msg = res ? "Patient Data Updated Successfully" : "Something went wrong";

@@ -15,6 +15,9 @@ import { ActivatedRoute } from '@angular/router';
 import { IndexedDbService } from 'src/app/Services/indexed-db.service';
 import { InpatientEditComponent } from '../inpatient/inpatient-edit/inpatient-edit.component';
 import { InpatientService } from 'src/app/Services/inpatient.service';
+import { Medicine } from 'src/app/Models/medicine.model';
+import { MedicineService } from 'src/app/Services/medicine.service';
+import { MedicineEditComponent } from '../medicine/medicine-edit/medicine-edit.component';
 import { InPatient } from 'src/app/Models/inpatient.model';
 
 @Component({
@@ -30,11 +33,25 @@ export class HomeComponent implements OnInit {
   isShowOtList = false;
   isShowPayment = false;
   isShowPrecption = false;
+  isShowMedicine = false;
 
   tempPatient: PatientDetail = {
     patientId: 0, firstName: '', lastName: '', drName: '', gender: '', age: 0,
     maritalStatus: '', phone: '',
-    city: '', address: '', createdAt: ''
+    city: '', address: '', procedure: '', createdAt: ''
+  };
+
+  tempMedicine: Medicine = {
+    medicineId: 0,
+  
+    roomNo: '',
+    patientName: '',
+    medicineName: '',
+    quantity: 0,
+    dosage: '',
+    doctorName: '',
+    notes: '',
+    createdAt: new Date().toISOString()
   };
 
   tempOpd: Opd = {
@@ -93,6 +110,7 @@ export class HomeComponent implements OnInit {
     private opdService: OpdService,
     private labService: LabService,
     private inpatientService: InpatientService,
+    private medicineService: MedicineService,
     private showAlert: ShowalertService,
     private route: ActivatedRoute,
     private dbService: IndexedDbService
@@ -189,6 +207,11 @@ export class HomeComponent implements OnInit {
     this.isShowPrecption = true;
   }
 
+  showMedicineList() {
+    this.resetViews();
+    this.isShowMedicine = true;
+  }
+
   close() {
     this.resetViews();
     this.isShowOtList = true;
@@ -200,6 +223,7 @@ export class HomeComponent implements OnInit {
     this.isShowLabSlips = false;
     this.isShowOtSlips = false;
     this.isShowInnPatients = false;
+    this.isShowMedicine = false;
     this.isShowOtList = false;
     this.isShowPayment = false;
     this.isShowPrecption = false;
@@ -208,6 +232,12 @@ export class HomeComponent implements OnInit {
   addPatient() {
     this.openDialog(PatientEditComponent, this.tempPatient, (patientData: any) => {
       return this.patientService.addNewPatient(patientData);
+    });
+  }
+
+  addMedicine() {
+    this.openDialog(MedicineEditComponent, this.tempMedicine, (medicineData: Medicine) => {
+      return this.medicineService.addNewMedicine(medicineData);
     });
   }
 

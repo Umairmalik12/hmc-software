@@ -1,0 +1,45 @@
+.slip-container {
+  font-family: Arial, sans-serif;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.toolbar {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.slips {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.slip {
+  border: 1px solid #ddd;
+  padding: 20px;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.title {
+  text-align: center;
+  color: #1976d2;
+  margin: 0 0 5px 0;
+}
+
+.subtitle {
+  text-align: center;
+  margin: 0 0 20px 0;
+  font-size: 1.1em;
+}
+
+.info p {
+  margin: 8px 0;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

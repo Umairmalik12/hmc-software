@@ -48,6 +48,12 @@ import { InpatientListComponent } from './Components/inpatient/inpatient-list/in
 import { InpatientEditComponent } from './Components/inpatient/inpatient-edit/inpatient-edit.component';
 import { IndexedDbService } from './Services/indexed-db.service';
 import { OpdSlipComponent } from './Components/opdslip/opd-slip/opd-slip.component';
+import { MedicineComponent } from './Components/medicine/medicine.component';
+import { MedicineListComponent } from './Components/medicine/medicine-list/medicine-list.component';
+import { MedicineEditComponent } from './Components/medicine/medicine-edit/medicine-edit.component';
+import { MedicineSlipComponent } from './Components/medicine/medicine-slip/medicine-slip.component';
+import { MedicineService } from './Services/medicine.service';
+import { MedicineDataService } from './Services/medicine-data.service';
 
 @NgModule({
   declarations: [
@@ -73,6 +79,10 @@ PreciptionComponent,
     InpatientComponent,
     InpatientListComponent,
     InpatientEditComponent,
+    MedicineComponent,
+    MedicineListComponent,
+    MedicineEditComponent,
+    MedicineSlipComponent,
   ],
   imports: [
     BrowserModule,
@@ -105,7 +115,10 @@ PreciptionComponent,
     AuthGuardService,
     CookieService,
     IndexedDbService,
+    MedicineService,
+    MedicineDataService,
   ],
   bootstrap: [AppComponent],
 })
 export class AppModule {}
+

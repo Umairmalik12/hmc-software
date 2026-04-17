@@ -1,0 +1,91 @@
+<div class="body">
+    <h1>Daily Medicine List</h1>
+    <div class="search-bar" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+        <mat-form-field appearance="outline">
+            <mat-label>Medicine ID</mat-label>
+            <input matInput [(ngModel)]="searchMedicineId" placeholder="Search by ID">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Room No</mat-label>
+            <input matInput [(ngModel)]="searchRoomNo" placeholder="Search by Room No">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Patient Name</mat-label>
+            <input matInput [(ngModel)]="searchPatientName" placeholder="Search by Patient Name">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Medicine Name</mat-label>
+            <input matInput [(ngModel)]="searchMedicineName" placeholder="Search by Medicine Name">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Doctor Name</mat-label>
+            <input matInput [(ngModel)]="searchDoctorName" placeholder="Search by Doctor Name">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Date Filter</mat-label>
+            <mat-select [(ngModel)]="dateFilter" (selectionChange)="onDateFilter()">
+                <mat-option value="all">All</mat-option>
+                <mat-option value="today">Today</mat-option>
+                <mat-option value="yesterday">Yesterday</mat-option>
+            </mat-select>
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="onSearch()">Search</button>
+        <button mat-raised-button color="accent" (click)="onClearSearch()">Clear</button>
+        <button mat-raised-button color="primary" (click)="addNewMedicine()">
+          <mat-icon>add</mat-icon>
+          Add New Medicine
+        </button>
+        <span style="flex: 1 1 auto;"></span>
+        <button mat-raised-button color="primary" (click)="exportToExcel()">Export to Excel</button>
+        <input type="file" accept=".xlsx, .xls" style="display:none" #importInput (change)="importFromExcel($event)">
+        <button mat-raised-button color="accent" (click)="importInput.click()">Import from Excel</button>
+    </div>
+    <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource">
+        <ng-container matColumnDef="medicineId">
+            <mat-header-cell *matHeaderCellDef>ID</mat-header-cell>
+            <mat-cell *matCellDef="let medicine">{{medicine.medicineId}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="roomNo">
+            <mat-header-cell *matHeaderCellDef>Room No</mat-header-cell>
+            <mat-cell *matCellDef="let medicine">{{medicine.roomNo}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="patientName">
+            <mat-header-cell *matHeaderCellDef>Patient</mat-header-cell>
+            <mat-cell *matCellDef="let medicine">{{medicine.patientName}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="medicineName">
+            <mat-header-cell *matHeaderCellDef>Medicine</mat-header-cell>
+            <mat-cell *matCellDef="let medicine">{{medicine.medicineName}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="quantity">
+            <mat-header-cell *matHeaderCellDef>Qty</mat-header-cell>
+            <mat-cell *matCellDef="let medicine">{{medicine.quantity}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="doctorName">
+            <mat-header-cell *matHeaderCellDef>Doctor</mat-header-cell>
+            <mat-cell *matCellDef="let medicine">{{medicine.doctorName}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="createdAt">
+            <mat-header-cell *matHeaderCellDef>Created</mat-header-cell>
+            <mat-cell *matCellDef="let medicine">{{medicine.createdAt | date:'dd/MM/yy h:mm a'}}</mat-cell>
+        </ng-container>
+        <ng-container matColumnDef="action" *ngIf="isSuperAdmin">
+            <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
+            <mat-cell *matCellDef="let medicine">
+                <div class="action-buttons">
+                    <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editMedicine(medicine.medicineId)"><mat-icon>edit</mat-icon></button>
+                    <button mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteMedicine(medicine.medicineId)"><mat-icon>delete</mat-icon></button>
+                    <button mat-button class="mat-raised-button mat-accent table-btn" (click)="printSlip(medicine.medicineId)"><mat-icon>print</mat-icon></button>
+                </div>
+            </mat-cell>
+        </ng-container>
+        <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+    </mat-table>
+</div>
+
+<mat-paginator class="page"
+                [length]="total"
+                [pageSize]="5"
+                [pageSizeOptions]="[5, 10, 15, 20]">
+</mat-paginator>

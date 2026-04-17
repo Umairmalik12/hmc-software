@@ -46,6 +46,13 @@
                     <mat-error *ngIf="d.age.errors?.min || d.age.errors?.max">age must be between 0 and 120</mat-error>
                 </mat-form-field>
             </div>
+            <div formGroupName="procedureInfo" class="input-section">
+                <mat-form-field appearance="fill">
+                    <mat-label>Procedure</mat-label>
+                    <input matInput type="text" formControlName="procedure">
+                    <mat-error *ngIf="h['procedure']?.errors?.required">Procedure is required</mat-error>
+                </mat-form-field>
+            </div>
             <div formGroupName="familyStatus" class="input-section">
                 <mat-form-field appearance="fill">
                     <mat-label>Marital Status</mat-label>
