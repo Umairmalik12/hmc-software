@@ -5,20 +5,38 @@
   </div>
 
   <div class="slips">
-    <div class="slip" *ngFor="let med of data.medicines">
-      <h2 class="title">Haq Medical Center</h2>
-      <h3 class="subtitle">Medicine Slip</h3>
-      <hr>
-      <div class="info">
-        <p><strong>ID:</strong> {{ med.medicineId }}</p>
-        <p><strong>Room:</strong> {{ med.roomNo }}</p>
-        <p><strong>Patient:</strong> {{ med.patientName }}</p>
-        <p><strong>Medicine:</strong> {{ med.medicineName }}</p>
-        <p><strong>Quantity:</strong> {{ med.quantity }}</p>
-        <p><strong>Dosage:</strong> {{ med.dosage }}</p>
-        <p><strong>Doctor:</strong> {{ med.doctorName }}</p>
-        <p><strong>Created At:</strong> {{ med.createdAt | date:'dd/MM/yy h:mm a' }}</p>
-        <p *ngIf="med.notes"><strong>Notes:</strong> {{ med.notes }}</p>
+    <div class="slip">
+      <div class="receipt-header">
+        <h1>Haq Medical Center</h1>
+        <p class="receipt-subtitle">Medicine Receipt</p>
+      </div>
+
+      <div class="meta-row">
+        <div><span>Date:</span> {{ data.medicines[0]?.createdAt | date:'dd/MM/yy' }}</div>
+        <div><span>Slip No:</span> {{ data.medicines[0]?.medicineId }}</div>
+      </div>
+      <div class="meta-row">
+        <div><span>Patient:</span> <strong>{{ data.medicines[0]?.patientName }}</strong></div>
+        <div><span>Room:</span> <strong>{{ data.medicines[0]?.roomNo }}</strong></div>
+      </div>
+      <div class="meta-row">
+        <div><span>Doctor:</span> {{ data.medicines[0]?.doctorName }}</div>
+        <div><span>Created:</span> {{ data.medicines[0]?.createdAt | date:'h:mm a' }}</div>
+      </div>
+
+      <div class="item-table">
+        <div class="item-row header-row">
+          <div class="qty-col">Qty</div>
+          <div class="desc-col">Description</div>
+        </div>
+        <div class="item-row" *ngFor="let med of data.medicines">
+          <div class="qty-col">{{ med.quantity }}</div>
+          <div class="desc-col">{{ med.medicineName }}</div>
+        </div>
+      </div>
+
+      <div class="receipt-footer">
+        <div><span>Total Items:</span> {{ data.medicines.length }}</div>
       </div>
     </div>
   </div>

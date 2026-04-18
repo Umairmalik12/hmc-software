@@ -3,6 +3,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MedicineEditComponent } from './medicine-edit/medicine-edit.component';
 import { Medicine } from '../../Models/medicine.model';
 import { MedicineService } from '../../Services/medicine.service';
+import { NotifyUpdateService } from '../../Services/notify-update.service';
 
 @Component({
   selector: 'app-medicine',
@@ -12,33 +13,29 @@ import { MedicineService } from '../../Services/medicine.service';
 export class MedicineComponent {
   tempMedicine: Medicine = {
     medicineId: 0,
-   
     roomNo: '',
     patientName: '',
-    medicineName: '',
-    quantity: 0,
-    dosage: '',
+    medicines: [],
     doctorName: '',
-    notes: '',
     createdAt: new Date().toISOString()
   };
 
   constructor(
     private dialog: MatDialog,
-    private medicineService: MedicineService
+    private medicineService: MedicineService,
+    private notifyUpdate: NotifyUpdateService
   ) {}
 
   addNewMedicine() {
     const dialogRef = this.dialog.open(MedicineEditComponent, {
       disableClose: true,
       autoFocus: true,
-      data: this.tempMedicine
+      data: { medicines: [] }
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        // Refresh list via service notify
-        window.location.reload(); // Simple refresh for now
+        this.notifyUpdate.notify.next(true);
       }
     });
   }

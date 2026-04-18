@@ -10,7 +10,7 @@ import { Medicine } from 'src/app/Models/medicine.model';
 export class MedicineSlipComponent {
   constructor(
     public dialogRef: MatDialogRef<MedicineSlipComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { medicines: Medicine[] }
+    @Inject(MAT_DIALOG_DATA) public data: { medicines: any[] }
   ) {}
 
   print() {

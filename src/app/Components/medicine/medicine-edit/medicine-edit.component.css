@@ -15,6 +15,25 @@
   width: 100%;
 }
 
+.medicines-section {
+  margin-top: 16px;
+}
+
+.medicine-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.medicine-field {
+  flex: 2;
+}
+
+.quantity-field {
+  flex: 1;
+}
+
 mat-dialog-actions {
   justify-content: flex-end;
   gap: 12px;

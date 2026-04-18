@@ -84,6 +84,26 @@ export class MedicineService {
     }
   }
 
+  async addMultipleMedicines(medicines: Medicine[]): Promise<boolean> {
+    try {
+      const storedMedicines = await this.indexedDb.getItem<Medicine[]>(STORAGE_KEY) || [];
+      let id = storedMedicines.length > 0 ? storedMedicines[storedMedicines.length - 1].medicineId + 1 : 1;
+      for (const data of medicines) {
+        data.medicineId = id++;
+        if (!data.createdAt) {
+          data.createdAt = new Date().toISOString();
+        }
+        storedMedicines.push(data);
+      }
+      await this.indexedDb.setItem(STORAGE_KEY, storedMedicines);
+      this.medicineDetail = storedMedicines;
+      return true;
+    } catch (e) {
+      console.error('Error adding multiple medicines:', e);
+      return false;
+    }
+  }
+
   async updateMedicine(data: Medicine): Promise<boolean> {
     try {
       const storedMedicines = await this.indexedDb.getItem<Medicine[]>(STORAGE_KEY) || [];
@@ -97,6 +117,28 @@ export class MedicineService {
       return false;
     } catch (e) {
       console.error('Error updating medicine:', e);
+      return false;
+    }
+  }
+
+  async updateMultipleMedicines(medicines: Medicine[]): Promise<boolean> {
+    try {
+      const storedMedicines = await this.indexedDb.getItem<Medicine[]>(STORAGE_KEY) || [];
+      for (const data of medicines) {
+        const index = storedMedicines.findIndex(p => p.medicineId === data.medicineId);
+        if (index !== -1) {
+          storedMedicines[index] = data;
+        } else {
+          // If not found, add as new
+          data.medicineId = storedMedicines.length > 0 ? storedMedicines[storedMedicines.length - 1].medicineId + 1 : 1;
+          storedMedicines.push(data);
+        }
+      }
+      await this.indexedDb.setItem(STORAGE_KEY, storedMedicines);
+      this.medicineDetail = storedMedicines;
+      return true;
+    } catch (e) {
+      console.error('Error updating multiple medicines:', e);
       return false;
     }
   }

@@ -2,10 +2,6 @@
     <h1>Daily Medicine List</h1>
     <div class="search-bar" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
         <mat-form-field appearance="outline">
-            <mat-label>Medicine ID</mat-label>
-            <input matInput [(ngModel)]="searchMedicineId" placeholder="Search by ID">
-        </mat-form-field>
-        <mat-form-field appearance="outline">
             <mat-label>Room No</mat-label>
             <input matInput [(ngModel)]="searchRoomNo" placeholder="Search by Room No">
         </mat-form-field>
@@ -13,10 +9,7 @@
             <mat-label>Patient Name</mat-label>
             <input matInput [(ngModel)]="searchPatientName" placeholder="Search by Patient Name">
         </mat-form-field>
-        <mat-form-field appearance="outline">
-            <mat-label>Medicine Name</mat-label>
-            <input matInput [(ngModel)]="searchMedicineName" placeholder="Search by Medicine Name">
-        </mat-form-field>
+      
         <mat-form-field appearance="outline">
             <mat-label>Doctor Name</mat-label>
             <input matInput [(ngModel)]="searchDoctorName" placeholder="Search by Doctor Name">
@@ -31,10 +24,6 @@
         </mat-form-field>
         <button mat-raised-button color="primary" (click)="onSearch()">Search</button>
         <button mat-raised-button color="accent" (click)="onClearSearch()">Clear</button>
-        <button mat-raised-button color="primary" (click)="addNewMedicine()">
-          <mat-icon>add</mat-icon>
-          Add New Medicine
-        </button>
         <span style="flex: 1 1 auto;"></span>
         <button mat-raised-button color="primary" (click)="exportToExcel()">Export to Excel</button>
         <input type="file" accept=".xlsx, .xls" style="display:none" #importInput (change)="importFromExcel($event)">
@@ -53,13 +42,11 @@
             <mat-header-cell *matHeaderCellDef>Patient</mat-header-cell>
             <mat-cell *matCellDef="let medicine">{{medicine.patientName}}</mat-cell>
         </ng-container>
-        <ng-container matColumnDef="medicineName">
-            <mat-header-cell *matHeaderCellDef>Medicine</mat-header-cell>
-            <mat-cell *matCellDef="let medicine">{{medicine.medicineName}}</mat-cell>
-        </ng-container>
-        <ng-container matColumnDef="quantity">
-            <mat-header-cell *matHeaderCellDef>Qty</mat-header-cell>
-            <mat-cell *matCellDef="let medicine">{{medicine.quantity}}</mat-cell>
+        <ng-container matColumnDef="medicines">
+            <mat-header-cell *matHeaderCellDef>Medicines</mat-header-cell>
+            <mat-cell *matCellDef="let medicine">
+                <div *ngFor="let med of medicine.medicines">{{med.medicineName}} ({{med.quantity}})</div>
+            </mat-cell>
         </ng-container>
         <ng-container matColumnDef="doctorName">
             <mat-header-cell *matHeaderCellDef>Doctor</mat-header-cell>

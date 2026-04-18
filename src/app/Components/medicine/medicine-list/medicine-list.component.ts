@@ -21,7 +21,7 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
   medicine: Medicine[] = [];
   filteredMedicines: Medicine[] = [];
   dataSource: MedicineDataService = new MedicineDataService(this.medicineService);
-  displayedColumns: string[] = ['medicineId', 'roomNo', 'patientName', 'medicineName', 'quantity', 'doctorName', 'createdAt'];
+  displayedColumns: string[] = [ 'createdAt','medicineId', 'patientName', 'roomNo', 'doctorName',];
 
   // Search fields
   searchMedicineId: string = '';
@@ -40,10 +40,11 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
     const dialogConfig = new MatDialogConfig();
     dialogConfig.disableClose = true;
     dialogConfig.autoFocus = true;
+    dialogConfig.data = { medicines: [] };
 
     const dialogRef = this.dialog.open(MedicineEditComponent, dialogConfig);
 
-    dialogRef.afterClosed().subscribe((resultData: Medicine | null) => {
+    dialogRef.afterClosed().subscribe((resultData: Medicine[] | null) => {
       if (resultData) {
         this.notifyUpdate.notify.next(true);
       }
@@ -93,6 +94,7 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
       this.medicine = medicines;
       this.filteredMedicines = medicines;
       this.dataSource.updateMedicines(this.filteredMedicines);
+      this.changeDetectorRef.detectChanges();
     });
   }
 
@@ -102,7 +104,7 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
       const matchesId = this.searchMedicineId ? m.medicineId.toString().includes(this.searchMedicineId) : true;
       const matchesRoom = this.searchRoomNo ? m.roomNo.toLowerCase().includes(this.searchRoomNo.toLowerCase()) : true;
       const matchesPatient = this.searchPatientName ? m.patientName.toLowerCase().includes(this.searchPatientName.toLowerCase()) : true;
-      const matchesMedicine = this.searchMedicineName ? m.medicineName.toLowerCase().includes(this.searchMedicineName.toLowerCase()) : true;
+      const matchesMedicine = this.searchMedicineName ? m.medicines.some(med => med.medicineName.toLowerCase().includes(this.searchMedicineName.toLowerCase())) : true;
       const matchesDoctor = this.searchDoctorName ? m.doctorName.toLowerCase().includes(this.searchDoctorName.toLowerCase()) : true;
       return matchesId && matchesRoom && matchesPatient && matchesMedicine && matchesDoctor;
     });
@@ -177,14 +179,10 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
         const rec: any = record;
         const medicine: Medicine = {
           medicineId: rec.medicineId || 0,
-       
           roomNo: rec.roomNo || '',
           patientName: rec.patientName || '',
-          medicineName: rec.medicineName || '',
-          quantity: rec.quantity || 0,
-          dosage: rec.dosage || '',
+          medicines: rec.medicines || [{ medicineName: rec.medicineName || '', quantity: rec.quantity || 0 }],
           doctorName: rec.doctorName || '',
-          notes: rec.notes || '',
           createdAt: rec.createdAt || new Date().toISOString()
         };
 
@@ -215,13 +213,12 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
         const dialogConfig = new MatDialogConfig();
         dialogConfig.disableClose = true;
         dialogConfig.autoFocus = true;
-        dialogConfig.data = data;
+        dialogConfig.data = { medicines: [data] };
 
         const dialogRef = this.dialog.open(MedicineEditComponent, dialogConfig);
 
-        dialogRef.afterClosed().subscribe((resultData: any) => {
+        dialogRef.afterClosed().subscribe((resultData: Medicine[] | null) => {
           if (resultData) {
-            this.medicineService.updateMedicine(resultData);
             const msg = "Medicine Data Updated Successfully";
             const type = "success";
 
@@ -257,12 +254,26 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
   printSlip(id: number) {
     this.medicineService.getMedicineDetails(id).subscribe(data => {
       if (data) {
-        const dialogConfig = new MatDialogConfig();
-        dialogConfig.disableClose = true;
-        dialogConfig.autoFocus = true;
-        dialogConfig.data = { medicines: [data] };
+        // Get all medicines for the same patient
+        this.medicineService.getAllMedicine().subscribe(allMedicines => {
+          const patientMedicines = allMedicines.filter(m => m.patientName === data.patientName);
+          const flattened = patientMedicines.reduce((acc: any[], m: Medicine) => 
+            acc.concat(m.medicines.map((med: any) => ({
+              medicineId: m.medicineId,
+              roomNo: m.roomNo,
+              patientName: m.patientName,
+              medicineName: med.medicineName,
+              quantity: med.quantity,
+              doctorName: m.doctorName,
+              createdAt: m.createdAt
+            }))), []);
+          const dialogConfig = new MatDialogConfig();
+          dialogConfig.disableClose = true;
+          dialogConfig.autoFocus = true;
+          dialogConfig.data = { medicines: flattened };
 
-        const dialogRef = this.dialog.open(MedicineSlipComponent, dialogConfig);
+          const dialogRef = this.dialog.open(MedicineSlipComponent, dialogConfig);
+        });
       }
     });
   }

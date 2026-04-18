@@ -2,12 +2,8 @@ export interface Medicine {
   medicineId: number;
   roomNo: string;
   patientName: string;
-  medicineName: string;
-  quantity: number;
-  dosage: string;
+  medicines: { medicineName: string; quantity: number }[];
   doctorName: string;
-  notes: string;
   createdAt: string;
-  
 }
 

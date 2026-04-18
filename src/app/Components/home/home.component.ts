@@ -43,14 +43,10 @@ export class HomeComponent implements OnInit {
 
   tempMedicine: Medicine = {
     medicineId: 0,
-  
     roomNo: '',
     patientName: '',
-    medicineName: '',
-    quantity: 0,
-    dosage: '',
+    medicines: [],
     doctorName: '',
-    notes: '',
     createdAt: new Date().toISOString()
   };
 
