@@ -1,4 +1,267 @@
-/* You can add global styles to this file, and also import other style files */
-
+/* Shared Haq Medical Center application theme. */
 html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+body { margin: 0; color: #24383c; background: #f4f7f8; font-family: Roboto, "Helvetica Neue", sans-serif; }
+* { box-sizing: border-box; }
+app-root { display: block; min-width: 0; }
+
+:root {
+  --hmc-primary: #0c7c72;
+  --hmc-primary-dark: #09665e;
+  --hmc-text: #24383c;
+  --hmc-muted: #718286;
+  --hmc-border: #e2e9eb;
+  --hmc-surface: #fff;
+  --hmc-background: #f4f7f8;
+}
+
+.mat-card { border: 1px solid var(--hmc-border); border-radius: 12px !important; box-shadow: 0 4px 16px #172b4d0a !important; }
+.mat-card-title { color: #173a3d; font-weight: 700; }
+.mat-toolbar.mat-primary { background: var(--hmc-primary); }
+.mat-raised-button.mat-primary, .mat-flat-button.mat-primary,
+.mat-mdc-raised-button.mat-primary, .mat-mdc-unelevated-button.mat-primary { color: #fff !important; background: var(--hmc-primary) !important; }
+.mat-raised-button.mat-primary:hover, .mat-flat-button.mat-primary:hover,
+.mat-mdc-raised-button.mat-primary:hover, .mat-mdc-unelevated-button.mat-primary:hover { background: var(--hmc-primary-dark) !important; }
+.mat-raised-button.mat-accent, .mat-flat-button.mat-accent,
+.mat-mdc-raised-button.mat-accent, .mat-mdc-unelevated-button.mat-accent { color: #116c64 !important; background: #e7f2f1 !important; }
+.mat-form-field-appearance-outline .mat-form-field-outline { color: #d7e1e3; }
+.mat-form-field.mat-focused .mat-form-field-label, .mat-form-field.mat-focused .mat-form-field-ripple { color: var(--hmc-primary); }
+.mat-form-field.mat-focused .mat-form-field-outline-thick { color: var(--hmc-primary); }
+.mat-mdc-form-field.mat-focused .mdc-floating-label,
+.mat-mdc-form-field.mat-focused .mat-mdc-form-field-icon-suffix,
+.mat-mdc-form-field.mat-focused .mat-mdc-form-field-icon-prefix { color: var(--hmc-primary); }
+.mat-mdc-form-field.mat-focused .mdc-line-ripple::after { border-bottom-color: var(--hmc-primary); }
+.mat-mdc-form-field.mat-focused .mdc-notched-outline__leading,
+.mat-mdc-form-field.mat-focused .mdc-notched-outline__notch,
+.mat-mdc-form-field.mat-focused .mdc-notched-outline__trailing { border-color: var(--hmc-primary) !important; }
+.mat-mdc-radio-button { --mdc-radio-selected-icon-color: var(--hmc-primary); --mdc-radio-selected-hover-icon-color: var(--hmc-primary-dark); --mdc-radio-selected-focus-icon-color: var(--hmc-primary); --mdc-radio-selected-pressed-icon-color: var(--hmc-primary-dark); }
+a, button, input, select, textarea { accent-color: var(--hmc-primary); }
+button, [mat-button], [mat-raised-button] { transition: background-color .16s ease, box-shadow .16s ease, transform .16s ease; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #0c7c7240; outline-offset: 2px; }
+.mat-button, .mat-stroked-button, .mat-flat-button, .mat-raised-button, .mat-mdc-button, .mat-mdc-outlined-button, .mat-mdc-unelevated-button, .mat-mdc-raised-button {
+  min-height: 38px;
+  border-radius: 8px !important;
+  font-weight: 650;
+  letter-spacing: 0 !important;
+}
+.mat-button:not(.mat-primary):not(.mat-accent):not(.mat-warn),
+.mat-stroked-button:not(.mat-primary):not(.mat-accent):not(.mat-warn) { color: #176f68; }
+.mat-flat-button.mat-warn, .mat-raised-button.mat-warn, .mat-mdc-button.mat-warn, .mat-mdc-raised-button.mat-warn { color: #fff; background: #b74646; }
+.mat-icon-button, .mat-mdc-icon-button { min-height: 36px; border-radius: 8px !important; }
+.mat-mini-fab, .mat-fab, .mat-mdc-fab { box-shadow: 0 3px 9px #173a3d20 !important; }
+
+.mat-dialog-container {
+  width: 100%;
+  max-height: 90vh !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid #e2e9eb;
+  border-radius: 18px !important;
+  background: #fff;
+  box-shadow: 0 24px 70px #172b4d2e !important;
+}
+.mat-mdc-dialog-container .mdc-dialog__surface {
+  border: 1px solid #e2e9eb;
+  border-radius: 16px !important;
+  box-shadow: 0 24px 70px #172b4d2e !important;
+}
+.hmc-dialog-panel .mat-dialog-container { overflow: hidden; }
+mat-dialog-content, .mat-dialog-content {
+  max-height: calc(90vh - 140px) !important;
+  margin: 0 !important;
+  padding: 22px 28px !important;
+  overflow: auto;
+  scrollbar-color: #b7c9c7 transparent;
+}
+.mat-mdc-dialog-content { max-height: calc(90vh - 140px) !important; padding: 22px 28px !important; }
+mat-dialog-title, h2[mat-dialog-title] {
+  display: block;
+  margin: 0 !important;
+  padding: 22px 28px 18px !important;
+  color: #173a3d;
+  background: linear-gradient(110deg, #f1f8f7, #fff 75%);
+  border-bottom: 1px solid #e7eeee;
+  font-size: 20px;
+  font-weight: 750;
+}
+.mat-mdc-dialog-title { margin: 0 !important; padding: 22px 28px 18px !important; color: #173a3d; background: linear-gradient(110deg, #f1f8f7, #fff 75%); border-bottom: 1px solid #e7eeee; font-size: 20px; font-weight: 750; }
+mat-dialog-actions, .mat-dialog-actions {
+  position: relative;
+  gap: 10px;
+  margin: 0 !important;
+  padding: 14px 28px 20px !important;
+  background: #fff;
+  border-top: 1px solid #edf1f2;
+}
+.mat-mdc-dialog-actions { gap: 10px; margin: 0 !important; padding: 14px 28px 20px !important; border-top: 1px solid #edf1f2; background: #fff; }
+mat-dialog-actions button[color="warn"], .mat-dialog-actions button[color="warn"] {
+  color: #52666a;
+  background: #edf2f2;
+}
+
+.mat-form-field-appearance-fill .mat-form-field-flex { background: #f5f8f8 !important; border-radius: 8px 8px 0 0 !important; }
+.mat-form-field-appearance-fill .mat-form-field-underline::before { background: #cbd9d8; }
+.mat-form-field-appearance-fill.mat-focused .mat-form-field-ripple { background: var(--hmc-primary); }
+.mat-mdc-form-field .mdc-text-field--filled { background: #f5f8f8 !important; border-radius: 8px 8px 0 0; }
+.mat-form-field-appearance-outline .mat-form-field-outline { border-radius: 8px; }
+mat-form-field { font-size: 14px; }
+textarea.mat-input-element { min-height: 72px; }
+
+mat-dialog-content form, .mat-dialog-content form { display: block; min-width: 0; }
+mat-dialog-content .outer-input-section, .mat-dialog-content .outer-input-section {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 8px 18px;
+  padding: 0;
+}
+mat-dialog-content .outer-input-section > mat-form-field,
+.mat-dialog-content .outer-input-section > mat-form-field { width: 100%; min-width: 0; }
+mat-dialog-content .input-section, .mat-dialog-content .input-section {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 8px 18px;
+  margin: 0;
+}
+mat-dialog-content .input-section > mat-form-field,
+.mat-dialog-content .input-section > mat-form-field { width: 100%; min-width: 0; margin: 0; }
+mat-dialog-content .input-section[formGroupName="fullName"],
+.mat-dialog-content .input-section[formGroupName="fullName"] { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+mat-dialog-content .input-section[formGroupName="bioDetail"],
+.mat-dialog-content .input-section[formGroupName="bioDetail"] { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) minmax(150px, .7fr); }
+mat-dialog-content .input-section[formGroupName="bioDetail"] > mat-label,
+.mat-dialog-content .input-section[formGroupName="bioDetail"] > mat-label { grid-column: 1; }
+mat-dialog-content .input-section[formGroupName="bioDetail"] .radio-group,
+.mat-dialog-content .input-section[formGroupName="bioDetail"] .radio-group { grid-column: 1; }
+mat-dialog-content .input-section[formGroupName="bioDetail"] > mat-form-field,
+.mat-dialog-content .input-section[formGroupName="bioDetail"] > mat-form-field { grid-column: 2; grid-row: 1 / span 2; }
+mat-dialog-content .input-section[formGroupName="procedureInfo"],
+mat-dialog-content .input-section[formGroupName="familyStatus"],
+mat-dialog-content .input-section[formGroupName="socialDetail"],
+mat-dialog-content .input-section[formGroupName="addressDetail"],
+.mat-dialog-content .input-section[formGroupName="procedureInfo"],
+.mat-dialog-content .input-section[formGroupName="familyStatus"],
+.mat-dialog-content .input-section[formGroupName="socialDetail"],
+.mat-dialog-content .input-section[formGroupName="addressDetail"] { grid-column: 1 / -1; }
+mat-dialog-content .radio-group, .mat-dialog-content .radio-group {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 56px;
+  padding: 0 14px;
+  border: 1px solid #e1e9e9;
+  border-radius: 10px;
+  background: #f7faf9;
+}
+mat-dialog-content .input-section > mat-label,
+.mat-dialog-content .input-section > mat-label { align-self: center; color: #52696a; font-size: 13px; font-weight: 700; }
+.mat-radio-button.mat-accent.mat-radio-checked .mat-radio-outer-circle { border-color: #0c7c72; }
+.mat-radio-button.mat-accent .mat-radio-inner-circle, .mat-radio-button.mat-accent .mat-radio-ripple .mat-ripple-element { background-color: #0c7c72; }
+.mat-mdc-radio-button { --mdc-radio-selected-icon-color: #0c7c72; --mdc-radio-selected-hover-icon-color: #09665e; --mdc-radio-selected-focus-icon-color: #0c7c72; --mdc-radio-selected-pressed-icon-color: #09665e; }
+.mat-checkbox-checked.mat-accent .mat-checkbox-background, .mat-checkbox-indeterminate.mat-accent .mat-checkbox-background { background-color: #0c7c72; }
+.mat-checkbox.mat-accent .mat-checkbox-ripple .mat-ripple-element { background-color: #0c7c7220; }
+.mat-datepicker-toggle, .mat-datepicker-content .mat-calendar-body-selected { color: #0c7c72; }
+.mat-datepicker-content .mat-calendar-body-selected { color: #fff; background-color: #0c7c72; }
+mat-dialog-content .medicines-section, .mat-dialog-content .medicines-section { grid-column: 1 / -1; min-width: 0; }
+mat-dialog-content .medicine-row, .mat-dialog-content .medicine-row { display: flex; align-items: center; gap: 12px; }
+mat-dialog-content .medicine-field, .mat-dialog-content .medicine-field { flex: 2; min-width: 0; }
+mat-dialog-content .quantity-field, .mat-dialog-content .quantity-field { flex: 1; min-width: 100px; }
+
+.body {
+  margin: 16px !important;
+  padding: 22px !important;
+  overflow-x: auto;
+  border: 1px solid var(--hmc-border);
+  border-radius: 14px !important;
+  background: var(--hmc-surface) !important;
+  box-shadow: 0 4px 18px #172b4d08;
+}
+.body > h1, .body > h2 {
+  margin: 0 0 20px;
+  color: #173a3d;
+  font-size: 22px;
+  font-weight: 750;
+}
+.search-bar { gap: 12px !important; align-items: center; }
+.search-bar mat-form-field { min-width: 180px; flex: 1 1 180px; }
+.mat-table, mat-table {
+  width: 100%;
+  min-width: 620px;
+  overflow: hidden;
+  border: 1px solid #e6edef;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 8px #172b4d08 !important;
+}
+.mat-table .mat-row, mat-table mat-row { transition: background-color .14s ease; }
+.mat-mdc-table { width: 100%; min-width: 620px; overflow: hidden; border: 1px solid #e6edef; border-radius: 10px; background: #fff; box-shadow: 0 2px 8px #172b4d08; }
+.mat-header-row, mat-header-row { min-height: 46px; background: #edf6f5; }
+.mat-mdc-header-row { background: #edf6f5; }
+.mat-header-cell, mat-header-cell {
+  color: #34575a !important;
+  background: #edf6f5 !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  letter-spacing: .25px;
+  border-bottom: 1px solid #dfeae9 !important;
+}
+.mat-mdc-header-cell { color: #34575a !important; background: #edf6f5 !important; font-size: 12px !important; font-weight: 750 !important; border-bottom: 1px solid #dfeae9 !important; }
+.mat-row, mat-row { min-height: 52px; border-bottom-color: #edf1f2 !important; }
+.mat-mdc-row { min-height: 52px; border-bottom-color: #edf1f2 !important; }
+.mat-row:nth-child(even), mat-row:nth-child(even) { background: #fbfcfc; }
+.mat-row:hover, mat-row:hover { background: #f0f8f7; }
+.mat-cell, mat-cell { color: #40565a; font-size: 13px !important; border-bottom-color: #edf1f2 !important; }
+.mat-mdc-cell { color: #40565a; font-size: 13px !important; border-bottom-color: #edf1f2 !important; }
+.mat-paginator, mat-paginator { margin-top: 12px; border: 1px solid #e6edef; border-radius: 10px; background: #fff; }
+.mat-paginator .mat-icon-button, .mat-paginator button { color: #176f68; }
+.action-buttons { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.table-btn { min-width: 36px !important; width: 36px; height: 36px; padding: 0 !important; border-radius: 8px !important; }
+.table-btn .mat-icon { margin: 0; }
+button.mat-warn, .mat-raised-button.mat-warn { background-color: #b74646; }
+
+@media (max-width: 760px) {
+  .cdk-overlay-pane { max-width: calc(100vw - 24px) !important; }
+  .mat-dialog-container { max-width: calc(100vw - 24px) !important; border-radius: 14px !important; }
+  .body { margin: 8px !important; padding: 14px !important; }
+  .body > h1, .body > h2 { font-size: 19px; }
+  .mat-table, mat-table { min-width: 600px; }
+  mat-dialog-content, .mat-dialog-content { max-height: calc(86vh - 120px) !important; padding: 16px 18px !important; }
+  mat-dialog-title, h2[mat-dialog-title], .mat-mdc-dialog-title { padding: 18px 20px 14px !important; font-size: 18px; }
+  mat-dialog-actions, .mat-dialog-actions, .mat-mdc-dialog-actions { padding: 12px 20px 16px !important; }
+  mat-dialog-content .input-section[formGroupName="fullName"],
+  .mat-dialog-content .input-section[formGroupName="fullName"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 520px) {
+  mat-dialog-content .outer-input-section, .mat-dialog-content .outer-input-section,
+  mat-dialog-content .input-section, .mat-dialog-content .input-section,
+  mat-dialog-content .input-section[formGroupName="fullName"],
+  mat-dialog-content .input-section[formGroupName="bioDetail"],
+  .mat-dialog-content .input-section[formGroupName="fullName"],
+  .mat-dialog-content .input-section[formGroupName="bioDetail"] { grid-template-columns: minmax(0, 1fr); }
+  mat-dialog-content .input-section[formGroupName="fullName"],
+  mat-dialog-content .input-section[formGroupName="bioDetail"],
+  mat-dialog-content .input-section[formGroupName="procedureInfo"],
+  mat-dialog-content .input-section[formGroupName="familyStatus"],
+  mat-dialog-content .input-section[formGroupName="socialDetail"],
+  mat-dialog-content .input-section[formGroupName="addressDetail"],
+  .mat-dialog-content .input-section[formGroupName="fullName"],
+  .mat-dialog-content .input-section[formGroupName="bioDetail"],
+  .mat-dialog-content .input-section[formGroupName="procedureInfo"],
+  .mat-dialog-content .input-section[formGroupName="familyStatus"],
+  .mat-dialog-content .input-section[formGroupName="socialDetail"],
+  .mat-dialog-content .input-section[formGroupName="addressDetail"] { grid-column: 1; }
+  mat-dialog-content .input-section[formGroupName="bioDetail"] > mat-form-field,
+  .mat-dialog-content .input-section[formGroupName="bioDetail"] > mat-form-field { grid-column: 1; grid-row: auto; }
+}
+
+@media print {
+  @page thermal58 { size: 58mm 70mm; margin: 0; }
+  @page thermal80 { size: 80mm 70mm; margin: 0; }
+  body.patient-token-printing * { visibility: hidden !important; }
+  body.patient-token-printing #patient-token-slip-print,
+  body.patient-token-printing #patient-token-slip-print * { visibility: visible !important; }
+  body.patient-token-printing #patient-token-slip-print { display: block !important; position: absolute; left: 0; top: 0; margin: 0; }
+  body.patient-token-printing #patient-token-slip-print .paper-control { display: none !important; }
+  body.patient-token-printing.patient-token-paper-80 #patient-token-slip-print { page: thermal80; }
+}

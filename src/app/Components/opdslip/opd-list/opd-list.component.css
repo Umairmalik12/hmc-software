@@ -1,90 +1,13 @@
-/* Overall Body Styling */
-.body {
-    margin: 20px;
-    padding: 20px;
-    overflow-x: auto;
-    background-color: #f9f9f9;
-    border-radius: 8px;
-}
-
-/* Table Styling */
-.patient-table {
-    width: 100%;
-    min-width: 600px;
-    border-collapse: collapse;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    background-color: #ffffff;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-/* Header Cell Styling */
-.mat-header-cell {
-    padding: 14px 16px;
-    font-size: 16px;
-    font-weight: bold;
-    color: white;
-    background: linear-gradient(90deg, #ff6f61, #ff8a65);
-    text-align: left;
-    border-bottom: 2px solid #ddd;
-}
-
-/* Pagination Styling */
-.page {
-    margin: 20px auto;
-    display: flex;
-    justify-content: center;
-}
-
-/* Action Column Buttons */
-.mat-cell .action-buttons {
-    display: flex;
-    justify-content: flex-start; /* Align buttons to the left */
-    gap: 8px; /* Add space between the buttons */
-    white-space: nowrap; /* Prevent wrapping */
-}
-
-/* Button Styling */
-.table-btn {
-    font-size: 14px;
-    padding: 8px 16px;
-    min-width: 100px;
-    text-align: center !important;
-    border-radius: 6px;
-    text-transform: uppercase;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    display: inline-block;
-}
-
-/* Ensure buttons do not break out of the cell */
-.mat-cell {
-    padding: 12px 16px;
-    font-size: 14px;
-    color: #555;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-}
-
-/* Adjust for smaller screens */
-@media screen and (max-width: 840px) {
-    .patient-table {
-        min-width: 100%;
-    }
-
-    .mat-header-cell, .mat-cell {
-        padding: 8px;
-        font-size: 12px;
-    }
-
-    .table-btn {
-        font-size: 12px;
-        padding: 6px 12px;
-        min-width: 80px;
-    }
-
-    .mat-cell .action-buttons {
-        flex-direction: column; /* Stack the buttons vertically on smaller screens */
-        gap: 12px; /* Increase gap between buttons when stacked */
-    }
-}
+.body { margin: 0; padding: 22px; overflow-x: auto; border: 1px solid #e2e9eb; border-radius: 14px; background: #fff; box-shadow: 0 4px 18px #172b4d08; }
+.body > h1 { margin: 0 0 20px; color: #173a3d; font-size: 22px; font-weight: 750; }
+.patient-table { width: 100%; min-width: 680px; overflow: hidden; border: 1px solid #e6edef; border-radius: 10px; background: #fff; }
+.patient-table .mat-header-cell { color: #34575a; background: #edf6f5; font-size: 12px; font-weight: 750; }
+.patient-table .mat-cell { color: #40565a; font-size: 13px; }
+.patient-table .mat-row:nth-child(even) { background: #fbfcfc; }
+.patient-table .mat-row:hover { background: #f0f8f7; }
+.search-bar { gap: 10px !important; align-items: center; margin-bottom: 18px !important; }
+.search-bar mat-form-field { flex: 1 1 160px; min-width: 150px; }
+.page { display: flex; justify-content: center; margin: 12px 0 0; border: 1px solid #e6edef; border-radius: 10px; background: #fff; }
+.action-buttons { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.table-btn { min-width: 36px; width: 36px; height: 36px; padding: 0; border-radius: 8px; }
+@media (max-width: 840px) { .body { padding: 14px; } .patient-table { min-width: 680px; } }

@@ -1,21 +1,5 @@
-.outer-input-section {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.input-section {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.input-section mat-form-field {
-  flex: 1;
-  min-width: 250px;
-}
-
-.radio-group {
-  display: flex;
-  gap: 16px;
-}
+.outer-input-section { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+.outer-input-section > mat-form-field { width: 100%; min-width: 0; }
+.input-section { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+.input-section > mat-form-field { width: 100%; min-width: 0; }
+@media (max-width: 520px) { .outer-input-section, .input-section { grid-template-columns: minmax(0, 1fr); } }

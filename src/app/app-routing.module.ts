@@ -2,12 +2,7 @@ import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 import { HomeComponent } from './Components/home/home.component';
 import { LoginComponent } from './Components/login/login.component';
-import { PatientComponent } from './Components/patient/patient.component';
 import { AuthGuardService } from './Services/Guard-Services/auth-guard.service';
-import { OpdComponent } from './Components/opdslip/opd.component';
-import { LabComponent } from './Components/lab/lab.component';
-import { InpatientComponent } from './Components/inpatient/inpatient.component';
-import { MedicineComponent } from './Components/medicine/medicine.component';
 
 const routes: Routes = [
   {
@@ -18,32 +13,44 @@ const routes: Routes = [
   {
     path:'home', 
     component: HomeComponent,
-    canActivate: [AuthGuardService]
+    canActivate: [AuthGuardService],
+    data: { dashboardView: 'patients' }
   },
   {
     path:'patient', 
-    component: PatientComponent,
-    canActivate: [AuthGuardService]
+    component: HomeComponent,
+    canActivate: [AuthGuardService],
+    data: { dashboardView: 'patients' }
   },
   {
     path:'opd', 
-    component: OpdComponent,
-    canActivate: [AuthGuardService]
+    component: HomeComponent,
+    canActivate: [AuthGuardService],
+    data: { dashboardView: 'opd' }
   },
   {
     path:'lab', 
-    component: LabComponent,
-    canActivate: [AuthGuardService]
+    component: HomeComponent,
+    canActivate: [AuthGuardService],
+    data: { dashboardView: 'lab' }
   },
   {
     path:'medicine', 
-    component: MedicineComponent,
-    canActivate: [AuthGuardService]
+    component: HomeComponent,
+    canActivate: [AuthGuardService],
+    data: { dashboardView: 'medicine' }
   },
   {
     path:'inpatient', 
-    component: InpatientComponent,
-    canActivate: [AuthGuardService]
+    component: HomeComponent,
+    canActivate: [AuthGuardService],
+    data: { dashboardView: 'inpatient' }
+  },
+  {
+    path: 'patient-tokens',
+    component: HomeComponent,
+    canActivate: [AuthGuardService],
+    data: { dashboardView: 'tokens' }
   },
   {
     path:'**',
@@ -56,4 +63,3 @@ const routes: Routes = [
   exports: [RouterModule]
 })
 export class AppRoutingModule { }
-

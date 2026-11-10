@@ -11,4 +11,5 @@ export interface PatientDetail{
     address: string;
     procedure: string;
     createdAt: string;
+    oldId?: number;
 }

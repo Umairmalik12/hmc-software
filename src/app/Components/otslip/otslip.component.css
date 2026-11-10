@@ -1,3 +1,21 @@
+form { max-width: 960px; margin: 0 auto; }
+#ot-form mat-card { padding: 22px; border: 1px solid #e2e9eb; border-radius: 14px; background: #fff; }
+#ot-form mat-card-title { color: #155e59; font-size: 21px; font-weight: 750; }
+#ot-form h3 { margin: 8px 0 18px; color: #718286; font-size: 14px; font-weight: 600; }
+#ot-form mat-card-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+#ot-form .full-width { width: 100%; }
+.product-list { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.product-item { display: flex; min-width: 0; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid #e5ecec; border-radius: 9px; background: #fbfdfd; }
+.product-item mat-checkbox { flex: 1; min-width: 0; }
+.quantity-field { flex: 0 0 115px; }
+mat-card-actions { justify-content: flex-end; gap: 10px; max-width: 960px; margin: 0 auto; padding: 14px 0; }
+@media (max-width: 650px) {
+  #ot-form mat-card { padding: 14px; }
+  #ot-form mat-card-content, .product-list { grid-template-columns: minmax(0, 1fr); }
+  .product-item { grid-column: 1; }
+  .quantity-field { flex-basis: 100px; }
+}
+
 @media print {
     body * {
       visibility: hidden;
@@ -13,43 +31,6 @@
     }
   }
 
-  .product-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px; /* space between items */
-  }
-  
-  .product-item {
-    width: 48%; /* two columns */
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .quantity-field {
-    flex: 1;
-  }
-  
-  @media (max-width: 600px) {
-    .product-item {
-      width: 100%;
-      flex-direction: column;
-      align-items: flex-start;
-    }
-  
-    .quantity-field {
-      width: 100%;
-    }
-  }
-
-  .product-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-  }
-  
-  .product-item {
-    width: 48%; /* Adjust width to fit two items in a row */
-    margin-bottom: 20px;
-    box-sizing: border-box; /* Ensures padding/margin doesn't affect width */
-  }
+  mat-card-actions { display: none !important; }
+  .product-list { display: block; }
+  .product-item { display: inline-flex; width: 48%; margin: 0 1% 8px 0; border: 0; }

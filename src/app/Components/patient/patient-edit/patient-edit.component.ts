@@ -36,7 +36,7 @@ export class PatientEditComponent {
 
     this.patientForm = this.fb.group({
       patientDetail: this.fb.group({
-           patientId: [this.patientDetails.patientId || null, [Validators.required, Validators.min(1)]],
+           patientId: [this.patientDetails.patientId || null, [Validators.min(1)]],
            createdAt: [this.patientDetails.createdAt || '', []],
         fullName: this.fb.group({
           firstName: [this.patientDetails.firstName, [Validators.required]],
@@ -78,18 +78,22 @@ export class PatientEditComponent {
 
   // form submit function
   onSubmit() {
-    if (!this.patientForm.invalid) {
+    if (this.patientForm.invalid) {
+      this.patientForm.markAllAsTouched();
+      return;
+    }
 
       let choice = true;
-      if (this.patientForm.dirty) choice = confirm("Submitting Patinent Form");
+      if (this.patientForm.dirty) choice = confirm('Submit operation patient details?');
 
       if (choice) {
         this.patientForm.enable();
         let result: PatientDetail = this.ResultRefactoring();
-        console.log(result,"result");
+        if (this.edit) {
+          result.oldId = this.patientDetails.patientId;
+        }
         this.dialogRef.close(result);
       }
-    }
   }
 
   close() {
@@ -99,9 +103,8 @@ export class PatientEditComponent {
   }
 
   ResultRefactoring(): PatientDetail {
-    console.log(this.d['age'].value,"this.d['age'].value")
     let tempPatient: PatientDetail = {
-      patientId: this.b['patientId'].value,
+      patientId: Number(this.b['patientId'].value) || 0,
       createdAt: this.b['createdAt'].value,
       firstName: this.c['firstName'].value, lastName: this.c['lastName'].value, drName: this.c['drName'].value,
       gender: this.d['gender'].value, age: this.d['age'].value,

@@ -1,27 +1,13 @@
-.body {
-  padding: 20px;
-}
-
-.search-bar {
-  margin-bottom: 20px;
-}
-
-.patient-table {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.table-btn {
-  min-width: 40px;
-  height: 40px;
-  line-height: 20px;
-}
-
-.page {
-  margin-top: 20px;
-}
+.body { margin: 0; padding: 22px; overflow-x: auto; border: 1px solid #e2e9eb; border-radius: 14px; background: #fff; box-shadow: 0 4px 18px #172b4d08; }
+.body > h1 { margin: 0 0 18px; color: #173a3d; font-size: 22px; font-weight: 750; }
+.patient-table { width: 100%; min-width: 680px; overflow: hidden; border: 1px solid #e6edef; border-radius: 10px; background: #fff; }
+.patient-table .mat-header-cell { color: #34575a; background: #edf6f5; font-size: 12px; font-weight: 750; }
+.patient-table .mat-cell { color: #40565a; font-size: 13px; }
+.patient-table .mat-row:nth-child(even) { background: #fbfcfc; }
+.patient-table .mat-row:hover { background: #f0f8f7; }
+.search-bar { gap: 10px !important; align-items: center; margin-bottom: 18px !important; }
+.search-bar mat-form-field { flex: 1 1 160px; min-width: 150px; }
+.action-buttons { display: flex; align-items: center; gap: 6px; }
+.table-btn { min-width: 36px !important; width: 36px; height: 36px; padding: 0 !important; border-radius: 8px !important; }
+.page { display: flex; justify-content: center; margin: 12px 0 0; border: 1px solid #e6edef; border-radius: 10px; background: #fff; }
+@media (max-width: 840px) { .body { padding: 14px; } .patient-table { min-width: 680px; } }

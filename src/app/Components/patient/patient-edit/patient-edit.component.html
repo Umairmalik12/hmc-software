@@ -4,8 +4,9 @@
     <mat-dialog-content>
 <div formGroupName="patientDetail" class="outer-input-section">
             <mat-form-field appearance="fill">
-                <mat-label>MR No.</mat-label>
+                <mat-label>MR No. (leave blank to auto-assign)</mat-label>
                 <input matInput type="number" formControlName="patientId" [readonly]="edit">
+                <mat-error *ngIf="b['patientId'].errors?.min">MR No. must be greater than zero</mat-error>
             </mat-form-field>
          
             <mat-form-field appearance="fill">

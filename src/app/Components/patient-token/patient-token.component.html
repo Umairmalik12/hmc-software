@@ -1,0 +1,141 @@
+<main class="token-dashboard">
+  <header class="dashboard-header">
+    <div>
+      <p class="eyebrow">HAQ MEDICAL CENTER</p>
+      <h1>Patient Token Management</h1>
+      <p class="subheading">Create and reprint daily patient queue slips.</p>
+    </div>
+    <div class="live-clock" aria-live="polite">
+      <span>Today's Date</span>
+      <strong>{{ formatDate(today) }}</strong>
+      <span>Pakistan time</span>
+      <strong>{{ currentTime }}</strong>
+    </div>
+  </header>
+
+  <section class="panel generate-panel" aria-labelledby="generate-heading">
+    <div>
+      <h2 id="generate-heading">Generate a patient token</h2>
+      <p>Enter the patient's name. The next daily token is assigned automatically.</p>
+    </div>
+    <form class="generate-form" (ngSubmit)="generateSlip()">
+      <label for="patient-name">Patient name</label>
+      <div class="form-controls">
+        <input
+          id="patient-name"
+          name="customerName"
+          type="text"
+          maxlength="120"
+          autocomplete="off"
+          required
+          [(ngModel)]="customerName"
+          placeholder="Enter patient's full name"
+        />
+        <button type="submit" [disabled]="generating">
+          {{ generating ? 'Generating…' : 'Generate Slip' }}
+        </button>
+      </div>
+    </form>
+    <p *ngIf="errorMessage" class="message error-message" role="alert">{{ errorMessage }}</p>
+    <p *ngIf="successMessage" class="message success-message" role="status">{{ successMessage }}</p>
+    <p class="storage-note">Records are saved in this browser and are not shared with other devices.</p>
+  </section>
+
+  <section class="summary-grid" aria-label="Token statistics">
+    <article class="summary-card">
+      <span>Today's Total Patients</span>
+      <strong>{{ todayTotal }}</strong>
+      <small>{{ formatDate(today) }}</small>
+    </article>
+    <article class="summary-card">
+      <span>Last Generated Token</span>
+      <strong>{{ lastGeneratedToken }}</strong>
+      <small>Pakistan local date</small>
+    </article>
+    <article class="summary-card">
+      <span>Selected Date Total</span>
+      <strong>{{ selectedDateTotal }}</strong>
+      <small>{{ formatDate(selectedDate) }}</small>
+    </article>
+    <article class="summary-card">
+      <span>Total Historical Slips</span>
+      <strong>{{ historicalTotal }}</strong>
+      <small>Saved in this browser</small>
+    </article>
+  </section>
+
+  <section class="panel history-panel">
+    <div class="history-heading">
+      <div>
+        <h2>Date-wise patient history</h2>
+        <p>Review and reprint slips saved for any date.</p>
+      </div>
+      <div class="date-controls">
+        <label for="history-date">Filter date</label>
+        <input
+          id="history-date"
+          type="date"
+          [ngModel]="selectedDate"
+          (ngModelChange)="filterByDate($event)"
+          [ngModelOptions]="{standalone: true}"
+        />
+        <button type="button" class="secondary-button" (click)="showToday()">Today</button>
+      </div>
+    </div>
+
+    <div *ngFor="let group of historyGroups" class="date-group">
+      <h3>{{ formatDate(group.date) }} <span>{{ group.slips.length }} patients</span></h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Patient Name</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let slip of group.slips">
+              <td class="table-token">{{ slip.tokenNumber }}</td>
+              <td>{{ slip.customerName }}</td>
+              <td>{{ formatDate(slip.date) }}</td>
+              <td>{{ slip.time }}</td>
+              <td class="actions">
+                <button type="button" class="secondary-button" (click)="printSlip(slip)">Print</button>
+                <button type="button" class="delete-button" (click)="deleteSlip(slip)">Delete</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p *ngIf="!historyGroups.length" class="empty-state">No patient tokens were generated for this date.</p>
+  </section>
+
+  <section
+    *ngIf="selectedSlip as slip"
+    id="patient-token-slip-print"
+    [class.paper-80]="paperWidth === 80"
+    aria-label="Printable patient token slip"
+  >
+    <div class="slip-brand">HAQ MEDICAL CENTER</div>
+    <div class="slip-hospital">Hospital</div>
+    <div class="slip-rule"></div>
+    <div class="slip-title">PATIENT TOKEN</div>
+    <div class="slip-number">{{ slip.tokenNumber }}</div>
+    <div class="slip-details"><strong>Patient Name:</strong> {{ slip.customerName }}</div>
+    <div class="slip-details"><strong>Date:</strong> {{ formatDate(slip.date) }}</div>
+    <div class="slip-details"><strong>Time:</strong> {{ slip.time }}</div>
+    <div class="slip-rule"></div>
+    <div class="slip-footer">PLEASE WAIT FOR YOUR TURN</div>
+    <div class="slip-footer">THANK YOU!</div>
+    <label class="paper-control">Paper width
+      <select [(ngModel)]="paperWidth" [ngModelOptions]="{standalone: true}">
+        <option [ngValue]="58">58 mm</option>
+        <option [ngValue]="80">80 mm</option>
+      </select>
+    </label>
+  </section>
+</main>

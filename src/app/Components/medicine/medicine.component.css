@@ -1,10 +1,20 @@
 .medicine-container {
-  padding: 20px;
+  width: 100%;
+  padding: 0;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  gap: 16px;
+  margin: 0 0 16px;
+  padding: 18px 22px;
+  border: 1px solid #e2e9eb;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 12px #172b4d08;
 }
+
+.header h1 { margin: 0; color: #173a3d; font-size: 21px; font-weight: 750; }
+@media (max-width: 600px) { .header { align-items: stretch; flex-direction: column; padding: 16px; } .header button { width: 100%; } }

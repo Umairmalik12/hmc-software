@@ -25,7 +25,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DEFAULT_OPTIONS, MatDialogModule } from '@angular/material/dialog';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, MatOptionModule } from '@angular/material/core';
 import { AuthGuardService } from './Services/Guard-Services/auth-guard.service';
@@ -54,6 +54,7 @@ import { MedicineEditComponent } from './Components/medicine/medicine-edit/medic
 import { MedicineSlipComponent } from './Components/medicine/medicine-slip/medicine-slip.component';
 import { MedicineService } from './Services/medicine.service';
 import { MedicineDataService } from './Services/medicine-data.service';
+import { PatientTokenComponent } from './Components/patient-token/patient-token.component';
 
 @NgModule({
   declarations: [
@@ -83,6 +84,7 @@ PreciptionComponent,
     MedicineListComponent,
     MedicineEditComponent,
     MedicineSlipComponent,
+    PatientTokenComponent,
   ],
   imports: [
     BrowserModule,
@@ -111,6 +113,16 @@ PreciptionComponent,
     MatOptionModule,
   ],
   providers: [
+    {
+      provide: MAT_DIALOG_DEFAULT_OPTIONS,
+      useValue: {
+        width: 'min(820px, calc(100vw - 32px))',
+        maxWidth: '94vw',
+        maxHeight: '92vh',
+        panelClass: 'hmc-dialog-panel',
+        autoFocus: true,
+      },
+    },
     UserLoginService,
     AuthGuardService,
     CookieService,
@@ -121,4 +133,3 @@ PreciptionComponent,
   bootstrap: [AppComponent],
 })
 export class AppModule {}
-

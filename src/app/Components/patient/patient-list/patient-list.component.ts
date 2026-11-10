@@ -227,23 +227,29 @@ export class PatientListComponent implements OnInit, AfterViewInit {
     this.patientService.getPatientDetails(id).subscribe(data => {
       if (data) {
         this.tempPatient = data;
-        (this.tempPatient as any).oldId = id;
+        this.tempPatient.oldId = id;
 
         const dialogConfig = new MatDialogConfig();
         dialogConfig.disableClose = true;
         dialogConfig.autoFocus = true;
         dialogConfig.data = this.tempPatient;
+        dialogConfig.panelClass = 'hmc-dialog-panel';
 
         const dialogRef = this.dialog.open(PatientEditComponent, dialogConfig);
 
         dialogRef.afterClosed().subscribe(async (data: PatientDetail) => {
-          console.log('data: ', data);
           if (data) {
-            const res: any = this.patientService.updatePatient(data);
-            const msg = res ? "Patient Data Updated Successfully" : "Something went wrong";
-            const type = res ? "success" : "error";
-
-            this.notifyUpdate.notify.next(true);
+            let saved = false;
+            try {
+              saved = await this.patientService.updatePatient(data);
+            } catch (error) {
+              console.error('Unable to update operation patient:', error);
+            }
+            const msg = saved ? 'Patient data updated successfully.' : 'Unable to update patient data.';
+            const type = saved ? 'success' : 'error';
+            if (saved) {
+              this.notifyUpdate.notify.next(true);
+            }
             this.notifyUpdate.alertNotify.next({ msg, type });
           }
         });

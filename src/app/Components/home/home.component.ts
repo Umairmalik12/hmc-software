@@ -34,6 +34,9 @@ export class HomeComponent implements OnInit {
   isShowPayment = false;
   isShowPrecption = false;
   isShowMedicine = false;
+  isShowPatientTokens = false;
+  isMobile = window.innerWidth <= 760;
+  isMobileNavOpen = false;
 
   tempPatient: PatientDetail = {
     patientId: 0, firstName: '', lastName: '', drName: '', gender: '', age: 0,
@@ -124,41 +127,51 @@ export class HomeComponent implements OnInit {
       this.currentDateTime = new Date();
     }, 1000);
 
-    this.route.queryParams.subscribe(params => {
-      this.otPatientId = params['patientId'];
+    this.route.data.subscribe(data => {
+      this.selectDashboardView(data['dashboardView'] || 'patients');
       if (this.otPatientId) {
         this.isShowOtSlips = true;
-        this.isShowOtList = false;
-        this.isShowLabSlips = false;
-        this.isShowPatients = false;
-        this.isShowOpdPatients = false;
-        this.isShowPrecption = false;
+      }
+    });
+    this.route.queryParams.subscribe(params => {
+      this.otPatientId = Number(params['patientId']) || 0;
+      if (this.otPatientId) {
+        this.selectDashboardView('ot-form');
       } else {
-        this.isShowOtSlips = false;
-        this.isShowOtList = true;
-        this.isShowLabSlips = false;
-        this.isShowPatients = false;
-        this.isShowOpdPatients = false;
-        this.isShowPrecption = false;
+        this.selectDashboardView(this.route.snapshot.data['dashboardView'] || 'patients');
       }
     });
   }
 
-  openDialog(component: any, data: any, serviceMethod: (data: any) => any) {
+  openDialog(component: any, data: any, serviceMethod: (data: any) => Promise<boolean> | boolean | void) {
     const dialogConfig = new MatDialogConfig();
     dialogConfig.disableClose = true;
     dialogConfig.autoFocus = true;
     dialogConfig.data = data;
+    dialogConfig.panelClass = 'hmc-dialog-panel';
 
     const dialogRef = this.dialog.open(component, dialogConfig);
 
-    dialogRef.afterClosed().subscribe((result: any) => {
+    dialogRef.afterClosed().subscribe(async (result: any) => {
       if (result) {
-        const res = serviceMethod(result);
-        let msg = "Operation Successful";
-        let type = "success";
-        this.notifyUpdate.notify.next(true);
-        this.notifyUpdate.alertNotify.next({ msg, type });
+        try {
+          const saved = await serviceMethod(result);
+          if (saved === false) {
+            this.notifyUpdate.alertNotify.next({
+              msg: 'The record was not saved. Check for a duplicate ID and try again.',
+              type: 'error'
+            });
+            return;
+          }
+          this.notifyUpdate.notify.next(true);
+          this.notifyUpdate.alertNotify.next({ msg: 'Operation successful.', type: 'success' });
+        } catch (error) {
+          console.error('Unable to save dialog record:', error);
+          this.notifyUpdate.alertNotify.next({
+            msg: 'Unable to save the record. Please try again.',
+            type: 'error'
+          });
+        }
       }
     });
   }
@@ -208,6 +221,48 @@ export class HomeComponent implements OnInit {
     this.isShowMedicine = true;
   }
 
+  private selectDashboardView(view: string): void {
+    this.resetViews();
+    switch (view) {
+      case 'opd':
+        this.isShowOpdPatients = true;
+        break;
+      case 'lab':
+        this.isShowLabSlips = true;
+        break;
+      case 'medicine':
+        this.isShowMedicine = true;
+        break;
+      case 'inpatient':
+        this.isShowInnPatients = true;
+        break;
+      case 'tokens':
+        this.isShowPatientTokens = true;
+        break;
+      case 'ot-list':
+        this.isShowOtList = true;
+        break;
+      case 'ot-form':
+        this.isShowOtSlips = true;
+        break;
+      case 'payment':
+        this.isShowPayment = true;
+        break;
+      case 'prescription':
+        this.isShowPrecption = true;
+        break;
+      default:
+        this.isShowPatients = true;
+        break;
+    }
+  }
+
+  closeMobileNav(): void {
+    if (this.isMobile) {
+      this.isMobileNavOpen = false;
+    }
+  }
+
   close() {
     this.resetViews();
     this.isShowOtList = true;
@@ -223,6 +278,7 @@ export class HomeComponent implements OnInit {
     this.isShowOtList = false;
     this.isShowPayment = false;
     this.isShowPrecption = false;
+    this.isShowPatientTokens = false;
   }
 
   addPatient() {

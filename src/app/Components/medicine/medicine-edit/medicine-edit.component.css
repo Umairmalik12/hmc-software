@@ -1,41 +1,13 @@
-::ng-deep mat-dialog-container {
-  max-width: 800px !important;
-  width: 90vw !important;
-  max-height: 90vh !important;
-}
-
-.outer-input-section {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 20px;
-}
-
-.outer-input-section mat-form-field {
-  width: 100%;
-}
-
-.medicines-section {
-  margin-top: 16px;
-}
-
-.medicine-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.medicine-field {
-  flex: 2;
-}
-
-.quantity-field {
-  flex: 1;
-}
-
-mat-dialog-actions {
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 20px;
+.outer-input-section { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+.outer-input-section > mat-form-field { width: 100%; min-width: 0; }
+.medicines-section { grid-column: 1 / -1; margin-top: 8px; padding: 16px; border: 1px solid #e2e9eb; border-radius: 12px; background: #f8fbfb; }
+.medicines-section h3 { margin: 0 0 12px; color: #155e59; font-size: 16px; }
+.medicine-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.medicine-field { flex: 2; min-width: 0; }
+.quantity-field { flex: 1; min-width: 100px; }
+mat-dialog-actions { justify-content: flex-end; }
+@media (max-width: 520px) {
+  .outer-input-section { grid-template-columns: minmax(0, 1fr); }
+  .medicine-row { flex-wrap: wrap; }
+  .medicine-field { flex: 1 1 100%; }
 }

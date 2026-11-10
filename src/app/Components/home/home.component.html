@@ -2,74 +2,83 @@
 
 <!-- Sidenav Container -->
 <mat-sidenav-container class="sidenav-container">
-    <mat-sidenav #sidenav mode="side" opened>
+    <mat-sidenav #sidenav [mode]="isMobile ? 'over' : 'side'" [opened]="!isMobile || isMobileNavOpen">
+        <div class="sidebar-brand">
+            <div class="brand-mark">H</div>
+            <div><strong>HAQ MEDICAL CENTER</strong><span>Care management</span></div>
+        </div>
         <mat-nav-list>
-            <h3 class="sidebar-title">Navigation</h3>
-            <a mat-list-item (click)="addPatient()">
+            <h3 class="sidebar-title">WORKSPACE</h3>
+            <a mat-list-item (click)="addPatient(); closeMobileNav()">
                 <mat-icon>person_add</mat-icon>
                 <span>Add Operate Patient</span>
             </a>
-            <a mat-list-item (click)="showPatientList()">
+            <a mat-list-item (click)="showPatientList(); closeMobileNav()">
                 <mat-icon>local_hospital</mat-icon>
                 <span>Operate Patients</span>
             </a>
 
-            <a mat-list-item (click)="addOpdSlip()">
+            <a mat-list-item (click)="addOpdSlip(); closeMobileNav()">
                 <mat-icon>note_add</mat-icon>
                 <span>Add OPD Slip</span>
             </a>
-            <a mat-list-item (click)="showOpdList()">
+            <a mat-list-item (click)="showOpdList(); closeMobileNav()">
                 <mat-icon>assignment</mat-icon>
                 <span>OPD Slips</span>
             </a>
 
-            <a mat-list-item (click)="addInnPatient()">
+            <a mat-list-item (click)="addInnPatient(); closeMobileNav()">
                 <mat-icon>local_hospital</mat-icon>
                 <span>Add Inn Patient</span>
             </a>
-            <a mat-list-item (click)="showInnPatientList()">
+            <a mat-list-item (click)="showInnPatientList(); closeMobileNav()">
                 <mat-icon>local_hospital</mat-icon>
                 <span>Inn Patients</span>
             </a>
-            <a mat-list-item (click)="addLabTestSlip()">
+            <a mat-list-item (click)="addLabTestSlip(); closeMobileNav()">
                 <mat-icon>biotech</mat-icon>
                 <span>Add Lab Slip</span>
             </a>
-            <a mat-list-item (click)="showLabTestSlipList()">
+            <a mat-list-item (click)="showLabTestSlipList(); closeMobileNav()">
                 <mat-icon>science</mat-icon>
                 <span>Lab Test Slips</span>
             </a>
 
-            <a mat-list-item (click)="addMedicine()">
+            <a mat-list-item (click)="addMedicine(); closeMobileNav()">
                 <mat-icon>local_pharmacy</mat-icon>
                 <span>Add Medicine Record</span>
             </a>
-            <a mat-list-item (click)="showMedicineList()">
+            <a mat-list-item (click)="showMedicineList(); closeMobileNav()">
                 <mat-icon>local_pharmacy</mat-icon>
                 <span>Daily Medicine List</span>
             </a>
 
-            <a mat-list-item (click)="showOtSlip()">
+            <a mat-list-item (click)="showOtSlip(); closeMobileNav()">
                 <mat-icon>local_pharmacy</mat-icon>
                 <span>OT Medicine Slip</span>
             </a>
 
-            <a mat-list-item (click)="showOtListSlip()">
+            <a mat-list-item (click)="showOtListSlip(); closeMobileNav()">
                 <mat-icon>local_pharmacy</mat-icon>
                 <span>OT Medicine List</span>
             </a>
 
-            <a mat-list-item (click)="showPayment()">
+            <a mat-list-item (click)="showPayment(); closeMobileNav()">
                 <mat-icon>local_pharmacy</mat-icon>
                 <span>Payment</span>
             </a>
-            <a mat-list-item (click)="showPreception()">
+            <a mat-list-item (click)="showPreception(); closeMobileNav()">
                 <mat-icon>local_pharmacy</mat-icon>
                 <span>Preception</span>
             </a>
+
+            <a mat-list-item routerLink="/patient-tokens" routerLinkActive="active-nav" (click)="closeMobileNav()">
+                <mat-icon>confirmation_number</mat-icon>
+                <span>Patient Token Slips</span>
+            </a>
             
             
-            <a mat-list-item routerLink="">
+            <a mat-list-item routerLink="" class="logout-link">
                 <mat-icon>exit_to_app</mat-icon>
                 <span>Logout</span>
             </a>
@@ -80,7 +89,10 @@
     <mat-sidenav-content>
         <!-- Toolbar -->
         <mat-toolbar color="primary" class="nav-toolbar">
-            <div class="title">Haq Medical Center</div>
+            <button mat-icon-button (click)="isMobile ? (isMobileNavOpen = !isMobileNavOpen) : sidenav.toggle()" class="nav-button" aria-label="Toggle navigation">
+                <mat-icon>menu</mat-icon>
+            </button>
+            <div class="title">Haq Medical Center<span>Hospital Management</span></div>
 
             <!-- User Info -->
             <div class="user-info">
@@ -94,9 +106,6 @@
                 <span>{{ currentDateTime | date:'MMM d, y, h:mm a' }}</span>
             </div>
 
-            <button mat-mini-fab color="warn" (click)="sidenav.toggle()" class="nav-button">
-                <mat-icon>menu</mat-icon>
-            </button>
         </mat-toolbar>
 
         <!-- Page Content -->
@@ -110,9 +119,10 @@
             <app-payment *ngIf="isShowPayment"></app-payment>
             <app-preciption *ngIf="isSuperAdmin && isShowPrecption"></app-preciption>
             <app-medicine *ngIf="isShowMedicine"></app-medicine>
+            <app-patient-token *ngIf="isShowPatientTokens"></app-patient-token>
 
             <!-- Welcome Message -->
-            <div *ngIf="!isShowPatients && !isShowOpdPatients && !isShowLabSlips && !isShowMedicine" class="welcome">
+            <div *ngIf="!isShowPatients && !isShowOpdPatients && !isShowLabSlips && !isShowMedicine && !isShowPatientTokens && !isShowOtSlips && !isShowInnPatients && !isShowPayment && !isShowPrecption && !isShowOtList" class="welcome">
                 <h1>Welcome to Haq Medical Center</h1>
                 <p>Providing quality healthcare with excellence.</p>
             </div>

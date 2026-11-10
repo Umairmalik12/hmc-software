@@ -22,10 +22,6 @@ export class PatientService {
     this.patientDetail = storedPatients || [];
   }
 
-  private async savePatientData(): Promise<void> {
-    await this.indexedDb.setItem(STORAGE_KEY, this.patientDetail);
-  }
-
   getAllPatient(): Observable<Patient[]> {
     return new Observable<Patient[]>(observer => {
       this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY).then(data => {
@@ -83,7 +79,9 @@ export class PatientService {
       }
 
       storedPatients.push(data);
-      await this.savePatientData();
+      await this.indexedDb.setItem(STORAGE_KEY, storedPatients);
+      this.patientDetail = storedPatients;
+      this.total = storedPatients.length;
       return true;
     } catch (e) {
       console.error('Error adding new patient:', e);
@@ -91,7 +89,7 @@ export class PatientService {
     }
   }
 
-  async updatePatient(data: any): Promise<boolean> {
+  async updatePatient(data: PatientDetail): Promise<boolean> {
     try {
       const storedPatients = await this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY) || [];
       const oldId = data.oldId;
@@ -102,8 +100,9 @@ export class PatientService {
           console.error('New MR No already exists');
           return false;
         }
-        storedPatients[index] = data;
-        delete data.oldId;
+        const updatedPatient = { ...data };
+        delete updatedPatient.oldId;
+        storedPatients[index] = updatedPatient;
         await this.indexedDb.setItem(STORAGE_KEY, storedPatients);
         this.patientDetail = storedPatients;
         return true;
