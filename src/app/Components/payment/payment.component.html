@@ -89,7 +89,8 @@
       <!-- Payment History -->
       <mat-card-content *ngIf="payments.length > 0" class="payment-history">
         <h3>Payment History</h3>
-        <table mat-table [dataSource]="payments" class="payment-table">
+        <div class="table-scroll-container" (scroll)="onTableScroll($event)">
+        <table mat-table [dataSource]="displayedPayments" class="payment-table">
           <ng-container matColumnDef="patientName">
             <th mat-header-cell *matHeaderCellDef> Patient Name </th>
             <td mat-cell *matCellDef="let payment"> {{payment.patientName}} </td>
@@ -136,6 +137,7 @@
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
         </table>
+        </div>
       </mat-card-content>
     </mat-card>
   </div>

@@ -81,6 +81,6 @@
     </div>
   </div>
 
+    <p class="no-print" role="alert" *ngIf="storageError">{{storageError}}</p>
     <div class="no-print actions" *ngIf="!isPrinting">    <button class="btn-save" (click)="save()">💾 Save Prescription</button>  <button class="btn-print" (click)="print()">🖨 Print</button>   <button class="btn-add" (click)="addMedicine()">➕ Add Medicine Row</button>  </div>
 </div>
-

@@ -6,7 +6,8 @@ import { OpdEditComponent } from '../opd-edit/opd-edit.component';
 import { OpdService } from 'src/app/Services/opd.service';
 import { OpdDataService } from 'src/app/Services/opd-data.service';
 import { Opd } from 'src/app/Models/opd.model';
-import { IndexedDbService } from 'src/app/Services/indexed-db.service';
+import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
+import { UserLoginService } from 'src/app/Services/user-login.service';
 import * as XLSX from 'xlsx';
 import { OpdSlipComponent } from '../opd-slip/opd-slip.component';
 
@@ -19,9 +20,12 @@ export class OpdListComponent implements OnInit, AfterViewInit {
 
   opd: Opd[] = [];
   filteredOpds: Opd[] = [];
+  displayedOpds: Opd[] = [];
   dataSource: OpdDataService = new OpdDataService(this.opdService);
   displayedColumns: string[] = [];
- tempOpd!: Opd;
+  tempOpd!: Opd;
+  displayLimit: number = 20;
+  readonly pageStep: number = 10;
   // 🔍 Search fields
   searchPatientId: string = '';
   searchName: string = '';
@@ -39,7 +43,8 @@ export class OpdListComponent implements OnInit, AfterViewInit {
     private intl: MatPaginatorIntl,
     private changeDetectorRef: ChangeDetectorRef,
     private notifyUpdate: NotifyUpdateService,
-    private indexDb: IndexedDbService
+    private indexDb: SupabaseDataService,
+    private userLogin: UserLoginService
   ) {
     this.notifyUpdate.notify.subscribe(() => {
       this.dataActions('', 'asc', 0, 5);
@@ -47,7 +52,7 @@ export class OpdListComponent implements OnInit, AfterViewInit {
   }
 
   async ngOnInit(): Promise<void> {
-    this.indexDb.getItem<string>('loginUser').then((loginUser) => {
+    this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
       this.displayedColumns = ['patientId', 'patientName', 'dateTime', 'sex', 'drName', 'followUp', 'createdAt'];
       if (this.isSuperAdmin) {
@@ -63,16 +68,36 @@ export class OpdListComponent implements OnInit, AfterViewInit {
     });
   }
 
+  onTableScroll(event: Event): void {
+    const el = event.target as HTMLElement;
+    if (!el) return;
+    const threshold = 120;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
+      if (this.displayLimit < this.filteredOpds.length) {
+        this.displayLimit = Math.min(this.displayLimit + this.pageStep, this.filteredOpds.length);
+        this.updateDisplayedOpds();
+      }
+    }
+  }
+
+  private updateDisplayedOpds(): void {
+    this.displayedOpds = this.filteredOpds.slice(0, this.displayLimit);
+    this.dataSource.updatePatients(this.displayedOpds);
+  }
+
   dataActions(a: string, b: string, c: number, d: number): void {
     this.dataSource.loadPatient(a, b, c, d);
-    this.paginator.pageIndex = c;
-    this.paginator.pageSize = d;
+    if (this.paginator) {
+      this.paginator.pageIndex = c;
+      this.paginator.pageSize = d;
+    }
     this.total = this.opdService.total;
 
     // keep local copy for filtering
     this.opdService.getAllOpds().subscribe((opds) => {
       this.opd = opds;
       this.filteredOpds = opds;
+      this.onDateFilter();
     });
   }
 
@@ -118,7 +143,8 @@ export class OpdListComponent implements OnInit, AfterViewInit {
       return matchesId && matchesName && matchesPhone && matchesCity;
     });
 
-    this.dataSource.updatePatients(this.filteredOpds);
+    this.displayLimit = 20;
+    this.updateDisplayedOpds();
   }
 
   onSearch() {
@@ -132,7 +158,8 @@ export class OpdListComponent implements OnInit, AfterViewInit {
     this.searchCity = '';
     this.dateFilter = 'all';
     this.filteredOpds = this.opd;
-    this.dataSource.updatePatients(this.filteredOpds);
+    this.displayLimit = 20;
+    this.updateDisplayedOpds();
   }
 
   // 📤 Export
@@ -162,7 +189,7 @@ export class OpdListComponent implements OnInit, AfterViewInit {
       for (const record of data) {
         const rec: any = record;
         const opdDetail: any = {
-          patientId: rec.patientId,
+          patientId: Number(rec.patientId) || await this.indexDb.allocateId('opdDetails'),
           patientName: rec.patientName || rec.name || '',
           date: rec.date || '',
           time: rec.time || '',

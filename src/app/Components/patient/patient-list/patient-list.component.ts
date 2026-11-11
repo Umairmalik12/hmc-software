@@ -9,7 +9,8 @@ import { PatientDataService } from 'src/app/Services/patient-data.service';
 import { PatientService } from 'src/app/Services/patient.service';
 import { ShowalertService } from 'src/app/Services/showalert.service';
 import { PatientEditComponent } from '../patient-edit/patient-edit.component';
-import { IndexedDbService } from 'src/app/Services/indexed-db.service';
+import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
+import { UserLoginService } from 'src/app/Services/user-login.service';
 
 @Component({
   selector: 'app-patient-list',
@@ -20,8 +21,11 @@ export class PatientListComponent implements OnInit, AfterViewInit {
 
   patient: Patient[] = [];
   filteredPatients: Patient[] = [];
+  displayedPatients: Patient[] = [];
   dataSource: PatientDataService = new PatientDataService(this.patientService);
   displayedColumns: string[] = [];
+  displayLimit: number = 20;
+  readonly pageStep: number = 10;
 
   // 🔍 Search fields
   searchPatientId: string = '';
@@ -57,7 +61,8 @@ export class PatientListComponent implements OnInit, AfterViewInit {
     private intl: MatPaginatorIntl,
     private changeDetectorRef: ChangeDetectorRef,
     private notifyUpdate: NotifyUpdateService,
-    private indexedDbService: IndexedDbService
+    private indexedDbService: SupabaseDataService,
+    private userLogin: UserLoginService
   ) {
     this.notifyUpdate.notify.subscribe(() => {
       this.dataActions('', 'asc', 0, 5);
@@ -65,7 +70,7 @@ export class PatientListComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
-    this.indexedDbService.getItem<string>('loginUser').then((loginUser) => {
+    this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
       this.displayedColumns = ['patientId', 'name', 'drName', 'gender', 'phone', 'procedure', 'city' , 'createdAt'];
       if (this.isSuperAdmin) {
@@ -79,6 +84,23 @@ export class PatientListComponent implements OnInit, AfterViewInit {
     this.paginator?.page.subscribe(() => {
       this.dataActions('', 'asc', this.paginator.pageIndex, this.paginator.pageSize);
     });
+  }
+
+  onTableScroll(event: Event): void {
+    const el = event.target as HTMLElement;
+    if (!el) return;
+    const threshold = 120;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
+      if (this.displayLimit < this.filteredPatients.length) {
+        this.displayLimit = Math.min(this.displayLimit + this.pageStep, this.filteredPatients.length);
+        this.updateDisplayedPatients();
+      }
+    }
+  }
+
+  private updateDisplayedPatients(): void {
+    this.displayedPatients = this.filteredPatients.slice(0, this.displayLimit);
+    this.dataSource.updatePatients(this.displayedPatients);
   }
 
   dataActions(a: string, b: string, c: number, d: number): void {
@@ -95,7 +117,6 @@ export class PatientListComponent implements OnInit, AfterViewInit {
       this.patient = patients;
       this.filteredPatients = patients;
       this.onDateFilter();
-      this.dataSource.updatePatients(this.filteredPatients);
     });
   }
 
@@ -142,7 +163,8 @@ export class PatientListComponent implements OnInit, AfterViewInit {
       return matchesId && matchesName && matchesPhone && matchesProcedure && matchesCity;
     });
 
-    this.dataSource.updatePatients(this.filteredPatients);
+    this.displayLimit = 20;
+    this.updateDisplayedPatients();
   }
 
   onSearch() {
@@ -157,7 +179,8 @@ export class PatientListComponent implements OnInit, AfterViewInit {
     this.searchCity = '';
     this.dateFilter = 'all';
     this.filteredPatients = this.patient;
-    this.dataSource.updatePatients(this.filteredPatients);
+    this.displayLimit = 20;
+    this.updateDisplayedPatients();
   }
 
   // 📤 Export
@@ -188,7 +211,7 @@ export class PatientListComponent implements OnInit, AfterViewInit {
       for (const record of data) {
         const rec: any = record;
         const patientDetail: any = {
-          patientId: rec.patientId,
+          patientId: Number(rec.patientId) || await this.indexedDbService.allocateId('patientDetails'),
           firstName: rec.firstName || rec.name?.split(' ')[0] || '',
           lastName: rec.lastName || rec['Father Name'] || rec.name?.split(' ')[1] || '',
           drName: rec.drName || rec['Dr Name'] || '',
@@ -216,7 +239,8 @@ export class PatientListComponent implements OnInit, AfterViewInit {
       this.patientService.getAllPatient().subscribe(patients => {
         this.patient = patients;
         this.filteredPatients = this.patient;
-        this.dataSource.updatePatients(this.filteredPatients);
+        this.displayLimit = 20;
+        this.updateDisplayedPatients();
       });
     };
     reader.readAsBinaryString(target.files[0]);

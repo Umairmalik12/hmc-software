@@ -7,7 +7,8 @@ import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { MedicineDataService } from '../../../Services/medicine-data.service';
 import { MedicineService } from '../../../Services/medicine.service';
 import { ShowalertService } from 'src/app/Services/showalert.service';
-import { IndexedDbService } from 'src/app/Services/indexed-db.service';
+import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
+import { UserLoginService } from 'src/app/Services/user-login.service';
 import { MedicineEditComponent } from '../medicine-edit/medicine-edit.component';
 import { MedicineSlipComponent } from '../medicine-slip/medicine-slip.component';
 
@@ -20,8 +21,11 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
 
   medicine: Medicine[] = [];
   filteredMedicines: Medicine[] = [];
+  displayedMedicines: Medicine[] = [];
   dataSource: MedicineDataService = new MedicineDataService(this.medicineService);
   displayedColumns: string[] = [ 'createdAt','medicineId', 'patientName', 'roomNo', 'doctorName',];
+  displayLimit: number = 20;
+  readonly pageStep: number = 10;
 
   // Search fields
   searchMedicineId: string = '';
@@ -57,7 +61,8 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
     private intl: MatPaginatorIntl,
     private changeDetectorRef: ChangeDetectorRef,
     private notifyUpdate: NotifyUpdateService,
-    private indexedDbService: IndexedDbService
+    private indexedDbService: SupabaseDataService,
+    private userLogin: UserLoginService
   ) {
     this.notifyUpdate.notify.subscribe(() => {
       this.dataActions('', 'asc', 0, 5);
@@ -65,7 +70,7 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
-    this.indexedDbService.getItem<string>('loginUser').then((loginUser) => {
+    this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
       if (this.isSuperAdmin) {
         this.displayedColumns.push('action');
@@ -78,6 +83,24 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
     this.paginator?.page.subscribe(() => {
       this.dataActions('', 'asc', this.paginator.pageIndex, this.paginator.pageSize);
     });
+  }
+
+  onTableScroll(event: Event): void {
+    const el = event.target as HTMLElement;
+    if (!el) return;
+    const threshold = 120;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
+      if (this.displayLimit < this.filteredMedicines.length) {
+        this.displayLimit = Math.min(this.displayLimit + this.pageStep, this.filteredMedicines.length);
+        this.updateDisplayedMedicines();
+      }
+    }
+  }
+
+  private updateDisplayedMedicines(): void {
+    this.displayedMedicines = this.filteredMedicines.slice(0, this.displayLimit);
+    this.dataSource.updateMedicines(this.displayedMedicines);
+    this.changeDetectorRef.detectChanges();
   }
 
   dataActions(a: string, b: string, c: number, d: number): void {
@@ -93,8 +116,8 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
     this.medicineService.getAllMedicine().subscribe((medicines) => {
       this.medicine = medicines;
       this.filteredMedicines = medicines;
-      this.dataSource.updateMedicines(this.filteredMedicines);
-      this.changeDetectorRef.detectChanges();
+      this.displayLimit = 20;
+      this.updateDisplayedMedicines();
     });
   }
 
@@ -108,7 +131,8 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
       const matchesDoctor = this.searchDoctorName ? m.doctorName.toLowerCase().includes(this.searchDoctorName.toLowerCase()) : true;
       return matchesId && matchesRoom && matchesPatient && matchesMedicine && matchesDoctor;
     });
-    this.dataSource.updateMedicines(this.filteredMedicines);
+    this.displayLimit = 20;
+    this.updateDisplayedMedicines();
   }
 
   onClearSearch() {
@@ -119,7 +143,8 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
     this.searchDoctorName = '';
     this.dateFilter = 'all';
     this.filteredMedicines = this.medicine;
-    this.dataSource.updateMedicines(this.filteredMedicines);
+    this.displayLimit = 20;
+    this.updateDisplayedMedicines();
   }
 
   onDateFilter() {
@@ -178,7 +203,7 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
       for (const record of data) {
         const rec: any = record;
         const medicine: Medicine = {
-          medicineId: rec.medicineId || 0,
+          medicineId: Number(rec.medicineId) || await this.indexedDbService.allocateId('medicineDetails'),
           roomNo: rec.roomNo || '',
           patientName: rec.patientName || '',
           medicines: rec.medicines || [{ medicineName: rec.medicineName || '', quantity: rec.quantity || 0 }],
@@ -278,4 +303,3 @@ export class MedicineListComponent implements OnInit, AfterViewInit {
     });
   }
 }
-

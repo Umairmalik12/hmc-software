@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { LabPatient } from '../Models/lab.model';
-import { IndexedDbService } from './indexed-db.service';
+import { SupabaseDataService } from './supabase-data.service';
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +10,7 @@ export class LabService {
   total: number = 0;
   labDetail: LabPatient[] = [];
 
-  constructor(private indexedDbService: IndexedDbService) {
+  constructor(private indexedDbService: SupabaseDataService) {
     this.loadLabData();
   }
 
@@ -24,10 +24,19 @@ export class LabService {
     return this.indexedDbService.setItem('labDetails', this.labDetail);
   }
 
+  private sortNewestFirst(items: LabPatient[]): LabPatient[] {
+    return [...items].sort((a, b) => {
+      const timeA = (a as any).createdAt || a.dateTime ? new Date(((a as any).createdAt || a.dateTime)).getTime() : 0;
+      const timeB = (b as any).createdAt || b.dateTime ? new Date(((b as any).createdAt || b.dateTime)).getTime() : 0;
+      if (timeA && timeB && timeA !== timeB) return timeB - timeA;
+      return (Number(b.patientId) || 0) - (Number(a.patientId) || 0);
+    });
+  }
+
   getAllLabPatient(): Observable<LabPatient[]> {
     return new Observable<LabPatient[]>(observer => {
       this.indexedDbService.getItem<LabPatient[]>('labDetails').then(data => {
-        this.labDetail = data ?? [];
+        this.labDetail = this.sortNewestFirst(data ?? []);
         this.total = this.labDetail.length;
         observer.next(this.labDetail);
         observer.complete();
@@ -38,7 +47,7 @@ export class LabService {
   findLabPatients(filter = '', sortOrder = 'asc', pageNumber = 0, pageSize = 5): Observable<LabPatient[]> {
     return new Observable<LabPatient[]>(observer => {
       this.indexedDbService.getItem<LabPatient[]>('labDetails').then(data => {
-        this.labDetail = data ?? [];
+        this.labDetail = this.sortNewestFirst(data ?? []);
         this.total = this.labDetail.length;
 
         let start = pageNumber * pageSize;
@@ -64,15 +73,12 @@ export class LabService {
 
  addNewLabPatient(data: LabPatient): Observable<boolean> {
   return new Observable<boolean>(observer => {
-    this.indexedDbService.getItem<LabPatient[]>('labDetails').then(stored => {
+    this.indexedDbService.getItem<LabPatient[]>('labDetails').then(async stored => {
       this.labDetail = stored ?? [];
 
       // Only assign a new ID if not provided
       if (!data.patientId) {
-        const maxId = this.labDetail.length > 0
-          ? Math.max(...this.labDetail.map(p => p.patientId ?? 0))
-          : 0;
-        data.patientId = maxId + 1;
+        data.patientId = await this.indexedDbService.allocateId('labDetails');
       }
 
       this.labDetail.push(data);

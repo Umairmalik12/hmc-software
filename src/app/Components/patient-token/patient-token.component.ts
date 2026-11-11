@@ -1,5 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { IndexedDbService, PatientTokenSlip } from 'src/app/Services/indexed-db.service';
+import { SupabaseDataService, PatientTokenSlip } from 'src/app/Services/supabase-data.service';
+import { printThermal } from './thermal-print';
+import { Subscription } from 'rxjs';
 
 interface TokenDateGroup {
   date: string;
@@ -25,8 +27,9 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
   successMessage = '';
 
   private clockTimer: ReturnType<typeof setInterval> | undefined;
+  private realtimeSubscription?: Subscription;
 
-  constructor(private indexedDb: IndexedDbService) {}
+  constructor(private indexedDb: SupabaseDataService) {}
 
   get todayTotal(): number {
     return this.slips.filter(slip => slip.date === this.today).length;
@@ -56,6 +59,13 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
         ? error.message
         : 'Unable to load patient token history.';
     }
+    this.realtimeSubscription = this.indexedDb.changes.subscribe(collection => {
+      if (collection === 'patientTokens') {
+        this.loadSlips().catch(error => {
+          this.errorMessage = error instanceof Error ? error.message : 'Unable to refresh patient token history.';
+        });
+      }
+    });
     this.clockTimer = setInterval(() => this.updateClock(), 1000);
   }
 
@@ -63,6 +73,7 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
     if (this.clockTimer) {
       clearInterval(this.clockTimer);
     }
+    this.realtimeSubscription?.unsubscribe();
   }
 
   async generateSlip(): Promise<void> {
@@ -169,16 +180,16 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
   }
 
   private printSelectedSlip(): void {
-    document.body.classList.add('patient-token-printing');
-    document.body.classList.toggle('patient-token-paper-80', this.paperWidth === 80);
-    setTimeout(() => {
-      try {
-        window.print();
-      } finally {
-        document.body.classList.remove('patient-token-printing');
-        document.body.classList.remove('patient-token-paper-80');
-      }
-    }, 150);
+    const el = document.getElementById('patient-token-slip-print');
+    if (!el) return;
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.style.display = 'block';
+    clone.style.position = 'static';
+    clone.style.width = this.paperWidth === 80 ? '72mm' : '54mm';
+    clone.style.margin = '0';
+    // remove the on-screen paper-size selector from the printout
+    clone.querySelectorAll('.paper-control').forEach(n => n.remove());
+    printThermal(clone.outerHTML, this.paperWidth);
   }
 
   private updateClock(): void {

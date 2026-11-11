@@ -1,6 +1,7 @@
 <div class="body">
   <h1>OT Medicine Patient List</h1>
 
+  <div class="table-scroll-container" (scroll)="onTableScroll($event)">
   <table mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource" multiTemplateDataRows>
 
     <!-- Patient Name Column -->
@@ -31,9 +32,9 @@
     <ng-container matColumnDef="action" *ngIf="isSuperAdmin">
       <th mat-header-cell *matHeaderCellDef>Action</th>
       <td mat-cell *matCellDef="let ot">
-        <div class="action-buttons" >
-          <button mat-raised-button color="primary" (click)="editOt(ot.id)">Edit</button>
-          <button mat-raised-button color="warn" (click)="deleteOt(ot.id)">Delete</button>
+        <div class="action-buttons">
+          <button mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit OT record" (click)="editOt(ot.id)"><mat-icon>edit</mat-icon></button>
+          <button mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete OT record" (click)="deleteOt(ot.id)"><mat-icon>delete</mat-icon></button>
         </div>
       </td>
     </ng-container>
@@ -43,6 +44,7 @@
     <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
 
   </table>
+  </div>
 
   <mat-paginator class="page"
                  [length]="total"

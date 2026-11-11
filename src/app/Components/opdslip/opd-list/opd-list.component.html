@@ -38,6 +38,7 @@
   </div>
 
   <!-- 📋 OPD Table -->
+  <div class="table-scroll-container" (scroll)="onTableScroll($event)">
   <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource">
 
     <ng-container matColumnDef="patientId">
@@ -81,15 +82,15 @@
       <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
       <mat-cell *matCellDef="let opd">
         <div class="action-buttons">
-          <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editOpd(opd.patientId)">
+          <button mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit OPD slip" (click)="editOpd(opd.patientId)">
             <mat-icon>edit</mat-icon>
           </button>
-          <button mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteOpd(opd.patientId)">
+          <button mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete OPD slip" (click)="deleteOpd(opd.patientId)">
             <mat-icon>delete</mat-icon>
           </button>
-          <button mat-button class="mat-raised-button mat-accent table-btn" (click)="printSlip(opd)">
-  <mat-icon>print</mat-icon>
-</button>
+          <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print OPD slip" (click)="printSlip(opd)">
+            <mat-icon>print</mat-icon>
+          </button>
         </div>
       </mat-cell>
     </ng-container>
@@ -97,6 +98,7 @@
     <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
     <mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></mat-row>
   </mat-table>
+  </div>
 </div>
 
 <mat-paginator class="page"

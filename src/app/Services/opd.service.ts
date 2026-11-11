@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, defer, from } from 'rxjs';
 import { Opd } from '../Models/opd.model';
-import { IndexedDbService } from './indexed-db.service';
+import { SupabaseDataService } from './supabase-data.service';
 
 @Injectable({
   providedIn: 'root'
@@ -10,11 +10,20 @@ export class OpdService {
   total: number = 0;
   opdDetail: Opd[] = [];
 
-  constructor(private dbService: IndexedDbService) {}
+  constructor(private dbService: SupabaseDataService) {}
+
+  private sortNewestFirst(items: Opd[]): Opd[] {
+    return [...items].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA && timeB && timeA !== timeB) return timeB - timeA;
+      return (Number(b.patientId) || 0) - (Number(a.patientId) || 0);
+    });
+  }
 
   private async loadOpdData(): Promise<void> {
     const storedOpd = await this.dbService.getItem<Opd[]>('opdDetails');
-    this.opdDetail = storedOpd ?? [];
+    this.opdDetail = this.sortNewestFirst(storedOpd ?? []);
   }
 
   private async savePatientOpdData(): Promise<void> {
@@ -71,9 +80,7 @@ export class OpdService {
           return false;
         }
       } else {
-        // Auto-generate new ID
-        const maxId = this.opdDetail.length > 0 ? Math.max(...this.opdDetail.map(o => o.patientId)) : 0;
-        data.patientId = maxId + 1;
+        data.patientId = await this.dbService.allocateId('opdDetails');
       }
       this.opdDetail.push(data);
       await this.savePatientOpdData();

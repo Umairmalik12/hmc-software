@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ViewContainerRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, ViewContainerRef } from '@angular/core';
 import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
 import { PatientDetail } from 'src/app/Models/patientDetail.model';
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
@@ -12,7 +12,10 @@ import { LabEditComponent } from '../lab/lab-edit/lab-edit.component';
 import { LabPatient } from 'src/app/Models/lab.model';
 import { LabService } from 'src/app/Services/lab.service';
 import { ActivatedRoute } from '@angular/router';
-import { IndexedDbService } from 'src/app/Services/indexed-db.service';
+import { Router } from '@angular/router';
+import { UserLoginService } from 'src/app/Services/user-login.service';
+import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
+import { Subscription } from 'rxjs';
 import { InpatientEditComponent } from '../inpatient/inpatient-edit/inpatient-edit.component';
 import { InpatientService } from 'src/app/Services/inpatient.service';
 import { Medicine } from 'src/app/Models/medicine.model';
@@ -25,7 +28,7 @@ import { InPatient } from 'src/app/Models/inpatient.model';
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css']
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
   userName: string = '';
   currentDateTime: Date = new Date();
 
@@ -99,6 +102,8 @@ export class HomeComponent implements OnInit {
   isShowInnPatients = false;
 
   isSuperAdmin: boolean = false;
+  private realtimeSubscription?: Subscription;
+  private clockTimer?: ReturnType<typeof setInterval>;
 
   @ViewChild("placeholder", { read: ViewContainerRef }) alertContainer!: ViewContainerRef;
 
@@ -112,7 +117,9 @@ export class HomeComponent implements OnInit {
     private medicineService: MedicineService,
     private showAlert: ShowalertService,
     private route: ActivatedRoute,
-    private dbService: IndexedDbService
+    private router: Router,
+    private dataService: SupabaseDataService,
+    private userLogin: UserLoginService
   ) {
     this.notifyUpdate.alertNotify.subscribe(ob => {
       this.showAlert.showAlert(ob.msg, ob.type, this.alertContainer);
@@ -120,12 +127,18 @@ export class HomeComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    this.dbService.getItem<string>('loginUser').then((loginUser) => {
+    this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
+    }).catch(error => {
+      console.error('Unable to load current user role:', error);
+      this.notifyUpdate.alertNotify.next({ msg: 'Unable to load your account permissions.', type: 'error' });
     });
-    setInterval(() => {
+    this.clockTimer = setInterval(() => {
       this.currentDateTime = new Date();
     }, 1000);
+    this.realtimeSubscription = this.dataService.changes.subscribe(() => {
+      this.notifyUpdate.notify.next(true);
+    });
 
     this.route.data.subscribe(data => {
       this.selectDashboardView(data['dashboardView'] || 'patients');
@@ -141,6 +154,13 @@ export class HomeComponent implements OnInit {
         this.selectDashboardView(this.route.snapshot.data['dashboardView'] || 'patients');
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.realtimeSubscription?.unsubscribe();
+    if (this.clockTimer) {
+      clearInterval(this.clockTimer);
+    }
   }
 
   openDialog(component: any, data: any, serviceMethod: (data: any) => Promise<boolean> | boolean | void) {
@@ -163,6 +183,7 @@ export class HomeComponent implements OnInit {
             });
             return;
           }
+
           this.notifyUpdate.notify.next(true);
           this.notifyUpdate.alertNotify.next({ msg: 'Operation successful.', type: 'success' });
         } catch (error) {
@@ -174,6 +195,16 @@ export class HomeComponent implements OnInit {
         }
       }
     });
+  }
+
+  async logout(): Promise<void> {
+    try {
+      await this.userLogin.SignOut();
+      await this.router.navigate(['']);
+    } catch (error) {
+      console.error('Unable to sign out:', error);
+      this.notifyUpdate.alertNotify.next({ msg: 'Unable to sign out. Please try again.', type: 'error' });
+    }
   }
 
   showPatientList() {

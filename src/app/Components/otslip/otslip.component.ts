@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { FormBuilder, FormGroup, FormArray } from '@angular/forms';
+import { FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { IndexedDbService } from 'src/app/Services/indexed-db.service';
+import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
 
 @Component({
   selector: 'app-ot-form',
@@ -10,6 +10,10 @@ import { IndexedDbService } from 'src/app/Services/indexed-db.service';
 })
 export class OtFormComponent implements OnInit {
   isEditMode = false;
+  isSaving = false;
+  validationMessage = '';
+  productSearch = '';
+  selectedOnly = false;
   otlist: any[] = [];
   editingId: string | null = null;
 
@@ -41,11 +45,15 @@ export class OtFormComponent implements OnInit {
                 });
               }
             });
+            this.updateVisibleProducts();
           }
         }
       });
     }
   }
+
+  selectedProductCount = 0;
+  visibleProducts: Array<{ name: string; index: number }> = [];
 
   otForm: FormGroup;
 
@@ -66,9 +74,9 @@ export class OtFormComponent implements OnInit {
     'BILD NO.11', 'BILD NO.15', 'BILD NO.19', 'BILD NO.24', 'LOCAL 100CC',
   ];
 
-  constructor(private fb: FormBuilder, private router: Router,private indexedDb: IndexedDbService) {
+  constructor(private fb: FormBuilder, private router: Router,private indexedDb: SupabaseDataService) {
     this.otForm = this.fb.group({
-      patientName: [''],
+      patientName: ['', Validators.required],
       doctorName: [''],
       operationDate: [''],
       operationTime: [''],
@@ -79,10 +87,51 @@ export class OtFormComponent implements OnInit {
         quantity: ['']
       })))
     });
+    this.updateVisibleProducts();
   }
 
   get productControls(): FormArray {
     return this.otForm.get('products') as FormArray;
+  }
+
+  updateVisibleProducts(): void {
+    const query = (this.productSearch || '').trim().toLowerCase();
+    const controls = this.productControls ? this.productControls.controls : [];
+    let count = 0;
+    const list: Array<{ name: string; index: number }> = [];
+
+    this.products.forEach((name, index) => {
+      const isSelected = !!controls[index]?.get('selected')?.value;
+      if (isSelected) {
+        count++;
+      }
+      const matchesFilter = (!this.selectedOnly || isSelected) &&
+        (!query || name.toLowerCase().includes(query));
+      if (matchesFilter) {
+        list.push({ name, index });
+      }
+    });
+
+    this.selectedProductCount = count;
+    this.visibleProducts = list;
+  }
+
+  trackByProductIndex(_index: number, item: { name: string; index: number }): number {
+    return item.index;
+  }
+
+  onFilterChange(): void {
+    this.updateVisibleProducts();
+  }
+
+  onProductSelectionChange(index: number, selected: boolean): void {
+    const quantity = this.productControls.at(index).get('quantity');
+    if (!selected) {
+      quantity?.setValue('');
+      quantity?.markAsPristine();
+    }
+    this.validationMessage = '';
+    this.updateVisibleProducts();
   }
 
   async ngOnInit(): Promise<void> {
@@ -91,49 +140,78 @@ export class OtFormComponent implements OnInit {
   }
 
 async submitForm(): Promise<void> {
-  const formValue = this.otForm.value;
-
-  // Map selected products with names
-  const selectedProducts = formValue.products.map((item: any, i: number) => ({
-    name: this.products[i],
-    selected: item.selected,
-    quantity: item.quantity
-  })).filter((p:any) => p.selected && p.quantity);
-
-  // Use same ID if editing, otherwise generate new
-  const id = this.isEditMode && this.editingId 
-    ? this.editingId 
-    : 'form-' + Math.random().toString(36).substr(2, 9);
-
-  const record = {
-    ...formValue,
-    products: selectedProducts,
-    id
-  };
-
-  // 🔁 Replace existing or push new
-  const existingIndex = this.otlist.findIndex(item => item.id === id);
-  if (existingIndex !== -1) {
-    this.otlist[existingIndex] = record;
-  } else {
-    this.otlist.push(record);
+  this.validationMessage = '';
+  if (this.otForm.invalid) {
+    this.otForm.markAllAsTouched();
+    this.validationMessage = 'Please enter the patient name.';
+    return;
   }
 
-  // ✅ Save to IndexedDB
-  await this.indexedDb.setItem('otFormData', this.otlist);
+  const selectedRows = this.productControls.controls
+    .map((control, index) => ({ control, index }))
+    .filter(row => !!row.control.get('selected')?.value);
+  if (!selectedRows.length) {
+    this.validationMessage = 'Select at least one medicine or supply.';
+    return;
+  }
+  const missingQuantity = selectedRows.find(row => {
+    const quantity = Number(row.control.get('quantity')?.value);
+    return !Number.isFinite(quantity) || quantity <= 0;
+  });
+  if (missingQuantity) {
+    this.productControls.at(missingQuantity.index).get('quantity')?.markAsTouched();
+    this.validationMessage = `Enter a quantity for ${this.products[missingQuantity.index]}.`;
+    return;
+  }
 
-  this.printPage();
-  this.otForm.reset();
+  this.isSaving = true;
+  try {
+    const formValue = this.otForm.getRawValue();
+    const selectedProducts = selectedRows.map(row => ({
+      name: this.products[row.index],
+      selected: true,
+      quantity: Number(row.control.get('quantity')?.value),
+    }));
+    const id = this.isEditMode && this.editingId
+      ? this.editingId
+      : 'form-' + Math.random().toString(36).substr(2, 9);
+    const record = { ...formValue, products: selectedProducts, id };
+    const nextList = [...this.otlist];
+    const existingIndex = nextList.findIndex(item => item.id === id);
+    if (existingIndex !== -1) nextList[existingIndex] = record;
+    else nextList.push(record);
+
+    await this.indexedDb.setItem('otFormData', nextList);
+    this.otlist = nextList;
+    this.printPage();
+    this.resetForm();
+    this.router.navigate(['/home']);
+  } catch (error) {
+    console.error('Unable to save OT medicine slip:', error);
+    this.validationMessage = error instanceof Error ? error.message : 'Unable to save the OT medicine slip.';
+  } finally {
+    this.isSaving = false;
+  }
+}
+
+private resetForm(): void {
+  this.otForm.reset({ includeMedicineHeader: 'withMedicine' });
+  this.productControls.controls.forEach(control => {
+    control.patchValue({ selected: false, quantity: '' });
+    control.markAsPristine();
+    control.markAsUntouched();
+  });
+  this.validationMessage = '';
+  this.productSearch = '';
+  this.selectedOnly = false;
   this.isEditMode = false;
   this.editingId = null;
-  this.router.navigate(['/home']);
+  this.updateVisibleProducts();
 }
 
 
   cancelForm(): void {
-    this.otForm.reset();
-    this.isEditMode = false;
-    this.editingId = null;
+    this.resetForm();
     this.router.navigate(['/home'])
     this.isCancelForm.emit(true);
     
@@ -259,11 +337,12 @@ async submitForm(): Promise<void> {
   
               <div class="section">
                 <h4>Operation Details</h4>
-                <div class="info-row"><span class="label">Doctor:</span> ${this.otForm.value.doctorName}</div>
-                <div class="info-row"><span class="label">Date:</span> ${this.otForm.value.operationDate}</div>
-                <div class="info-row"><span class="label">Time:</span> ${this.otForm.value.operationTime}</div>
-                <div class="info-row"><span class="label">Room:</span> ${this.otForm.value.roomNumber}</div>
-                <div class="info-row"><span class="label">Medicine Header:</span> ${this.otForm.value.includeMedicineHeader }</div>
+                <div class="info-row"><span class="label">Patient Name:</span> <strong>${this.otForm.value.patientName || '—'}</strong></div>
+                <div class="info-row"><span class="label">Doctor:</span> ${this.otForm.value.doctorName || '—'}</div>
+                <div class="info-row"><span class="label">Date:</span> ${this.otForm.value.operationDate || '—'}</div>
+                <div class="info-row"><span class="label">Time:</span> ${this.otForm.value.operationTime || '—'}</div>
+                <div class="info-row"><span class="label">Room:</span> ${this.otForm.value.roomNumber || '—'}</div>
+                <div class="info-row"><span class="label">Medicine Header:</span> ${this.otForm.value.includeMedicineHeader === 'withoutMedicine' ? 'Without Medicine' : 'With Medicine'}</div>
               </div>
   
               <div class="section">
@@ -293,7 +372,7 @@ async submitForm(): Promise<void> {
   
 
   getSelectedProductsForPrint(): string {
-    return this.productControls.controls
+    const items = this.productControls.controls
       .map((ctrl, i) => {
         const { selected, quantity } = ctrl.value;
         if (selected && quantity) {
@@ -306,8 +385,9 @@ async submitForm(): Promise<void> {
         }
         return '';
       })
-      .filter(item => item) 
+      .filter(item => item)
       .join('');
+    return items || '<div style="color:#777;padding:10px;">No products selected</div>';
   }
   
   

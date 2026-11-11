@@ -1,26 +1,27 @@
 import { TestBed } from '@angular/core/testing';
 import { PatientDetail } from '../Models/patientDetail.model';
-import { IndexedDbService } from './indexed-db.service';
+import { SupabaseDataService } from './supabase-data.service';
 import { PatientService } from './patient.service';
 
 describe('PatientService', () => {
   let service: PatientService;
-  let indexedDb: jasmine.SpyObj<IndexedDbService>;
+  let supabase: jasmine.SpyObj<SupabaseDataService>;
   let storedPatients: PatientDetail[];
 
   beforeEach(() => {
     storedPatients = [];
-    indexedDb = jasmine.createSpyObj<IndexedDbService>('IndexedDbService', ['getItem', 'setItem']);
-    indexedDb.getItem.and.callFake(async <T>() => storedPatients as unknown as T);
-    indexedDb.setItem.and.callFake((_key: string, value: PatientDetail[]) => {
+    supabase = jasmine.createSpyObj<SupabaseDataService>('SupabaseDataService', ['getItem', 'setItem', 'allocateId']);
+    supabase.getItem.and.callFake(async <T>() => storedPatients as unknown as T);
+    supabase.setItem.and.callFake((_key: string, value: PatientDetail[]) => {
       storedPatients = value;
       return Promise.resolve();
     });
+    supabase.allocateId.and.returnValue(Promise.resolve(1));
 
     TestBed.configureTestingModule({
       providers: [
         PatientService,
-        { provide: IndexedDbService, useValue: indexedDb },
+        { provide: SupabaseDataService, useValue: supabase },
       ],
     });
     service = TestBed.inject(PatientService);
@@ -47,7 +48,8 @@ describe('PatientService', () => {
     expect(saved).toBeTrue();
     expect(patient.patientId).toBe(1);
     expect(storedPatients).toEqual([patient]);
-    expect(indexedDb.setItem).toHaveBeenCalledWith('patientDetails', [patient]);
+    expect(supabase.allocateId).toHaveBeenCalledWith('patientDetails');
+    expect(supabase.setItem).toHaveBeenCalledWith('patientDetails', [patient]);
     expect(service.patientDetail).toEqual([patient]);
   });
 

@@ -7,7 +7,7 @@ import { LabEditComponent } from '../lab-edit/lab-edit.component';
 import { LabPatientDataService } from 'src/app/Services/lab-data.service';
 import { LabService } from 'src/app/Services/lab.service';
 import { LabPatient } from 'src/app/Models/lab.model';
-import { IndexedDbService } from 'src/app/Services/indexed-db.service';
+import { UserLoginService } from 'src/app/Services/user-login.service';
 
 @Component({
   selector: 'app-lab-list',
@@ -17,8 +17,11 @@ import { IndexedDbService } from 'src/app/Services/indexed-db.service';
 export class LabListComponent implements OnInit, AfterViewInit {
 
   patient: LabPatient[] = [];
+  displayedPatients: LabPatient[] = [];
   dataSource: LabPatientDataService = new LabPatientDataService(this.labService);
   displayedColumns: string[] = [];
+  displayLimit: number = 20;
+  readonly pageStep: number = 10;
 
 
   tempLabPatient: LabPatient = {
@@ -39,7 +42,7 @@ export class LabListComponent implements OnInit, AfterViewInit {
 
   constructor(private labService: LabService, private dialog: MatDialog,
     private intl: MatPaginatorIntl, private changeDetectorRef: ChangeDetectorRef,
-    private indexDb: IndexedDbService,
+    private userLogin: UserLoginService,
     private notifyUpdate: NotifyUpdateService) {
 
     this.paginator = new MatPaginator(this.intl, this.changeDetectorRef);
@@ -50,7 +53,7 @@ export class LabListComponent implements OnInit, AfterViewInit {
   }
 
 ngOnInit(): void {
-  this.indexDb.getItem<string>('loginUser').then((loginUser) => {
+  this.userLogin.getLoginUser().then((loginUser) => {
     this.isSuperAdmin = loginUser === 'admin';
 
     this.displayedColumns = ['patientId', 'name', 'testName', 'price', 'suggestedDr', 'dateTime'];
@@ -70,11 +73,36 @@ ngOnInit(): void {
     });
   }
 
+  onTableScroll(event: Event): void {
+    const el = event.target as HTMLElement;
+    if (!el) return;
+    const threshold = 120;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
+      if (this.displayLimit < this.patient.length) {
+        this.displayLimit = Math.min(this.displayLimit + this.pageStep, this.patient.length);
+        this.updateDisplayedPatients();
+      }
+    }
+  }
+
+  private updateDisplayedPatients(): void {
+    this.displayedPatients = this.patient.slice(0, this.displayLimit);
+    this.dataSource.updatePatients(this.displayedPatients);
+  }
+
   dataActions(a: string, b: string, c: number, d: number): void {
     this.dataSource.loadLabPatient(a, b, c, d);
-    this.paginator.pageIndex = c;
-    this.paginator.pageSize = d;
+    if (this.paginator) {
+      this.paginator.pageIndex = c;
+      this.paginator.pageSize = d;
+    }
     this.total = this.labService.total;
+
+    this.labService.getAllLabPatient().subscribe(patients => {
+      this.patient = patients;
+      this.displayLimit = 20;
+      this.updateDisplayedPatients();
+    });
   }
 
  editLabPatient(id: number) {

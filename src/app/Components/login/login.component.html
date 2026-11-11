@@ -1,4 +1,3 @@
-<ng-template #placeholder></ng-template>
 <div>
     <div class="header">
         <h1>{{title | uppercase}}</h1>
@@ -12,19 +11,19 @@
                 </mat-card-header>
                 <mat-card-content class="form-content">
                     <mat-form-field>
-                        <mat-label>Username</mat-label>
-                        <input matInput type="text" ngModel name="username" required pattern="[a-zA-Z0-9]+"
-                            #username="ngModel">
-                        <mat-error *ngIf="username.errors?.required">username is required</mat-error>
+                        <mat-label>Email</mat-label>
+                        <input matInput type="email" ngModel name="username" required email #username="ngModel">
+                        <mat-error *ngIf="username.errors?.required">Email is required</mat-error>
+                        <mat-error *ngIf="username.errors?.email">Enter a valid email address</mat-error>
                     </mat-form-field>
                     <mat-form-field>
                         <mat-label>Password</mat-label>
-                        <input matInput [type]=" hide ? 'password' : 'text' " ngModel name="password" required
+                        <input matInput [type]="hide ? 'password' : 'text'" ngModel name="password" required
                             #password="ngModel">
-                   
-                        <mat-error *ngIf="password.errors?.required">password is required</mat-error>
+                        <mat-error *ngIf="password.errors?.required">Password is required</mat-error>
                     </mat-form-field>
                 </mat-card-content>
+                <p class="login-error" *ngIf="errorMessage">{{errorMessage}}</p>
                 <mat-card-actions class="form-content form-actions">
                     <button mat-stroked-button type="submit">Login</button>
                 </mat-card-actions>

@@ -8,10 +8,11 @@ import { AuthGuardService } from './auth-guard.service';
 describe('AuthGuardService', () => {
   let service: AuthGuardService;
   let router: Router;
-  let user: { status: boolean };
+  let user: jasmine.SpyObj<UserLoginService>;
 
   beforeEach(async () => {
-    user = { status: false };
+    user = jasmine.createSpyObj<UserLoginService>('UserLoginService', ['isAuthenticated']);
+    user.isAuthenticated.and.returnValue(Promise.resolve(false));
     await TestBed.configureTestingModule({
       imports: [RouterTestingModule],
       providers: [{ provide: UserLoginService, useValue: user }]
@@ -25,18 +26,18 @@ describe('AuthGuardService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('redirects unauthenticated users to login',()=>{
-    let route!: ActivatedRouteSnapshot;
-    let state!: RouterStateSnapshot;
-    const result = service.canActivate(route, state) as UrlTree;
+  it('redirects unauthenticated users to login', async () => {
+    const route = {} as ActivatedRouteSnapshot;
+    const state = {} as RouterStateSnapshot;
+    const result = await service.canActivate(route, state) as UrlTree;
     expect(result instanceof UrlTree).toBeTrue();
     expect(router.serializeUrl(result)).toBe('/');
   });
 
-  it('allows authenticated users', () => {
-    user.status = true;
-    let route!: ActivatedRouteSnapshot;
-    let state!: RouterStateSnapshot;
-    expect(service.canActivate(route, state)).toBeTrue();
+  it('allows authenticated users', async () => {
+    user.isAuthenticated.and.returnValue(Promise.resolve(true));
+    const route = {} as ActivatedRouteSnapshot;
+    const state = {} as RouterStateSnapshot;
+    expect(await service.canActivate(route, state)).toBeTrue();
   });
 });

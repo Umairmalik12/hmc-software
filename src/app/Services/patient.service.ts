@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Patient } from '../Models/patient.model';
 import { PatientDetail } from '../Models/patientDetail.model';
-import { IndexedDbService } from './indexed-db.service';
+import { SupabaseDataService } from './supabase-data.service';
 
 const STORAGE_KEY = 'patientDetails';
 
@@ -13,7 +13,7 @@ export class PatientService {
   total: number = 0;
   patientDetail: PatientDetail[] = [];
 
-  constructor(private indexedDb: IndexedDbService) {
+  constructor(private indexedDb: SupabaseDataService) {
     this.loadPatientData();
   }
 
@@ -22,10 +22,21 @@ export class PatientService {
     this.patientDetail = storedPatients || [];
   }
 
+  private sortNewestFirst<T extends { createdAt?: any; dateTime?: any; patientId?: any; medicineId?: any; inpatientId?: any; id?: any }>(items: T[]): T[] {
+    return [...items].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA && timeB && timeA !== timeB) return timeB - timeA;
+      const idA = Number(a.patientId ?? a.medicineId ?? a.inpatientId ?? a.id ?? 0);
+      const idB = Number(b.patientId ?? b.medicineId ?? b.inpatientId ?? b.id ?? 0);
+      return idB - idA;
+    });
+  }
+
   getAllPatient(): Observable<Patient[]> {
     return new Observable<Patient[]>(observer => {
       this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY).then(data => {
-        const patients = data || [];
+        const patients = this.sortNewestFirst(data || []);
         this.patientDetail = patients;
         this.total = patients.length;
         observer.next(this.getPatientBrief(patients));
@@ -37,7 +48,7 @@ export class PatientService {
   findPatients(filter = '', sortOrder = 'asc', pageNumber = 0, pageSize = 5): Observable<Patient[]> {
     return new Observable<Patient[]>(observer => {
       this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY).then(data => {
-        const patients = data || [];
+        const patients = this.sortNewestFirst(data || []);
         this.patientDetail = patients;
         this.total = patients.length;
 
@@ -73,9 +84,7 @@ export class PatientService {
           return false;
         }
       } else {
-        // Auto-generate new ID
-        const maxId = storedPatients.length > 0 ? Math.max(...storedPatients.map(p => p.patientId)) : 0;
-        data.patientId = maxId + 1;
+        data.patientId = await this.indexedDb.allocateId(STORAGE_KEY);
       }
 
       storedPatients.push(data);

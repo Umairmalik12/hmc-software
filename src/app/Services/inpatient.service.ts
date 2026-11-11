@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { InPatient } from '../Models/inpatient.model';
-import { IndexedDbService } from './indexed-db.service';
+import { SupabaseDataService } from './supabase-data.service';
 
 const STORAGE_KEY = 'inpatientDetails';
 
@@ -22,7 +22,7 @@ export class InpatientService {
   total: number = 0;
   inpatientDetail: InPatientDetail[] = [];
 
-  constructor(private indexedDb: IndexedDbService) {
+  constructor(private indexedDb: SupabaseDataService) {
     this.loadInpatientData();
   }
 
@@ -35,10 +35,19 @@ export class InpatientService {
     await this.indexedDb.setItem(STORAGE_KEY, this.inpatientDetail);
   }
 
+  private sortNewestFirst(items: InPatientDetail[]): InPatientDetail[] {
+    return [...items].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA && timeB && timeA !== timeB) return timeB - timeA;
+      return (Number(b.inpatientId) || 0) - (Number(a.inpatientId) || 0);
+    });
+  }
+
   getAllInpatient(): Observable<InPatient[]> {
     return new Observable<InPatient[]>(observer => {
       this.indexedDb.getItem<InPatientDetail[]>(STORAGE_KEY).then(data => {
-        const inpatients = data || [];
+        const inpatients = this.sortNewestFirst(data || []);
         this.inpatientDetail = inpatients;
         this.total = inpatients.length;
         observer.next(this.getInpatientBrief(inpatients));
@@ -50,7 +59,7 @@ export class InpatientService {
   findInpatients(filter = '', sortOrder = 'asc', pageNumber = 0, pageSize = 5): Observable<InPatient[]> {
     return new Observable<InPatient[]>(observer => {
       this.indexedDb.getItem<InPatientDetail[]>(STORAGE_KEY).then(data => {
-        const inpatients = data || [];
+        const inpatients = this.sortNewestFirst(data || []);
         this.inpatientDetail = inpatients;
         this.total = inpatients.length;
 
@@ -76,8 +85,7 @@ export class InpatientService {
   async addNewInpatient(data: InPatientDetail): Promise<boolean> {
     try {
       const storedInpatients = await this.indexedDb.getItem<InPatientDetail[]>(STORAGE_KEY) || [];
-      const id = storedInpatients.length > 0 ? storedInpatients[storedInpatients.length - 1].inpatientId + 1 : 1;
-      data.inpatientId = id;
+      data.inpatientId = await this.indexedDb.allocateId(STORAGE_KEY);
 
       if (!data.createdAt) {
         data.createdAt = new Date().toISOString();

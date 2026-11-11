@@ -1,5 +1,6 @@
 <div class="body">
     <h1>Lab Patient Test List</h1>
+    <div class="table-scroll-container" (scroll)="onTableScroll($event)">
     <mat-table class="lab-table mat-elevation-z8" [dataSource]="dataSource">
         
         <ng-container matColumnDef="patientId">
@@ -36,13 +37,13 @@
     <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
     <mat-cell *matCellDef="let lab">
         <div class="action-buttons">
-            <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editLabPatient(lab.patientId)">
-                <mat-icon>edit</mat-icon> 
+            <button mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit lab slip" (click)="editLabPatient(lab.patientId)">
+                <mat-icon>edit</mat-icon>
             </button>
-            <button  mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteLabPatient(lab.patientId)">
-                <mat-icon>delete</mat-icon> 
+            <button mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete lab slip" (click)="deleteLabPatient(lab.patientId)">
+                <mat-icon>delete</mat-icon>
             </button>
-             <button mat-button class="mat-raised-button mat-accent table-btn" (click)="printLabSlip(lab.patientId)">
+            <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print lab slip" (click)="printLabSlip(lab.patientId)">
                 <mat-icon>print</mat-icon>
             </button>
         </div>
@@ -52,6 +53,7 @@
         <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
         <mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></mat-row>
     </mat-table>
+    </div>
 </div>
 
 <mat-paginator class="page"

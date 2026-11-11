@@ -29,6 +29,7 @@
         <input type="file" accept=".xlsx, .xls" style="display:none" #importInput (change)="importFromExcel($event)">
         <button mat-raised-button color="accent" (click)="importInput.click()">Import from Excel</button>
     </div>
+    <div class="table-scroll-container" (scroll)="onTableScroll($event)">
     <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource">
         <ng-container matColumnDef="medicineId">
             <mat-header-cell *matHeaderCellDef>ID</mat-header-cell>
@@ -60,15 +61,16 @@
             <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
             <mat-cell *matCellDef="let medicine">
                 <div class="action-buttons">
-                    <button mat-button class="mat-raised-button mat-primary table-btn" (click)="editMedicine(medicine.medicineId)"><mat-icon>edit</mat-icon></button>
-                    <button mat-button class="mat-raised-button mat-warn table-btn" (click)="deleteMedicine(medicine.medicineId)"><mat-icon>delete</mat-icon></button>
-                    <button mat-button class="mat-raised-button mat-accent table-btn" (click)="printSlip(medicine.medicineId)"><mat-icon>print</mat-icon></button>
+                    <button mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit medicine" (click)="editMedicine(medicine.medicineId)"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete medicine" (click)="deleteMedicine(medicine.medicineId)"><mat-icon>delete</mat-icon></button>
+                    <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print medicine slip" (click)="printSlip(medicine.medicineId)"><mat-icon>print</mat-icon></button>
                 </div>
             </mat-cell>
         </ng-container>
         <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
         <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
     </mat-table>
+    </div>
 </div>
 
 <mat-paginator class="page"

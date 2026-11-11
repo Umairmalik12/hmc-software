@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Medicine } from '../Models/medicine.model';
-import { IndexedDbService } from './indexed-db.service';
+import { SupabaseDataService } from './supabase-data.service';
 
 const STORAGE_KEY = 'medicineDetails';
 
@@ -12,7 +12,7 @@ export class MedicineService {
   total: number = 0;
   medicineDetail: Medicine[] = [];
 
-  constructor(private indexedDb: IndexedDbService) {
+  constructor(private indexedDb: SupabaseDataService) {
     this.loadMedicineData();
   }
 
@@ -25,10 +25,19 @@ export class MedicineService {
     await this.indexedDb.setItem(STORAGE_KEY, this.medicineDetail);
   }
 
+  private sortNewestFirst(items: Medicine[]): Medicine[] {
+    return [...items].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA && timeB && timeA !== timeB) return timeB - timeA;
+      return (Number(b.medicineId) || 0) - (Number(a.medicineId) || 0);
+    });
+  }
+
   getAllMedicine(): Observable<Medicine[]> {
     return new Observable<Medicine[]>(observer => {
       this.indexedDb.getItem<Medicine[]>(STORAGE_KEY).then(data => {
-        const medicines = data || [];
+        const medicines = this.sortNewestFirst(data || []);
         this.medicineDetail = medicines;
         this.total = medicines.length;
         observer.next(medicines);
@@ -40,7 +49,7 @@ export class MedicineService {
   findMedicines(filter = '', sortOrder = 'asc', pageNumber = 0, pageSize = 5): Observable<Medicine[]> {
     return new Observable<Medicine[]>(observer => {
       this.indexedDb.getItem<Medicine[]>(STORAGE_KEY).then(data => {
-        const medicines = data || [];
+        const medicines = this.sortNewestFirst(data || []);
         this.medicineDetail = medicines;
         this.total = medicines.length;
 
@@ -66,8 +75,7 @@ export class MedicineService {
   async addNewMedicine(data: Medicine): Promise<boolean> {
     try {
       const storedMedicines = await this.indexedDb.getItem<Medicine[]>(STORAGE_KEY) || [];
-      const id = storedMedicines.length > 0 ? storedMedicines[storedMedicines.length - 1].medicineId + 1 : 1;
-      data.medicineId = id;
+      data.medicineId = await this.indexedDb.allocateId(STORAGE_KEY);
 
       if (!data.createdAt) {
         data.createdAt = new Date().toISOString();
@@ -87,9 +95,8 @@ export class MedicineService {
   async addMultipleMedicines(medicines: Medicine[]): Promise<boolean> {
     try {
       const storedMedicines = await this.indexedDb.getItem<Medicine[]>(STORAGE_KEY) || [];
-      let id = storedMedicines.length > 0 ? storedMedicines[storedMedicines.length - 1].medicineId + 1 : 1;
       for (const data of medicines) {
-        data.medicineId = id++;
+        data.medicineId = await this.indexedDb.allocateId(STORAGE_KEY);
         if (!data.createdAt) {
           data.createdAt = new Date().toISOString();
         }
@@ -130,7 +137,7 @@ export class MedicineService {
           storedMedicines[index] = data;
         } else {
           // If not found, add as new
-          data.medicineId = storedMedicines.length > 0 ? storedMedicines[storedMedicines.length - 1].medicineId + 1 : 1;
+          data.medicineId = await this.indexedDb.allocateId(STORAGE_KEY);
           storedMedicines.push(data);
         }
       }
@@ -161,4 +168,3 @@ export class MedicineService {
     }
   }
 }
-

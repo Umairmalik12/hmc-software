@@ -1,22 +1,27 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { IndexedDbService } from 'src/app/Services/indexed-db.service';
+import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-payment',
   templateUrl: './payment.component.html',
   styleUrls: ['./payment.component.css']
 })
-export class PaymentComponent implements OnInit {
+export class PaymentComponent implements OnInit, OnDestroy {
   paymentForm!: FormGroup;
   payments: any[] = [];
+  displayedPayments: any[] = [];
   displayedColumns: string[] = ['patientName', 'amount', 'cashGiven', 'cashReturn', 'paymentMethod', 'paymentStatus', 'actions'];
   cashReturn: number = 0;
   patientId: string = '';
+  displayLimit: number = 20;
+  readonly pageStep: number = 10;
+  private realtimeSubscription?: Subscription;
 
   constructor(
     private fb: FormBuilder,
-    private indexedDbService: IndexedDbService
+    private indexedDbService: SupabaseDataService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -31,10 +36,19 @@ export class PaymentComponent implements OnInit {
 
     // Load payments from IndexedDB
     await this.loadPayments();
+    this.realtimeSubscription = this.indexedDbService.changes.subscribe(collection => {
+      if (collection === 'payments') {
+        this.loadPayments().catch(error => console.error('Unable to refresh payments:', error));
+      }
+    });
 
     this.paymentForm.valueChanges.subscribe(() => {
       this.refreshPaymentList();
     });
+  }
+
+  ngOnDestroy(): void {
+    this.realtimeSubscription?.unsubscribe();
   }
 
   generatePatientId(): string {
@@ -43,9 +57,28 @@ export class PaymentComponent implements OnInit {
     return this.patientId;
   }
 
+  onTableScroll(event: Event): void {
+    const el = event.target as HTMLElement;
+    if (!el) return;
+    const threshold = 120;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
+      if (this.displayLimit < this.payments.length) {
+        this.displayLimit = Math.min(this.displayLimit + this.pageStep, this.payments.length);
+        this.displayedPayments = this.payments.slice(0, this.displayLimit);
+      }
+    }
+  }
+
   async loadPayments(): Promise<void> {
     const storedPayments = await this.indexedDbService.getItem<any[]>('payments');
-    this.payments = storedPayments || [];
+    const list = storedPayments || [];
+    this.payments = [...list].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA && timeB && timeA !== timeB) return timeB - timeA;
+      return String(b.id || '').localeCompare(String(a.id || ''));
+    });
+    this.displayedPayments = this.payments.slice(0, this.displayLimit);
   }
 
   calculateCashReturn(): void {

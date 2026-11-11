@@ -214,9 +214,14 @@ mat-dialog-content .quantity-field, .mat-dialog-content .quantity-field { flex: 
 .mat-mdc-cell { color: #40565a; font-size: 13px !important; border-bottom-color: #edf1f2 !important; }
 .mat-paginator, mat-paginator { margin-top: 12px; border: 1px solid #e6edef; border-radius: 10px; background: #fff; }
 .mat-paginator .mat-icon-button, .mat-paginator button { color: #176f68; }
-.action-buttons { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
-.table-btn { min-width: 36px !important; width: 36px; height: 36px; padding: 0 !important; border-radius: 8px !important; }
-.table-btn .mat-icon { margin: 0; }
+.mat-column-action, .mat-column-actions { min-width: 128px; padding-right: 12px !important; padding-left: 12px !important; text-align: center; }
+.mat-column-action .action-buttons, .mat-column-actions .action-buttons { width: 100%; }
+.action-buttons { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.action-buttons .table-btn,
+.table-btn { display: inline-flex !important; flex: 0 0 36px; align-items: center !important; justify-content: center !important; box-sizing: border-box; min-width: 36px !important; width: 36px; height: 36px; min-height: 36px; margin: 0; padding: 0 !important; line-height: 1 !important; border-radius: 8px !important; vertical-align: middle; }
+.action-buttons .table-btn .mat-icon,
+.table-btn .mat-icon { display: block; flex: 0 0 20px; width: 20px; height: 20px; margin: 0 !important; font-size: 20px; line-height: 20px; text-align: center; }
+.action-buttons .table-btn .mat-button-wrapper { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 0; }
 button.mat-warn, .mat-raised-button.mat-warn { background-color: #b74646; }
 
 @media (max-width: 760px) {
@@ -264,4 +269,86 @@ button.mat-warn, .mat-raised-button.mat-warn { background-color: #b74646; }
   body.patient-token-printing #patient-token-slip-print { display: block !important; position: absolute; left: 0; top: 0; margin: 0; }
   body.patient-token-printing #patient-token-slip-print .paper-control { display: none !important; }
   body.patient-token-printing.patient-token-paper-80 #patient-token-slip-print { page: thermal80; }
+}
+
+
+/* Consistent form layout across dialogs and standalone forms. */
+mat-form-field { width: 100%; min-width: 0; }
+.mat-form-field-wrapper { padding-bottom: 1em; }
+.mat-form-field-appearance-fill .mat-form-field-flex,
+.mat-mdc-form-field .mdc-text-field--filled { min-height: 48px; }
+mat-dialog-content form,
+.mat-dialog-content form { width: 100%; min-width: 0; }
+mat-dialog-content .outer-input-section,
+.mat-dialog-content .outer-input-section,
+mat-dialog-content.outer-input-section,
+.mat-dialog-content.outer-input-section {
+  gap: 12px 18px;
+}
+mat-dialog-content .input-section,
+.mat-dialog-content .input-section { gap: 12px 18px; }
+mat-dialog-content textarea[matInput],
+.mat-dialog-content textarea[matInput] { min-height: 84px; resize: vertical; }
+mat-dialog-content .radio-group,
+.mat-dialog-content .radio-group { min-height: 52px; }
+mat-dialog-content mat-error,
+.mat-dialog-content mat-error { font-size: 11px; line-height: 1.25; }
+mat-dialog-actions,
+.mat-dialog-actions,
+.mat-mdc-dialog-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+mat-dialog-actions button,
+.mat-dialog-actions button,
+.mat-mdc-dialog-actions button { min-width: 112px; }
+
+/* Payment form: balanced two-column desktop layout, stacked on phones. */
+.payment-form .form-content {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 4px 18px;
+  padding: 20px 24px;
+}
+.payment-form .form-field { min-width: 0; margin: 0; }
+.payment-form .form-actions { display: flex; grid-column: 1 / -1; justify-content: flex-end; gap: 10px; margin: 0; }
+.payment-form .submit-btn, .payment-form .cancel-btn { width: auto; min-width: 150px; margin: 0; }
+
+@media (max-width: 760px) {
+  .payment-form .form-content { padding: 16px; gap: 2px 12px; }
+  mat-dialog-content, .mat-dialog-content { padding: 18px !important; }
+}
+
+@media (max-width: 520px) {
+  .payment-form .form-content { grid-template-columns: minmax(0, 1fr); padding: 14px; }
+  .payment-form .form-actions { grid-column: 1; flex-direction: column; align-items: stretch; }
+  .payment-form .submit-btn, .payment-form .cancel-btn { width: 100%; }
+  mat-dialog-actions, .mat-dialog-actions, .mat-mdc-dialog-actions { justify-content: stretch; }
+  mat-dialog-actions button, .mat-dialog-actions button, .mat-mdc-dialog-actions button { flex: 1 1 120px; }
+}
+
+
+/* Smooth scroll-based pagination container for data tables */
+.table-scroll-container {
+  max-height: 68vh;
+  overflow-y: auto;
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--hmc-border);
+  scrollbar-color: #b7c9c7 transparent;
+}
+.table-scroll-container::-webkit-scrollbar { width: 8px; height: 8px; }
+.table-scroll-container::-webkit-scrollbar-thumb { background: #cbd8d7; border-radius: 4px; }
+.table-scroll-container::-webkit-scrollbar-thumb:hover { background: #0c7c72; }
+.table-scroll-container .mat-table,
+.table-scroll-container mat-table,
+.table-scroll-container table {
+  border: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+.table-scroll-container .mat-header-row,
+.table-scroll-container tr[mat-header-row] {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #edf6f5 !important;
 }

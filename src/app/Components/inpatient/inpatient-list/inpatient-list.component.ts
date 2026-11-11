@@ -8,7 +8,8 @@ import { InpatientDataService } from '../../../Services/inpatient-data.service';
 import { InpatientService } from '../../../Services/inpatient.service';
 import { ShowalertService } from 'src/app/Services/showalert.service';
 import { InpatientEditComponent } from '../inpatient-edit/inpatient-edit.component';
-import { IndexedDbService } from 'src/app/Services/indexed-db.service';
+import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
+import { UserLoginService } from 'src/app/Services/user-login.service';
 
 @Component({
   selector: 'app-inpatient-list',
@@ -19,8 +20,11 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
 
   inpatient: InPatient[] = [];
   filteredInpatients: InPatient[] = [];
+  displayedInpatients: InPatient[] = [];
   dataSource: InpatientDataService = new InpatientDataService(this.inpatientService);
   displayedColumns: string[] = ['inpatientId', 'patientName', 'procedure', 'admissionDate', 'dischargeDate', 'surgeonName'];
+  displayLimit: number = 20;
+  readonly pageStep: number = 10;
 
   // Search fields
   searchInpatientId: string = '';
@@ -50,7 +54,8 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
     private intl: MatPaginatorIntl,
     private changeDetectorRef: ChangeDetectorRef,
     private notifyUpdate: NotifyUpdateService,
-    private indexedDbService: IndexedDbService
+    private indexedDbService: SupabaseDataService,
+    private userLogin: UserLoginService
   ) {
     this.notifyUpdate.notify.subscribe(() => {
       this.dataActions('', 'asc', 0, 5);
@@ -58,7 +63,7 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
-    this.indexedDbService.getItem<string>('loginUser').then((loginUser) => {
+    this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
       this.displayedColumns.push('createdAt');
       if (this.isSuperAdmin) {
@@ -75,6 +80,23 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
     });
   }
 
+  onTableScroll(event: Event): void {
+    const el = event.target as HTMLElement;
+    if (!el) return;
+    const threshold = 120;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
+      if (this.displayLimit < this.filteredInpatients.length) {
+        this.displayLimit = Math.min(this.displayLimit + this.pageStep, this.filteredInpatients.length);
+        this.updateDisplayedInpatients();
+      }
+    }
+  }
+
+  private updateDisplayedInpatients(): void {
+    this.displayedInpatients = this.filteredInpatients.slice(0, this.displayLimit);
+    this.dataSource.updateInpatients(this.displayedInpatients);
+  }
+
   dataActions(a: string, b: string, c: number, d: number): void {
     this.dataSource.loadInpatient(a, b, c, d);
 
@@ -88,7 +110,8 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
     this.inpatientService.getAllInpatient().subscribe((inpatients) => {
       this.inpatient = inpatients;
       this.filteredInpatients = inpatients;
-      this.dataSource.updateInpatients(this.filteredInpatients);
+      this.displayLimit = 20;
+      this.updateDisplayedInpatients();
     });
   }
 
@@ -101,7 +124,8 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
       const matchesSurgeon = this.searchSurgeonName ? i.surgeonName.toLowerCase().includes(this.searchSurgeonName.toLowerCase()) : true;
       return matchesId && matchesName && matchesProcedure && matchesSurgeon;
     });
-    this.dataSource.updateInpatients(this.filteredInpatients);
+    this.displayLimit = 20;
+    this.updateDisplayedInpatients();
   }
 
   onClearSearch() {
@@ -111,7 +135,8 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
     this.searchSurgeonName = '';
     this.dateFilter = 'all';
     this.filteredInpatients = this.inpatient;
-    this.dataSource.updateInpatients(this.filteredInpatients);
+    this.displayLimit = 20;
+    this.updateDisplayedInpatients();
   }
 
   onDateFilter() {
@@ -182,7 +207,7 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
       for (const record of data) {
         const rec: any = record;
         const inpatientDetail: any = {
-          inpatientId: rec.inpatientId,
+          inpatientId: Number(rec.inpatientId) || await this.indexedDbService.allocateId('inpatientDetails'),
           patientName: rec.patientName || '',
           procedure: rec.procedure || '',
           admissionDate: rec.admissionDate || '',

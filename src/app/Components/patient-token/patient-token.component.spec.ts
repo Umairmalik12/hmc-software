@@ -1,9 +1,9 @@
-import { IndexedDbService, PatientTokenSlip } from 'src/app/Services/indexed-db.service';
+import { SupabaseDataService, PatientTokenSlip } from 'src/app/Services/supabase-data.service';
 import { PatientTokenComponent } from './patient-token.component';
 
 describe('PatientTokenComponent', () => {
   let component: PatientTokenComponent;
-  let indexedDb: jasmine.SpyObj<IndexedDbService>;
+  let supabase: jasmine.SpyObj<SupabaseDataService>;
 
   const slip: PatientTokenSlip = {
     id: 1,
@@ -16,11 +16,11 @@ describe('PatientTokenComponent', () => {
   };
 
   beforeEach(() => {
-    indexedDb = jasmine.createSpyObj<IndexedDbService>(
-      'IndexedDbService',
+    supabase = jasmine.createSpyObj<SupabaseDataService>(
+      'SupabaseDataService',
       ['createPatientToken', 'getAllPatientTokens', 'deletePatientToken']
     );
-    component = new PatientTokenComponent(indexedDb);
+    component = new PatientTokenComponent(supabase);
   });
 
   it('filters history to the selected date and formats it for display', () => {
@@ -42,13 +42,13 @@ describe('PatientTokenComponent', () => {
 
     await component.generateSlip();
 
-    expect(indexedDb.createPatientToken).not.toHaveBeenCalled();
+    expect(supabase.createPatientToken).not.toHaveBeenCalled();
     expect(component.errorMessage).toContain('patient name');
   });
 
   it('automatically prints a successfully generated token', async () => {
-    indexedDb.createPatientToken.and.returnValue(Promise.resolve(slip));
-    indexedDb.getAllPatientTokens.and.returnValue(Promise.resolve([slip]));
+    supabase.createPatientToken.and.returnValue(Promise.resolve(slip));
+    supabase.getAllPatientTokens.and.returnValue(Promise.resolve([slip]));
     const printSpy = spyOn(window, 'print');
     jasmine.clock().install();
     component.customerName = 'Ali Khan';

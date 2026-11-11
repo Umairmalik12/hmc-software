@@ -1,45 +1,45 @@
 import { Injectable } from '@angular/core';
-import { CookieService } from 'ngx-cookie-service';
-import { IndexedDbService } from './indexed-db.service';
+import { SupabaseClientService } from './supabase-client.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserLoginService {
-  private loggedIn: boolean = false;
+  private loggedIn = false;
 
-  constructor(
-    private cookie: CookieService,
-    private indexedDbService: IndexedDbService
-  ) {
-    const temp = this.cookie.get('status');
-    this.loggedIn = temp === 'true';
-  }
+  constructor(private supabase: SupabaseClientService) {}
 
   async SignIn(username: string, pass: string): Promise<boolean> {
-    const users = await this.indexedDbService.getItem<any[]>('hospitalUsers') || [];
-
-    const foundUser = users.find((user: any) =>
-      user.username.toLowerCase() === username.toLowerCase() &&
-      user.password.toLowerCase() === pass.toLowerCase()
-    );
-
-    if (foundUser) {
-      console.log('for', foundUser);
-
-      await this.indexedDbService.setItem('loginUser', foundUser.username);
-      this.loggedIn = true;
-      this.cookie.set('status', 'true', 1);
-      return true;
+    const { data, error } = await this.supabase.client.auth.signInWithPassword({
+      email: username.trim(),
+      password: pass,
+    });
+    if (error) {
+      throw new Error(error.message);
     }
-
-    return false;
+    this.loggedIn = !!data.session;
+    return this.loggedIn;
   }
 
   async SignOut(): Promise<void> {
-    this.cookie.delete('status');
+    const { error } = await this.supabase.client.auth.signOut();
+    if (error) {
+      throw new Error(error.message);
+    }
     this.loggedIn = false;
-    await this.indexedDbService.removeItem('loginUser');
+  }
+
+  async restoreSession(): Promise<boolean> {
+    const { data, error } = await this.supabase.client.auth.getSession();
+    if (error) {
+      throw new Error(error.message);
+    }
+    this.loggedIn = !!data.session;
+    return this.loggedIn;
+  }
+
+  async isAuthenticated(): Promise<boolean> {
+    return this.restoreSession();
   }
 
   get status(): boolean {
@@ -47,6 +47,21 @@ export class UserLoginService {
   }
 
   async getLoginUser(): Promise<string | undefined> {
-    return await this.indexedDbService.getItem<string>('loginUser');
+    const { data, error } = await this.supabase.client.auth.getUser();
+    if (error) {
+      throw new Error(error.message);
+    }
+    if (!data.user) {
+      return undefined;
+    }
+    const { data: role, error: roleError } = await this.supabase.client
+      .from('hmc_user_roles')
+      .select('role')
+      .eq('user_id', data.user.id)
+      .maybeSingle();
+    if (roleError) {
+      throw new Error(roleError.message);
+    }
+    return role?.role || 'staff';
   }
 }

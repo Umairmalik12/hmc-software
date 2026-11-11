@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
 
 const COMMON_MEDICINES_ARRAY = [
   "MIXEL",
@@ -124,20 +125,21 @@ export class PreciptionComponent implements OnInit {
   ];
 
   customMedicines: string[] = [];
+  storageError = '';
 
-  ngOnInit() {
-    // Load prescription
-    const stored = localStorage.getItem('prescription');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      this.patient = { ...this.patient, ...parsed.patient };
-      this.prescribedMedicines = parsed.medicines || this.prescribedMedicines;
-    }
-    
-    // Load custom medicines
-    const customStored = localStorage.getItem('customMedicines');
-    if (customStored) {
-      this.customMedicines = JSON.parse(customStored);
+  constructor(private dataService: SupabaseDataService) {}
+
+  async ngOnInit(): Promise<void> {
+    try {
+      const stored = await this.dataService.getItem<any>('prescription');
+      if (stored && !Array.isArray(stored)) {
+        this.patient = { ...this.patient, ...stored.patient };
+        this.prescribedMedicines = stored.medicines || this.prescribedMedicines;
+      }
+
+      this.customMedicines = await this.dataService.getItem<string[]>('customMedicines') || [];
+    } catch (error) {
+      this.storageError = error instanceof Error ? error.message : 'Unable to load prescription data.';
     }
   }
 
@@ -149,12 +151,20 @@ export class PreciptionComponent implements OnInit {
     }
   }
 
-  addCustomMedicine(name: string) {
+  async addCustomMedicine(name: string): Promise<boolean> {
     const trimmed = name.trim().toUpperCase();
     if (trimmed && !this.commonMedicines.some(m => m.toUpperCase() === trimmed) && !this.customMedicines.some(m => m.toUpperCase() === trimmed)) {
       this.customMedicines.unshift(trimmed);
-      localStorage.setItem('customMedicines', JSON.stringify(this.customMedicines));
+      try {
+        await this.dataService.setItem('customMedicines', this.customMedicines);
+        this.storageError = '';
+        return true;
+      } catch (error) {
+        this.storageError = error instanceof Error ? error.message : 'Unable to save custom medicine.';
+        return false;
+      }
     }
+    return true;
   }
 
   addMedicine() {
@@ -169,21 +179,34 @@ export class PreciptionComponent implements OnInit {
     this.save();
   }
 
-  save() {
-    localStorage.setItem('prescription', JSON.stringify({
-      patient: this.patient,
-      medicines: this.prescribedMedicines
-    }));
-    
-    // Auto-add new medicines as custom
-    this.prescribedMedicines.forEach(med => {
-      if (med.name) this.addCustomMedicine(med.name);
-    });
+  async save(): Promise<boolean> {
+    try {
+      await this.dataService.setItem('prescription', {
+        patient: this.patient,
+        medicines: this.prescribedMedicines
+      });
+
+      for (const medicine of this.prescribedMedicines) {
+        if (medicine.name) {
+          if (!await this.addCustomMedicine(medicine.name)) {
+            return false;
+          }
+        }
+      }
+      this.storageError = '';
+      return true;
+    } catch (error) {
+      this.storageError = error instanceof Error ? error.message : 'Unable to save prescription.';
+      return false;
+    }
   }
 
-  print() {
+  async print(): Promise<void> {
     this.isPrinting = true;
-    this.save();
+    if (!await this.save()) {
+      this.isPrinting = false;
+      return;
+    }
     
     const originalContent = document.getElementById('prescription')!;
     const printClone = originalContent.cloneNode(true) as HTMLElement;

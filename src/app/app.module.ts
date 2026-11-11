@@ -29,9 +29,7 @@ import { MAT_DIALOG_DEFAULT_OPTIONS, MatDialogModule } from '@angular/material/d
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, MatOptionModule } from '@angular/material/core';
 import { AuthGuardService } from './Services/Guard-Services/auth-guard.service';
-import { UserLoginService } from './Services/user-login.service';
 import { AlertboxComponent } from './Components/alertbox/alertbox.component';
-import { CookieService } from 'ngx-cookie-service';
 import { AgePipePipe } from './Pipes/age-pipe.pipe';
 import { OpdComponent } from './Components/opdslip/opd.component';
 import { OpdListComponent } from './Components/opdslip/opd-list/opd-list.component';
@@ -46,7 +44,7 @@ import { PreciptionComponent } from './Components/precipion/precipion.component'
 import { InpatientComponent } from './Components/inpatient/inpatient.component';
 import { InpatientListComponent } from './Components/inpatient/inpatient-list/inpatient-list.component';
 import { InpatientEditComponent } from './Components/inpatient/inpatient-edit/inpatient-edit.component';
-import { IndexedDbService } from './Services/indexed-db.service';
+import { SupabaseDataService } from './Services/supabase-data.service';
 import { OpdSlipComponent } from './Components/opdslip/opd-slip/opd-slip.component';
 import { MedicineComponent } from './Components/medicine/medicine.component';
 import { MedicineListComponent } from './Components/medicine/medicine-list/medicine-list.component';
@@ -123,10 +121,8 @@ PreciptionComponent,
         autoFocus: true,
       },
     },
-    UserLoginService,
     AuthGuardService,
-    CookieService,
-    IndexedDbService,
+    SupabaseDataService,
     MedicineService,
     MedicineDataService,
   ],

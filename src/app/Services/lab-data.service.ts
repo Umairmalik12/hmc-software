@@ -12,6 +12,10 @@ export class LabPatientDataService implements DataSource<LabPatient>{
 
   private labSubject= new BehaviorSubject<LabPatient[]>([]);
 
+  public updatePatients(patients: LabPatient[]) {
+    this.labSubject.next(patients);
+  }
+
   constructor(private labPatientService: LabService){ }
   
   loadLabPatient(filter: string, sortDirection: string,
