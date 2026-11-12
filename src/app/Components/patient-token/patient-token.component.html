@@ -118,6 +118,7 @@
     *ngIf="selectedSlip as slip"
     id="patient-token-slip-print"
     [class.paper-80]="paperWidth === 80"
+    [class.paper-58]="paperWidth === 58"
     aria-label="Printable patient token slip"
   >
     <div class="slip-brand">HAQ MEDICAL CENTER</div>
@@ -125,12 +126,13 @@
     <div class="slip-rule"></div>
     <div class="slip-title">PATIENT TOKEN</div>
     <div class="slip-number">{{ slip.tokenNumber }}</div>
-    <div class="slip-details"><strong>Patient Name:</strong> {{ slip.customerName }}</div>
-    <div class="slip-details"><strong>Date:</strong> {{ formatDate(slip.date) }}</div>
-    <div class="slip-details"><strong>Time:</strong> {{ slip.time }}</div>
+    <div class="slip-rule"></div>
+    <div class="slip-row"><span class="slip-label">Patient</span><span class="slip-value">{{ slip.customerName }}</span></div>
+    <div class="slip-row"><span class="slip-label">Date</span><span class="slip-value">{{ slip.date.split('-').reverse().join('-') }}</span></div>
+    <div class="slip-row"><span class="slip-label">Time</span><span class="slip-value">{{ slip.time }}</span></div>
     <div class="slip-rule"></div>
     <div class="slip-footer">PLEASE WAIT FOR YOUR TURN</div>
-    <div class="slip-footer">THANK YOU!</div>
+    <div class="slip-thanks">THANK YOU!</div>
     <label class="paper-control">Paper width
       <select [(ngModel)]="paperWidth" [ngModelOptions]="{standalone: true}">
         <option [ngValue]="58">58 mm</option>

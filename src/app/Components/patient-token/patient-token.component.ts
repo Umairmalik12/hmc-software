@@ -21,6 +21,7 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
   slips: PatientTokenSlip[] = [];
   historyGroups: TokenDateGroup[] = [];
   selectedSlip: PatientTokenSlip | null = null;
+  // Remember the chosen thermal roll size between sessions.
   paperWidth: 58 | 80 = 58;
   generating = false;
   errorMessage = '';
@@ -52,6 +53,9 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     this.updateClock();
+    // The slip is printed from a print window whose page box is the roll size;
+    // 58 mm stays the default (the most common thermal roll in use here).
+    this.detectPaperWidth();
     try {
       await this.loadSlips();
     } catch (error) {
@@ -185,11 +189,35 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
     const clone = el.cloneNode(true) as HTMLElement;
     clone.style.display = 'block';
     clone.style.position = 'static';
-    clone.style.width = this.paperWidth === 80 ? '72mm' : '54mm';
+    clone.style.width = this.paperWidth === 80 ? '72mm' : '48mm';
     clone.style.margin = '0';
     // remove the on-screen paper-size selector from the printout
     clone.querySelectorAll('.paper-control').forEach(n => n.remove());
+    this.savePaperWidth();
     printThermal(clone.outerHTML, this.paperWidth);
+  }
+
+  private savePaperWidth(): void {
+    try {
+      localStorage.setItem('hmc.tokenPaperWidth', String(this.paperWidth));
+    } catch {
+      // storage may be unavailable (private mode); the selection still applies this session
+    }
+  }
+
+  /**
+   * Picks up the thermal roll width from the saved choice. Browsers do not
+   * expose the selected printer's paper size without a print dialog, so the
+   * roll is a saved preference (58 mm default) instead of a forced A4 layout.
+   */
+  private detectPaperWidth(): void {
+    try {
+      const saved = localStorage.getItem('hmc.tokenPaperWidth');
+      if (saved === '80') this.paperWidth = 80;
+      if (saved === '58') this.paperWidth = 58;
+    } catch {
+      // keep the default roll
+    }
   }
 
   private updateClock(): void {
