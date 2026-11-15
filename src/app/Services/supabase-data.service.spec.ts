@@ -42,6 +42,68 @@ describe('SupabaseDataService', () => {
     });
   });
 
+  it('updates existing IDs in collections with nonstandard record keys', async () => {
+    query.range.and.returnValue(Promise.resolve({
+      data: [{ record_id: '3', data: { inpatientId: 3, patientName: 'Old' } }],
+      error: null,
+    }));
+    await service.setItem('inpatientDetails', [{ inpatientId: 3, patientName: 'New' }]);
+
+    expect(client.rpc).toHaveBeenCalledWith('apply_hmc_record_changes', {
+      p_collection: 'inpatientDetails',
+      p_inserts: [],
+      p_updates: [{ record_id: '3', data: { inpatientId: 3, patientName: 'New' }, sort_order: 0 }],
+      p_delete_ids: [],
+    });
+  });
+
+  it('does not delete remote rows missing from a partial client list', async () => {
+    query.range.and.returnValue(Promise.resolve({
+      data: [
+        { record_id: '1', data: { patientId: 1 } },
+        { record_id: '2', data: { patientId: 2 } },
+      ],
+      error: null,
+    }));
+    await service.setItem('patientDetails', [{ patientId: 1 }]);
+
+    expect(client.rpc).toHaveBeenCalledWith('apply_hmc_record_changes', {
+      p_collection: 'patientDetails',
+      p_inserts: [],
+      p_updates: [],
+      p_delete_ids: [],
+    });
+  });
+
+  it('updates remote rows removed from the application array without deleting unrelated records', async () => {
+    query.range.and.returnValue(Promise.resolve({
+      data: [
+        { record_id: '1', data: { patientId: 1, name: 'Before' } },
+        { record_id: '2', data: { patientId: 2, name: 'Keep' } },
+      ],
+      error: null,
+    }));
+    await service.setItem('patientDetails', [{ patientId: 1, name: 'Updated' }]);
+
+    expect(client.rpc).toHaveBeenCalledWith('apply_hmc_record_changes', {
+      p_collection: 'patientDetails',
+      p_inserts: [],
+      p_updates: [{ record_id: '1', data: { patientId: 1, name: 'Updated' }, sort_order: 0 }],
+      p_delete_ids: [],
+    });
+  });
+
+  it('deletes a specific record through the atomic RPC', async () => {
+    await service.deleteRecord('patientDetails', 7);
+
+    expect(client.rpc).toHaveBeenCalledWith('apply_hmc_record_changes', {
+      p_collection: 'patientDetails',
+      p_inserts: [],
+      p_updates: [],
+      p_delete_ids: ['7'],
+    });
+  });
+
   it('uses the database token generator and maps its saved row', async () => {
     client.rpc.and.returnValue(Promise.resolve({
       data: {

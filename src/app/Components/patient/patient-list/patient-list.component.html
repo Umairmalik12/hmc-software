@@ -66,7 +66,7 @@
         </ng-container>
          <ng-container matColumnDef="createdAt">
       <mat-header-cell *matHeaderCellDef>Created</mat-header-cell>
-      <mat-cell *matCellDef="let patient">{{patient.createdAt | date:'dd/MM/yy HH:mm'}}</mat-cell>
+      <mat-cell *matCellDef="let patient">{{patient.createdAt | date:'dd/MM/yy h:mm a'}}</mat-cell>
     </ng-container>
         <ng-container matColumnDef="action" *ngIf="isSuperAdmin">
             <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>

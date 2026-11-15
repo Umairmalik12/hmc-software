@@ -258,13 +258,15 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
 
         const dialogRef = this.dialog.open(InpatientEditComponent, dialogConfig);
 
-        dialogRef.afterClosed().subscribe((resultData: any) => {
+        dialogRef.afterClosed().subscribe(async (resultData: any) => {
           if (resultData) {
-            this.inpatientService.updateInpatient(resultData);
-            const msg = "InnPatient Data Updated Successfully";
-            const type = "success";
+            const success = await this.inpatientService.updateInpatient(resultData);
+            const msg = success ? "InnPatient Data Updated Successfully" : "Failed to update InnPatient";
+            const type = success ? "success" : "error";
 
-            this.notifyUpdate.notify.next(true);
+            if (success) {
+              this.notifyUpdate.notify.next(true);
+            }
             this.notifyUpdate.alertNotify.next({ msg, type });
           }
         });

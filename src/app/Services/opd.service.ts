@@ -82,8 +82,8 @@ export class OpdService {
       } else {
         data.patientId = await this.dbService.allocateId('opdDetails');
       }
+      await this.dbService.setItem('opdDetails', [...this.opdDetail, data]);
       this.opdDetail.push(data);
-      await this.savePatientOpdData();
       return true;
     } catch (e) {
       console.error('Error adding new OPD:', e);
@@ -102,9 +102,17 @@ export class OpdService {
           console.error('New MR No already exists');
           return false;
         }
-        this.opdDetail[index] = data;
-        console.log("Updated OPD:", this.opdDetail[index]);
-        await this.savePatientOpdData();
+        const updated = { ...data } as Opd & { oldPatientId?: number };
+        delete updated.oldPatientId;
+        if (oldId === undefined) {
+          return false;
+        }
+        if (newId === oldId) {
+          await this.dbService.upsertRecord('opdDetails', newId, updated, index);
+        } else {
+          await this.dbService.moveRecord('opdDetails', oldId, newId, updated);
+        }
+        this.opdDetail = this.opdDetail.filter((_, i) => i !== index).concat(updated);
         return true;
       }
       return false;
@@ -114,19 +122,19 @@ export class OpdService {
     }
   }
 
-  deleteOpd(id: number): Promise<boolean> {
-    return this.loadOpdData().then(() => {
-      try {
-        const index = this.opdDetail.findIndex(opd => opd.patientId === id);
-        if (index !== -1) {
-          this.opdDetail.splice(index, 1);
-          return this.savePatientOpdData().then(() => true);
-        }
-        return false;
-      } catch (e) {
-        console.error('Error deleting OPD:', e);
+  async deleteOpd(id: number): Promise<boolean> {
+    try {
+      await this.loadOpdData();
+      if (!this.opdDetail.some(opd => opd.patientId === id)) {
         return false;
       }
-    });
+      await this.dbService.deleteRecord('opdDetails', id);
+      this.opdDetail = this.opdDetail.filter(opd => opd.patientId !== id);
+      this.total = this.opdDetail.length;
+      return true;
+    } catch (e) {
+      console.error('Error deleting OPD:', e);
+      return false;
+    }
   }
 }

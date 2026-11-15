@@ -91,8 +91,8 @@ export class InpatientService {
         data.createdAt = new Date().toISOString();
       }
 
+      await this.indexedDb.setItem(STORAGE_KEY, [...storedInpatients, data]);
       storedInpatients.push(data);
-      await this.indexedDb.setItem(STORAGE_KEY, storedInpatients);
       this.inpatientDetail = storedInpatients;
       return true;
     } catch (e) {
@@ -106,8 +106,8 @@ export class InpatientService {
       const storedInpatients = await this.indexedDb.getItem<InPatientDetail[]>(STORAGE_KEY) || [];
       const index = storedInpatients.findIndex(p => p.inpatientId === data.inpatientId);
       if (index !== -1) {
+        await this.indexedDb.upsertRecord(STORAGE_KEY, data.inpatientId, data, index);
         storedInpatients[index] = data;
-        await this.indexedDb.setItem(STORAGE_KEY, storedInpatients);
         this.inpatientDetail = storedInpatients;
         return true;
       }
@@ -134,13 +134,12 @@ export class InpatientService {
   async deleteInpatient(id: number): Promise<boolean> {
     try {
       const storedInpatients = await this.indexedDb.getItem<InPatientDetail[]>(STORAGE_KEY) || [];
-      const updatedInpatients = storedInpatients.filter(p => p.inpatientId !== id);
-
-      if (updatedInpatients.length === storedInpatients.length) {
+      if (!storedInpatients.some(p => p.inpatientId === id)) {
         return false;
       }
 
-      await this.indexedDb.setItem(STORAGE_KEY, updatedInpatients);
+      await this.indexedDb.deleteRecord(STORAGE_KEY, id);
+      const updatedInpatients = storedInpatients.filter(p => p.inpatientId !== id);
       this.inpatientDetail = updatedInpatients;
       return true;
     } catch (e) {

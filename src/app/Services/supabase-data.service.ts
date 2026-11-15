@@ -31,7 +31,6 @@ const SINGLETON_ID = '__singleton__';
 })
 export class SupabaseDataService {
   readonly changes = new Subject<string>();
-  private collectionSnapshots = new Map<string, any[]>();
   private realtimeStarted = false;
 
   constructor(private supabase: SupabaseClientService) {}
@@ -42,13 +41,14 @@ export class SupabaseDataService {
         .from('hmc_records')
         .upsert({ collection: key, record_id: SINGLETON_ID, data: value, sort_order: 0 });
       this.throwIfError(error);
-      this.collectionSnapshots.delete(key);
       return;
     }
 
-    const snapshot = this.collectionSnapshots.has(key)
-      ? this.collectionSnapshots.get(key)!
-      : (await this.getItem<any[]>(key) || []);
+    // Always diff against the latest remote records to avoid stale-client overwrites.
+    const remoteValue = await this.getItem<any>(key);
+    const snapshot = (Array.isArray(remoteValue) ? remoteValue : []).filter(item =>
+      !(item && item.id === SINGLETON_ID)
+    );
     const previous = new Map<string, { item: any; index: number }>();
     snapshot.forEach((item, index) => previous.set(this.getRecordId(key, item), { item, index }));
     const current = new Map<string, { item: any; index: number }>();
@@ -74,18 +74,48 @@ export class SupabaseDataService {
       }
     });
 
-    const deletes = Array.from(previous.keys()).filter(id => !current.has(id));
-    if (inserts.length || updates.length || deletes.length) {
+    // Array writes are merge/upsert operations; deletion is explicit via deleteRecord.
+    // This prevents a stale client list from deleting rows added on another workstation.
+    if (inserts.length || updates.length) {
       const { error } = await this.client.rpc('apply_hmc_record_changes', {
         p_collection: key,
         p_inserts: inserts,
         p_updates: updates,
-        p_delete_ids: deletes,
+        p_delete_ids: [],
       });
       this.throwIfError(error);
     }
 
-    this.collectionSnapshots.set(key, this.clone(value));
+  }
+
+  async deleteRecord(collection: string, id: string | number): Promise<void> {
+    const { error } = await this.client.rpc('apply_hmc_record_changes', {
+      p_collection: collection,
+      p_inserts: [],
+      p_updates: [],
+      p_delete_ids: [String(id)],
+    });
+    this.throwIfError(error);
+  }
+
+  async moveRecord(collection: string, oldId: string | number, newId: string | number, data: any): Promise<void> {
+    const { error } = await this.client.rpc('apply_hmc_record_changes', {
+      p_collection: collection,
+      p_inserts: [{ record_id: String(newId), data, sort_order: 0 }],
+      p_updates: [],
+      p_delete_ids: [String(oldId)],
+    });
+    this.throwIfError(error);
+  }
+
+  async upsertRecord(collection: string, id: string | number, data: any, sortOrder = 0): Promise<void> {
+    const { error } = await this.client.rpc('apply_hmc_record_changes', {
+      p_collection: collection,
+      p_inserts: [],
+      p_updates: [{ record_id: String(id), data, sort_order: sortOrder }],
+      p_delete_ids: [],
+    });
+    this.throwIfError(error);
   }
 
   async getItem<T>(key: string): Promise<T | undefined> {
@@ -112,7 +142,6 @@ export class SupabaseDataService {
     const values = records
       .filter(record => record.record_id !== SINGLETON_ID)
       .map(record => record.data);
-    this.collectionSnapshots.set(key, this.clone(values));
     return values as T;
   }
 
@@ -209,8 +238,13 @@ export class SupabaseDataService {
       medicineDetails: 'medicineId',
       labDetails: 'patientId',
       inpatientDetails: 'inpatientId',
+      otFormData: 'id',
+      payments: 'id',
     };
-    const id = item && (item[fields[collection] || 'id'] ?? item.id);
+    const id = item && (item[fields[collection] || 'id'] ?? item.id ?? item.patientId);
+    if (collection === 'customMedicines') {
+      return String(id ?? JSON.stringify(item));
+    }
     if (id === undefined || id === null || String(id) === '') {
       throw new Error('Cannot save a ' + collection + ' record without a stable ID.');
     }
@@ -256,10 +290,6 @@ export class SupabaseDataService {
       time: row.token_time,
       createdAt: row.created_at,
     };
-  }
-
-  private clone<T>(value: T): T {
-    return value === undefined ? value : JSON.parse(JSON.stringify(value));
   }
 
   private throwIfError(error: { message: string } | null): void {

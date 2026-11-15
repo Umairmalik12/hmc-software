@@ -1,86 +1,129 @@
 <div class="prescription" id="prescription">
-  <!-- Medicine Datalist (hidden) -->
   <datalist id="medicineDatalist">
     <option *ngFor="let med of customMedicines" [value]="med"></option>
     <option *ngFor="let med of commonMedicines" [value]="med"></option>
   </datalist>
 
-  <!-- Header -->
-<div class="header">
+  <header class="header">
     <div class="urdu-title">بسم الله الرحمن الرحيم</div>
     <div class="clinic-title">Haq Medical Center</div>
     <div class="doc-info">
-      <h2>ڈاکٹر تنویر الحق</h2>
+      <h2>Dr. Tanveer ul Haq</h2>
       <p>M.B.B.S, F.C.P.S (Urology)</p>
       <p>Senior Consultant – Urology</p>
-      <p>Multan Institute of Kidney Diseases (MIKD)</p>
-      <p>PHC Reg #: 290710 | Contact: 0300-1234567</p>
+      <p>Multan Institute of Kidney Diseases</p>
+      <p>PHC Reg #: 290710 | 0300-1234567</p>
     </div>
-  </div>
+  </header>
 
-  <!-- Patient Information -->
-  <div class="patient-section">
+  <section class="patient-section">
     <h3>Patient Information</h3>
-    <table class="info-table">
-      <tr><td>Ref ID:</td><td><input [(ngModel)]="patient.refId" class="form-input" /></td><td>Date:</td><td>{{ today }}</td></tr>
-      <tr><td>Visit No:</td><td><input [(ngModel)]="patient.visit" class="form-input" /></td><td>Name:</td><td><input [(ngModel)]="patient.name" class="form-input wide" /></td></tr>
-      <tr><td>S/D/W of:</td><td><input [(ngModel)]="patient.relation" class="form-input" /></td><td>Age/Sex:</td><td><input [(ngModel)]="patient.age" class="form-input small" /> / <input [(ngModel)]="patient.sex" class="form-input small" /></td></tr>
-      <tr><td>Weight:</td><td><input [(ngModel)]="patient.weight" class="form-input small" /></td><td>Contact:</td><td><input [(ngModel)]="patient.contact" class="form-input" /></td></tr>
-    </table>
-    <div class="complaints">
-      <label>Allergies:</label> <input [(ngModel)]="patient.allergies" class="form-input wide" />
+    <div class="patient-grid">
+      <label class="field">
+        <span>MR No.</span>
+        <input [(ngModel)]="patient.refId" class="form-input" />
+      </label>
+      <label class="field">
+        <span>Date</span>
+        <input [ngModel]="today" class="form-input" readonly />
+      </label>
+      <label class="field field-wide">
+        <span>Patient Name</span>
+        <input [(ngModel)]="patient.name" class="form-input" />
+      </label>
+      <label class="field">
+        <span>Visit No.</span>
+        <input [(ngModel)]="patient.visit" class="form-input" />
+      </label>
+      <label class="field">
+        <span>Age</span>
+        <input [(ngModel)]="patient.age" class="form-input" />
+      </label>
+      <label class="field">
+        <span>Sex</span>
+        <input [(ngModel)]="patient.sex" class="form-input" />
+      </label>
+      <label class="field">
+        <span>Weight</span>
+        <input [(ngModel)]="patient.weight" class="form-input" />
+      </label>
+      <label class="field">
+        <span>Contact</span>
+        <input [(ngModel)]="patient.contact" class="form-input" />
+      </label>
+      <label class="field field-wide">
+        <span>Allergies</span>
+        <input [(ngModel)]="patient.allergies" class="form-input" />
+      </label>
+      <label class="field field-wide">
+        <span>Findings</span>
+        <input [(ngModel)]="patient.findings" class="form-input" />
+      </label>
+      <label class="field field-wide">
+        <span>Symptoms / Complaints</span>
+        <input [(ngModel)]="patient.symptoms" class="form-input" />
+      </label>
+      <label class="field field-wide">
+        <span>Diagnosis</span>
+        <input [(ngModel)]="patient.diagnosis" class="form-input" />
+      </label>
     </div>
-    <div class="complaints">
-      <label>Symptoms:</label> <input [(ngModel)]="patient.symptoms" class="form-input extra-wide" />
-    </div>
-    <div class="complaints">
-      <label>Findings:</label> <input [(ngModel)]="patient.findings" class="form-input extra-wide" />
-    </div>
-    <div class="diagnosis">
-      <label>Provisional Diagnosis:</label> <input [(ngModel)]="patient.diagnosis" class="form-input extra-wide" />
-    </div>
-  </div>
+  </section>
 
-  <hr style="margin: 25px 0;" />
+  <section class="rx-section">
+    <div class="section-header">
+      <h3>Prescription (Rx)</h3>
+      <button type="button" class="btn-add small" (click)="addMedicine()">Add Medicine</button>
+    </div>
 
-  <!-- Medicines -->
-  <div class="rx-section">
-    <h3>Prescription (Rx)</h3>
-    <table class="medicine-table">
+    <div *ngIf="prescribedMedicines.length === 0" class="empty-state">No medicines added yet.</div>
+
+    <table class="medicine-table" *ngIf="prescribedMedicines.length > 0">
       <thead>
         <tr>
           <th>Medicine</th>
-          <th>صبح (Morning)</th>
-          <th>دوپہر (Afternoon)</th>
-          <th>شام (Evening)</th>
+          <th>Morning</th>
+          <th>Afternoon</th>
+          <th>Evening</th>
+          <th class="action-col">Action</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let med of prescribedMedicines; let i = index" class="medicine-row">
-          <td><input list="medicineDatalist" type="text" [(ngModel)]="med.name" class="form-input medicine-input" placeholder="Type to search/select medicine + dosage..." (input)="onMedicineInput($event, med.name)" (blur)="addCustomMedicine(med.name)" /></td>
-          <td><label class="dose-checkbox"><input type="checkbox" [(ngModel)]="med.morning" /> ✓</label></td>
-          <td><label class="dose-checkbox"><input type="checkbox" [(ngModel)]="med.afternoon" /> ✓</label></td>
-          <td><label class="dose-checkbox"><input type="checkbox" [(ngModel)]="med.evening" /> ✓</label></td>
+          <td>
+            <input list="medicineDatalist" type="text" [(ngModel)]="med.name" class="form-input medicine-input" placeholder="Medicine name / dose" (input)="onMedicineInput($event, med.name)" (blur)="addCustomMedicine(med.name)" />
+          </td>
+          <td><label class="dose-checkbox"><input type="checkbox" [(ngModel)]="med.morning" /></label></td>
+          <td><label class="dose-checkbox"><input type="checkbox" [(ngModel)]="med.afternoon" /></label></td>
+          <td><label class="dose-checkbox"><input type="checkbox" [(ngModel)]="med.evening" /></label></td>
+          <td class="action-col">
+            <button type="button" class="remove-row" (click)="removeMedicine(i)" *ngIf="prescribedMedicines.length > 1" aria-label="Remove medicine row">×</button>
+          </td>
         </tr>
       </tbody>
     </table>
-    <small class="dropdown-hint no-print">💡 Type to see dropdown suggestions from common/custom medicines</small>
-  </div>
 
-  <!-- Instructions & Signature -->
-  <div class="footer-section">
+    <small class="dropdown-hint no-print">Type to select from saved/custom medicines.</small>
+  </section>
+
+  <footer class="footer-section">
     <div class="instructions">
-      <strong>Instructions:</strong> Take medicines as prescribed. Complete full course. Return for follow-up after 7 days. Report any side effects or allergies immediately. Keep away from children.
+      <strong>Instructions:</strong> Take medicines as prescribed. Complete the full course and return for follow-up in 7 days. Report side effects immediately.
     </div>
     <div class="signature-area">
       <div class="signature-box">
         <p>Dr. Tanveer ul Haq</p>
-        <p>Senior Consultant Urologist<br>Multan Institute of Kidney Diseases</p>
+        <p>Senior Consultant Urologist</p>
+        <p>Multan Institute of Kidney Diseases</p>
       </div>
-      <div class="stamp-box">🔴 Doctor's Stamp & Signature</div>
+      <div class="stamp-box">Doctor's Signature</div>
     </div>
-  </div>
+  </footer>
 
-    <p class="no-print" role="alert" *ngIf="storageError">{{storageError}}</p>
-    <div class="no-print actions" *ngIf="!isPrinting">    <button class="btn-save" (click)="save()">💾 Save Prescription</button>  <button class="btn-print" (click)="print()">🖨 Print</button>   <button class="btn-add" (click)="addMedicine()">➕ Add Medicine Row</button>  </div>
+  <p class="no-print" role="alert" *ngIf="storageError">{{storageError}}</p>
+  <div class="no-print actions" *ngIf="!isPrinting">
+    <button class="btn-save" (click)="save()">Save</button>
+    <button class="btn-print" (click)="print()">Print</button>
+    <button class="btn-add" (click)="addMedicine()">Add Medicine</button>
+  </div>
 </div>

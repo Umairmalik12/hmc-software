@@ -71,42 +71,43 @@ export class LabService {
     });
   }
 
- addNewLabPatient(data: LabPatient): Observable<boolean> {
-  return new Observable<boolean>(observer => {
-    this.indexedDbService.getItem<LabPatient[]>('labDetails').then(async stored => {
+  async addNewLabPatient(data: LabPatient): Promise<boolean> {
+    try {
+      const stored = await this.indexedDbService.getItem<LabPatient[]>('labDetails');
       this.labDetail = stored ?? [];
 
-      // Only assign a new ID if not provided
       if (!data.patientId) {
         data.patientId = await this.indexedDbService.allocateId('labDetails');
+      } else if (this.labDetail.some(o => o.patientId === data.patientId)) {
+        console.error('Duplicate MR No (patientId) exists');
+        return false;
       }
 
+      await this.indexedDbService.setItem('labDetails', [...this.labDetail, data]);
       this.labDetail.push(data);
-      this.saveLabData().then(() => {
-        observer.next(true);
-        observer.complete();
-      }).catch(err => observer.error(err));
-    }).catch(err => observer.error(err));
-  });
-}
-  updateLabPatient(data: LabPatient): Observable<boolean> {
-    return new Observable<boolean>(observer => {
-      this.indexedDbService.getItem<LabPatient[]>('labDetails').then(stored => {
-        this.labDetail = stored ?? [];
+      return true;
+    } catch (err) {
+      console.error('Error adding lab patient:', err);
+      return false;
+    }
+  }
 
-        const index = this.labDetail.findIndex(o => o.patientId === data.patientId);
-        if (index !== -1) {
-          this.labDetail[index] = data;
-          this.saveLabData().then(() => {
-            observer.next(true);
-            observer.complete();
-          }).catch(err => observer.error(err));
-        } else {
-          observer.next(false);
-          observer.complete();
-        }
-      }).catch(err => observer.error(err));
-    });
+  async updateLabPatient(data: LabPatient): Promise<boolean> {
+    try {
+      const stored = await this.indexedDbService.getItem<LabPatient[]>('labDetails');
+      this.labDetail = stored ?? [];
+
+      const index = this.labDetail.findIndex(o => o.patientId === data.patientId);
+      if (index !== -1) {
+        await this.indexedDbService.upsertRecord('labDetails', data.patientId!, data, index);
+        this.labDetail[index] = data;
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Error updating lab patient:', err);
+      return false;
+    }
   }
 
   getLabPatientBrief(): Observable<LabPatient[]> {
@@ -128,24 +129,22 @@ export class LabService {
     });
   }
 
-  deleteLabPatient(id: number): Observable<boolean> {
-  return new Observable<boolean>(observer => {
-    this.indexedDbService.getItem<LabPatient[]>('labDetails').then(data => {
+  async deleteLabPatient(id: number): Promise<boolean> {
+    try {
+      const data = await this.indexedDbService.getItem<LabPatient[]>('labDetails');
       this.labDetail = data ?? [];
 
       const index = this.labDetail.findIndex(p => p.patientId === id);
       if (index !== -1) {
+        await this.indexedDbService.deleteRecord('labDetails', id);
         this.labDetail.splice(index, 1);
-        this.saveLabData().then(() => {
-          observer.next(true);
-          observer.complete();
-        }).catch(err => observer.error(err));
-      } else {
-        observer.next(false);
-        observer.complete();
+        return true;
       }
-    }).catch(err => observer.error(err));
-  });
-}
+      return false;
+    } catch (err) {
+      console.error('Error deleting lab patient:', err);
+      return false;
+    }
+  }
 
 }

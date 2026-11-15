@@ -10,13 +10,16 @@ describe('PatientService', () => {
 
   beforeEach(() => {
     storedPatients = [];
-    supabase = jasmine.createSpyObj<SupabaseDataService>('SupabaseDataService', ['getItem', 'setItem', 'allocateId']);
+    supabase = jasmine.createSpyObj<SupabaseDataService>('SupabaseDataService', ['getItem', 'setItem', 'allocateId', 'moveRecord', 'upsertRecord', 'deleteRecord']);
     supabase.getItem.and.callFake(async <T>() => storedPatients as unknown as T);
     supabase.setItem.and.callFake((_key: string, value: PatientDetail[]) => {
       storedPatients = value;
       return Promise.resolve();
     });
     supabase.allocateId.and.returnValue(Promise.resolve(1));
+    supabase.moveRecord.and.returnValue(Promise.resolve());
+    supabase.upsertRecord.and.returnValue(Promise.resolve());
+    supabase.deleteRecord.and.returnValue(Promise.resolve());
 
     TestBed.configureTestingModule({
       providers: [
@@ -74,7 +77,8 @@ describe('PatientService', () => {
     const saved = await service.updatePatient(patient);
 
     expect(saved).toBeTrue();
-    expect(storedPatients[0].patientId).toBe(8);
+    expect(supabase.moveRecord).toHaveBeenCalledWith('patientDetails', 3, 8, jasmine.objectContaining({ patientId: 8 }));
+    expect(storedPatients[0].patientId).toBe(3);
     expect(storedPatients[0].oldId).toBeUndefined();
   });
 });

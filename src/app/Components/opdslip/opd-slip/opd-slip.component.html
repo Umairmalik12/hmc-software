@@ -14,7 +14,7 @@
         <p><strong>Name:</strong> {{ opd.patientName }}</p>
         <p><strong>Sex:</strong> {{ opd.sex }}</p>
         <p><strong>Date:</strong> {{ opd.date | date:'dd/MM/yyyy' }}</p>
-        <p><strong>Time:</strong> {{ opd.time }}</p>
+        <p><strong>Time:</strong> {{ opd.time | timeFormat }}</p>
         <p><strong>Doctor:</strong> {{ opd.drName }}</p>
         <p><strong>Follow Up:</strong> {{ opd.followUp }}</p>
       </div>

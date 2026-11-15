@@ -8,6 +8,7 @@ import { LabPatientDataService } from 'src/app/Services/lab-data.service';
 import { LabService } from 'src/app/Services/lab.service';
 import { LabPatient } from 'src/app/Models/lab.model';
 import { UserLoginService } from 'src/app/Services/user-login.service';
+import { formatTime12 } from 'src/app/Pipes/time-format.pipe';
 
 @Component({
   selector: 'app-lab-list',
@@ -116,57 +117,43 @@ ngOnInit(): void {
 
     const dialogRef = this.dialog.open(LabEditComponent, dialogConfig);
 
-    dialogRef.afterClosed().subscribe((data: LabPatient) => {
+    dialogRef.afterClosed().subscribe(async (data: LabPatient) => {
       if (data) {
-        console.log("data",data)
-        this.labService.updateLabPatient(data).subscribe(success => {
-          let msg = " Something went wrong";
-          let type = "error";
-          if (success) {
-            this.notifyUpdate.notify.next(true);
-            msg = "Lab Patient Data Updated Successfully";
-            type = "success";
-          }
-          this.notifyUpdate.alertNotify.next({ msg, type });
-        });
+        console.log("data", data);
+        const success = await this.labService.updateLabPatient(data);
+        const msg = success ? "Lab Patient Data Updated Successfully" : "Something went wrong";
+        const type = success ? "success" : "error";
+        if (success) {
+          this.notifyUpdate.notify.next(true);
+        }
+        this.notifyUpdate.alertNotify.next({ msg, type });
       }
     });
   });
 }
 
-
-  deleteLabPatient(id: number): void {
-  if (confirm('Are you sure you want to delete this lab patient?')) {
-    this.labService.deleteLabPatient(id).subscribe({
-      next: (success:any) => {
-        if (success) {
-          this.notifyUpdate.notify.next(true);
-          this.notifyUpdate.alertNotify.next({
-            msg: 'Lab Patient deleted successfully',
-            type: 'success'
-          });
-        } else {
-          this.notifyUpdate.alertNotify.next({
-            msg: 'Failed to delete patient',
-            type: 'error'
-          });
-        }
-      },
-      error: () => {
+  async deleteLabPatient(id: number): Promise<void> {
+    if (confirm('Are you sure you want to delete this lab patient?')) {
+      const success = await this.labService.deleteLabPatient(id);
+      if (success) {
+        this.notifyUpdate.notify.next(true);
         this.notifyUpdate.alertNotify.next({
-          msg: 'An error occurred during deletion',
+          msg: 'Lab Patient deleted successfully',
+          type: 'success'
+        });
+      } else {
+        this.notifyUpdate.alertNotify.next({
+          msg: 'Failed to delete patient',
           type: 'error'
         });
       }
-    });
+    }
   }
-}
 
 printLabSlip(patientId: string): void {
-  // Get current lab data safely from BehaviorSubject
-  const labs = this.dataSource['labSubject'].getValue(); // Direct access to BehaviorSubject value
-
+  const labs = this.dataSource['labSubject']?.getValue?.() ?? [];
   const lab = labs.find(item => String(item.patientId) === String(patientId));
+
   if (!lab) {
     this.notifyUpdate.alertNotify.next({
       msg: 'Lab data not found for printing.',
@@ -175,78 +162,250 @@ printLabSlip(patientId: string): void {
     return;
   }
 
-  // Format date properly
-  const formattedDate = new Date(lab.dateTime).toLocaleString();
+  const printDate = new Date();
+  const patientDate = new Date(lab.dateTime);
 
-  // Generate printable HTML
-const slipHtml = `
-<html>
-  <head>
-    <title>Lab Patient Slip</title>
-    <style>
-      body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f8fb; margin: 0; padding: 0; }
-      .slip-container { background: #fff; border-radius: 12px; box-shadow: 0 4px 24px #1976d233; max-width: 650px; margin: 40px auto; padding: 36px 40px; }
-      .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
-      .logo { font-size: 32px; font-weight: bold; color: #1976d2; letter-spacing: 2px; }
-      .lab-info { text-align: right; font-size: 14px; color: #555; }
-      h2 { text-align: center; margin-bottom: 28px; color: #1976d2; font-size: 28px; font-weight: 600; }
-      table { width: 100%; border-collapse: separate; border-spacing: 0 8px; margin-bottom: 24px; }
-      th, td { padding: 12px 16px; font-size: 17px; border-radius: 6px; }
-      th { background: #e3f2fd; color: #1976d2; text-align: left; width: 38%; font-weight: 500; }
-      td { background: #f9f9f9; color: #222; }
-      .section-title { font-weight: bold; color: #1976d2; margin-top: 24px; margin-bottom: 8px; font-size: 18px; }
-      .footer { text-align: center; margin-top: 40px; color: #888; font-size: 15px; }
-      @media print {
-        body { background: #fff; }
-        .slip-container { box-shadow: none; margin: 0; }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="slip-container">
-      <div class="header">
-        <div class="logo">Haq Medical Center Lab</div>
-        <div class="lab-info">
-          <div>Haq Medical Center</div>
-          <div>${new Date().toLocaleDateString()}</div>
-        </div>
-      </div>
-      <h2>Patient Test Slip</h2>
-      <table>
-        <tr><th>MR No.</th><td>${lab.patientId}</td></tr>
-        <tr><th>Date</th><td>${new Date(lab.dateTime).toLocaleDateString()}</td></tr>
-        <tr><th>Time</th><td>${new Date(lab.dateTime).toLocaleTimeString()}</td></tr>
-        <tr><th>Patient Name</th><td>${lab.name}</td></tr>
-        <tr><th>Phone</th><td>${lab.phone || '-'}</td></tr>
-        <tr><th>Test Name</th><td>${lab.testName}</td></tr>
-        <tr><th>Price</th><td>Rs. ${lab.price}</td></tr>
-        <tr><th>Doctor Name</th><td>${lab.suggestedDr}</td></tr>
-      </table>
-      <div class="footer">
-        Printed by  HMC Software &mdash; ${new Date().toLocaleString()}
-      </div>
-    </div>
-    <script>
-      window.onload = function() {
-        window.print();
-        setTimeout(() => window.close(), 1000);
-      };
-    </script>
-  </body>
-</html>
-`;
+  const escapeHtml = (value: unknown): string =>
+    String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
 
-  // Open a print window
-  const printWindow = window.open('', '_blank', 'width=800,height=600');
-  if (printWindow) {
-    printWindow.document.open();
-    printWindow.document.write(slipHtml);
-    printWindow.document.close();
-  } else {
+  const formatDisplayDate = (date: Date): string =>
+    date.toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric'
+    });
+
+  const formatDisplayTime = (date: Date): string =>
+    date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+
+  const formatPrintStamp = (date: Date): string =>
+    `${date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}`;
+
+  const slipHtml = `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Patient Test Slip</title>
+        <style>
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+
+          html, body {
+            margin: 0;
+            padding: 0;
+            width: 80mm;
+            background: #fff;
+            color: #000;
+            font-family: "Segoe UI", Arial, sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          body {
+            width: 80mm;
+            max-width: 80mm;
+            overflow: visible;
+          }
+
+          .receipt {
+            width: 72mm;
+            margin: 0;
+            padding: 2mm 2mm 1.5mm;
+            box-sizing: border-box;
+            background: #fff;
+            color: #000;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            overflow: visible;
+          }
+
+          .brand {
+            font-size: 11pt;
+            font-weight: 700;
+            text-align: center;
+            line-height: 1.2;
+            margin-bottom: 1mm;
+          }
+
+          .title {
+            font-size: 10.5pt;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 2mm;
+          }
+
+          .meta {
+            font-size: 7.2pt;
+            text-align: center;
+            margin-bottom: 2mm;
+          }
+
+          .rule {
+            border-top: 1px dashed #000;
+            margin: 1.5mm 0;
+          }
+
+          .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 3mm;
+            width: 100%;
+            margin: 1.2mm 0;
+            font-size: 8.2pt;
+            line-height: 1.25;
+          }
+
+          .label {
+            font-weight: 700;
+            min-width: 30%;
+            flex: 0 0 30%;
+          }
+
+          .value {
+            flex: 1;
+            text-align: right;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            font-weight: 600;
+          }
+
+          .footer-note {
+            font-size: 7.2pt;
+            text-align: center;
+            margin-top: 2mm;
+          }
+
+          .thanks {
+            font-size: 12pt;
+            font-weight: 700;
+            text-align: center;
+            margin-top: 2mm;
+            letter-spacing: 0.4pt;
+          }
+
+          @media print {
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+
+            html, body {
+              width: 80mm;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #fff;
+            }
+
+            body {
+              display: block;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
+            .receipt {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 72mm;
+              margin: 0;
+              padding: 2mm 2mm 1.5mm;
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+
+            body > *:not(.receipt) {
+              display: none !important;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <section class="receipt">
+          <div class="brand">Haq Medical Center Lab</div>
+          <div class="title">Patient Test Slip</div>
+          <div class="meta">${escapeHtml(formatPrintStamp(printDate))}</div>
+
+          <div class="rule"></div>
+
+          <div class="row">
+            <span class="label">MR No.</span>
+            <span class="value">${escapeHtml(lab.patientId)}</span>
+          </div>
+          <div class="row">
+            <span class="label">Date</span>
+            <span class="value">${escapeHtml(formatDisplayDate(patientDate))}</span>
+          </div>
+          <div class="row">
+            <span class="label">Time</span>
+            <span class="value">${escapeHtml(formatDisplayTime(patientDate))}</span>
+          </div>
+          <div class="row">
+            <span class="label">Patient Name</span>
+            <span class="value">${escapeHtml(lab.name || '-')}</span>
+          </div>
+          <div class="row">
+            <span class="label">Phone</span>
+            <span class="value">${escapeHtml(lab.phone || '-')}</span>
+          </div>
+          <div class="row">
+            <span class="label">Test Name</span>
+            <span class="value">${escapeHtml(lab.testName || '-')}</span>
+          </div>
+          <div class="row">
+            <span class="label">Price</span>
+            <span class="value">Rs. ${escapeHtml(lab.price ?? 0)}</span>
+          </div>
+          <div class="row">
+            <span class="label">Doctor Name</span>
+            <span class="value">${escapeHtml(lab.suggestedDr || '-')}</span>
+          </div>
+
+          <div class="rule"></div>
+
+          <div class="footer-note">Printed by HMC Software</div>
+          <div class="footer-note">${escapeHtml(formatPrintStamp(printDate))}</div>
+          <div class="thanks">Thank You!</div>
+        </section>
+      </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '_blank', 'width=500,height=700,menubar=no,toolbar=no,location=no,status=no');
+
+  if (!printWindow) {
     this.notifyUpdate.alertNotify.next({
       msg: 'Popup blocked. Please allow popups to print.',
       type: 'error'
     });
+    return;
   }
+
+  printWindow.document.open();
+  printWindow.document.write(slipHtml);
+  printWindow.document.close();
+
+  printWindow.focus();
+  printWindow.onload = () => {
+    printWindow.setTimeout(() => {
+      printWindow.print();
+      printWindow.setTimeout(() => printWindow.close(), 500);
+    }, 200);
+  };
 }
 }

@@ -8,7 +8,7 @@
     <div class="live-clock" aria-live="polite">
       <span>Today's Date</span>
       <strong>{{ formatDate(today) }}</strong>
-      <span>Pakistan time</span>
+      <span>Pakistan time (12h)</span>
       <strong>{{ currentTime }}</strong>
     </div>
   </header>
@@ -101,7 +101,7 @@
               <td class="table-token">{{ slip.tokenNumber }}</td>
               <td>{{ slip.customerName }}</td>
               <td>{{ formatDate(slip.date) }}</td>
-              <td>{{ slip.time }}</td>
+              <td>{{ slip.time | timeFormat }}</td>
               <td class="actions">
                 <button type="button" class="secondary-button" (click)="printSlip(slip)">Print</button>
                 <button type="button" class="delete-button" (click)="deleteSlip(slip)">Delete</button>
@@ -129,7 +129,7 @@
     <div class="slip-rule"></div>
     <div class="slip-row"><span class="slip-label">Patient</span><span class="slip-value">{{ slip.customerName }}</span></div>
     <div class="slip-row"><span class="slip-label">Date</span><span class="slip-value">{{ slip.date.split('-').reverse().join('-') }}</span></div>
-    <div class="slip-row"><span class="slip-label">Time</span><span class="slip-value">{{ slip.time }}</span></div>
+    <div class="slip-row"><span class="slip-label">Time</span><span class="slip-value">{{ slip.time | timeFormat }}</span></div>
     <div class="slip-rule"></div>
     <div class="slip-footer">PLEASE WAIT FOR YOUR TURN</div>
     <div class="slip-thanks">THANK YOU!</div>

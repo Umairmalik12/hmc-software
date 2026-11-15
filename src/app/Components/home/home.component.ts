@@ -332,8 +332,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   addLabTestSlip() {
     this.openDialog(LabEditComponent, this.tempLabPatient, (patientData: LabPatient) => {
-      this.labService.addNewLabPatient(patientData);
-      return true;
+      return this.labService.addNewLabPatient(patientData);
     });
   }
 

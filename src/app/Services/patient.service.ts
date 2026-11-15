@@ -87,8 +87,8 @@ export class PatientService {
         data.patientId = await this.indexedDb.allocateId(STORAGE_KEY);
       }
 
+      await this.indexedDb.setItem(STORAGE_KEY, [...storedPatients, data]);
       storedPatients.push(data);
-      await this.indexedDb.setItem(STORAGE_KEY, storedPatients);
       this.patientDetail = storedPatients;
       this.total = storedPatients.length;
       return true;
@@ -111,8 +111,14 @@ export class PatientService {
         }
         const updatedPatient = { ...data };
         delete updatedPatient.oldId;
-        storedPatients[index] = updatedPatient;
-        await this.indexedDb.setItem(STORAGE_KEY, storedPatients);
+        if (oldId === undefined) {
+          return false;
+        }
+        if (newId === oldId) {
+          await this.indexedDb.upsertRecord(STORAGE_KEY, newId, updatedPatient, index);
+        } else {
+          await this.indexedDb.moveRecord(STORAGE_KEY, oldId, newId, updatedPatient);
+        }
         this.patientDetail = storedPatients;
         return true;
       }
@@ -142,13 +148,12 @@ export class PatientService {
   async deletePatient(id: number): Promise<boolean> {
   try {
     const storedPatients = await this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY) || [];
-    const updatedPatients = storedPatients.filter(p => p.patientId !== id);
-
-    if (updatedPatients.length === storedPatients.length) {
+    if (!storedPatients.some(p => p.patientId === id)) {
       return false;
     }
 
-    await this.indexedDb.setItem(STORAGE_KEY, updatedPatients);
+    await this.indexedDb.deleteRecord(STORAGE_KEY, id);
+    const updatedPatients = storedPatients.filter(p => p.patientId !== id);
     this.patientDetail = updatedPatients;
     return true;
   } catch (e) {

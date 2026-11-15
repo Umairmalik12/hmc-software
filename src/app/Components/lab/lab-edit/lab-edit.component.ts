@@ -42,7 +42,7 @@ export class LabEditComponent {
     this.edit = !!labTestDetails?.patientId; // Check if editing
 
     this.labPatientForm = this.fb.group({
-  patientId: [this.labTestDetails?.patientId || '', [Validators.required]], // Always editable input
+  patientId: [{ value: this.labTestDetails?.patientId || '', disabled: this.edit }],
 
       name: [this.labTestDetails?.name || '', [Validators.required, Validators.pattern('[a-zA-Z ]+')]],
       phone: [this.labTestDetails?.phone || '', [Validators.required, Validators.pattern('^[0-9]{10,15}$')]],
@@ -71,14 +71,15 @@ export class LabEditComponent {
   }
 
   private getFormattedLabPatientData() {
+    const formValue = this.labPatientForm.getRawValue();
     return {
-      patientId: this.c['patientId'].value,
-      name: this.c['name'].value,
-      phone: this.c['phone'].value,
-      testName: this.c['testName'].value,
-      price: this.c['price'].value,
-      suggestedDr: this.c['suggestedDr'].value,
-      dateTime: this.c['dateTime'].value
+      patientId: Number(formValue.patientId) || 0,
+      name: formValue.name,
+      phone: formValue.phone,
+      testName: formValue.testName,
+      price: Number(formValue.price),
+      suggestedDr: formValue.suggestedDr,
+      dateTime: formValue.dateTime
     };
   }
 }

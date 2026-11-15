@@ -100,9 +100,9 @@ export class MedicineService {
         if (!data.createdAt) {
           data.createdAt = new Date().toISOString();
         }
+        await this.indexedDb.setItem(STORAGE_KEY, [...storedMedicines, data]);
         storedMedicines.push(data);
       }
-      await this.indexedDb.setItem(STORAGE_KEY, storedMedicines);
       this.medicineDetail = storedMedicines;
       return true;
     } catch (e) {
@@ -116,8 +116,8 @@ export class MedicineService {
       const storedMedicines = await this.indexedDb.getItem<Medicine[]>(STORAGE_KEY) || [];
       const index = storedMedicines.findIndex(p => p.medicineId === data.medicineId);
       if (index !== -1) {
+        await this.indexedDb.upsertRecord(STORAGE_KEY, data.medicineId, data, index);
         storedMedicines[index] = data;
-        await this.indexedDb.setItem(STORAGE_KEY, storedMedicines);
         this.medicineDetail = storedMedicines;
         return true;
       }
@@ -134,14 +134,16 @@ export class MedicineService {
       for (const data of medicines) {
         const index = storedMedicines.findIndex(p => p.medicineId === data.medicineId);
         if (index !== -1) {
+          await this.indexedDb.upsertRecord(STORAGE_KEY, data.medicineId!, data, index);
           storedMedicines[index] = data;
         } else {
           // If not found, add as new
           data.medicineId = await this.indexedDb.allocateId(STORAGE_KEY);
+          if (!data.createdAt) data.createdAt = new Date().toISOString();
+          await this.indexedDb.setItem(STORAGE_KEY, [...storedMedicines, data]);
           storedMedicines.push(data);
         }
       }
-      await this.indexedDb.setItem(STORAGE_KEY, storedMedicines);
       this.medicineDetail = storedMedicines;
       return true;
     } catch (e) {
@@ -153,13 +155,12 @@ export class MedicineService {
   async deleteMedicine(id: number): Promise<boolean> {
     try {
       const storedMedicines = await this.indexedDb.getItem<Medicine[]>(STORAGE_KEY) || [];
-      const updatedMedicines = storedMedicines.filter(p => p.medicineId !== id);
-
-      if (updatedMedicines.length === storedMedicines.length) {
+      if (!storedMedicines.some(p => p.medicineId === id)) {
         return false;
       }
 
-      await this.indexedDb.setItem(STORAGE_KEY, updatedMedicines);
+      await this.indexedDb.deleteRecord(STORAGE_KEY, id);
+      const updatedMedicines = storedMedicines.filter(p => p.medicineId !== id);
       this.medicineDetail = updatedMedicines;
       return true;
     } catch (e) {

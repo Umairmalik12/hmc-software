@@ -19,7 +19,7 @@
     <!-- Operation Time Column -->
     <ng-container matColumnDef="operationTime">
       <th mat-header-cell *matHeaderCellDef>Time</th>
-      <td mat-cell *matCellDef="let ot">{{ ot.operationTime }}</td>
+      <td mat-cell *matCellDef="let ot">{{ ot.operationTime | timeFormat }}</td>
     </ng-container>
 
     <!-- Doctor Name Column -->

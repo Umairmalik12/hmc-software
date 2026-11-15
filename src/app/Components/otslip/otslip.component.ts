@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
+import { formatTime12 } from 'src/app/Pipes/time-format.pipe';
 
 @Component({
   selector: 'app-ot-form',
@@ -23,9 +24,9 @@ export class OtFormComponent implements OnInit {
     if (selectedPatientId) {
       this.indexedDb.getItem<any[]>('otFormData').then(otFormData => {
         if (otFormData) {
-          const patientData = otFormData.find((ot: any) => ot.id === selectedPatientId);
+          const patientData = otFormData.find((ot: any) => String(ot.id) === String(selectedPatientId));
           if (patientData) {
-            this.editingId = patientData.id;
+            this.editingId = String(patientData.id);
             this.isEditMode = true;
             this.otForm.patchValue({
               patientName: patientData.patientName,
@@ -174,10 +175,13 @@ async submitForm(): Promise<void> {
     }));
     const id = this.isEditMode && this.editingId
       ? this.editingId
-      : 'form-' + Math.random().toString(36).substr(2, 9);
-    const record = { ...formValue, products: selectedProducts, id };
+      : String(await this.indexedDb.allocateId('otFormData'));
+    const createdAt = this.isEditMode
+      ? (this.otlist.find(item => String(item.id) === String(id))?.createdAt || new Date().toISOString())
+      : new Date().toISOString();
+    const record = { ...formValue, products: selectedProducts, id, createdAt };
     const nextList = [...this.otlist];
-    const existingIndex = nextList.findIndex(item => item.id === id);
+    const existingIndex = nextList.findIndex(item => String(item.id) === String(id));
     if (existingIndex !== -1) nextList[existingIndex] = record;
     else nextList.push(record);
 
@@ -340,7 +344,7 @@ private resetForm(): void {
                 <div class="info-row"><span class="label">Patient Name:</span> <strong>${this.otForm.value.patientName || '—'}</strong></div>
                 <div class="info-row"><span class="label">Doctor:</span> ${this.otForm.value.doctorName || '—'}</div>
                 <div class="info-row"><span class="label">Date:</span> ${this.otForm.value.operationDate || '—'}</div>
-                <div class="info-row"><span class="label">Time:</span> ${this.otForm.value.operationTime || '—'}</div>
+                <div class="info-row"><span class="label">Time:</span> ${formatTime12(this.otForm.value.operationTime) || '—'}</div>
                 <div class="info-row"><span class="label">Room:</span> ${this.otForm.value.roomNumber || '—'}</div>
                 <div class="info-row"><span class="label">Medicine Header:</span> ${this.otForm.value.includeMedicineHeader === 'withoutMedicine' ? 'Without Medicine' : 'With Medicine'}</div>
               </div>
@@ -353,7 +357,7 @@ private resetForm(): void {
               </div>
   
               <div class="footer">
-                Printed on: ${new Date().toLocaleString()}
+                Printed on: ${new Date().toLocaleString('en-US', { hour12: true })}
               </div>
             </body>
           </html>

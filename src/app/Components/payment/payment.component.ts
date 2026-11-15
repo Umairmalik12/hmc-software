@@ -92,12 +92,16 @@ export class PaymentComponent implements OnInit, OnDestroy {
     if (this.paymentForm.valid) {
       const paymentData = this.paymentForm.getRawValue(); // Includes disabled fields
       paymentData.cashReturn = this.cashReturn;
-      paymentData.id = 'pay-' + Math.random().toString(36).substr(2, 9);
+      const allocatedId = await this.indexedDbService.allocateId('payments');
+      paymentData.id = String(allocatedId);
+      paymentData.createdAt = new Date().toISOString();
 
       this.payments.push(paymentData);
       await this.indexedDbService.setItem('payments', this.payments);
 
-      this.paymentForm.reset();
+      this.paymentForm.reset({
+        patientId: this.generatePatientId(),
+      });
       this.cashReturn = 0;
 
       await this.refreshPaymentList();
@@ -146,7 +150,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
       </tr>
       <tr>
         <td><strong>Date:</strong></td>
-        <td>${new Date().toLocaleString()}</td>
+        <td>${new Date().toLocaleString('en-US', { hour12: true })}</td>
       </tr>
     </table>
 
@@ -175,7 +179,9 @@ export class PaymentComponent implements OnInit, OnDestroy {
   }
 
   resetForm(): void {
-    this.paymentForm.reset();
+    this.paymentForm.reset({
+      patientId: this.generatePatientId(),
+    });
     this.cashReturn = 0;
   }
 }

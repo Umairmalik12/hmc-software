@@ -30,7 +30,7 @@
 
         <ng-container matColumnDef="dateTime">
             <mat-header-cell *matHeaderCellDef>Appointment Date</mat-header-cell>
-            <mat-cell *matCellDef="let lab">{{ lab.dateTime | date: 'short' }}</mat-cell>
+            <mat-cell *matCellDef="let lab">{{ lab.dateTime | date: 'M/d/yy, h:mm a' }}</mat-cell>
         </ng-container>
 
    <ng-container matColumnDef="action" *ngIf="isSuperAdmin" >

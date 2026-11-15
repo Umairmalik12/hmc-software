@@ -133,10 +133,6 @@ begin
   if coalesce(array_length(p_delete_ids, 1), 0) > 0 then
     delete from public.hmc_records
     where collection = p_collection and record_id = any(p_delete_ids);
-    get diagnostics affected_rows = row_count;
-    if affected_rows <> array_length(p_delete_ids, 1) then
-      raise exception 'One or more % records could not be deleted', p_collection;
-    end if;
   end if;
 
   for row_data in select value from jsonb_array_elements(coalesce(p_inserts, '[]'::jsonb))
@@ -149,11 +145,10 @@ begin
       (row_data ->> 'sort_order')::integer,
       now()
     )
-    on conflict (collection, record_id) do nothing;
-    get diagnostics affected_rows = row_count;
-    if affected_rows = 0 then
-      raise exception 'Record ID % already exists in %', row_data ->> 'record_id', p_collection;
-    end if;
+    on conflict (collection, record_id) do update
+      set data = excluded.data,
+          sort_order = excluded.sort_order,
+          updated_at = now();
   end loop;
 
   for row_data in select value from jsonb_array_elements(coalesce(p_updates, '[]'::jsonb))
@@ -165,7 +160,18 @@ begin
       where collection = p_collection and record_id = row_data ->> 'record_id';
     get diagnostics affected_rows = row_count;
     if affected_rows = 0 then
-      raise exception 'Record ID % was not found in %', row_data ->> 'record_id', p_collection;
+      insert into public.hmc_records (collection, record_id, data, sort_order, updated_at)
+      values (
+        p_collection,
+        row_data ->> 'record_id',
+        row_data -> 'data',
+        (row_data ->> 'sort_order')::integer,
+        now()
+      )
+      on conflict (collection, record_id) do update
+        set data = excluded.data,
+            sort_order = excluded.sort_order,
+            updated_at = now();
     end if;
   end loop;
 end;

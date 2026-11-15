@@ -60,7 +60,7 @@ export function printThermal(html: string, widthMm: 58 | 80): void {
     .slip-footer{margin-top:.7mm;font-size:${(7.5 * scale).toFixed(1)}pt;font-weight:700;letter-spacing:.3pt;
       text-transform:uppercase;line-height:1.25}
     .slip-thanks{font-size:${(8.5 * scale).toFixed(1)}pt;font-weight:900;letter-spacing:.6pt;
-      text-transform:uppercase;line-height:1.25}
+      text-transform:uppercase;line-height:1.25;padding-bottom:2mm}
   `;
 
   // Step 1 – measuring document at the real printable width (no @page height).
@@ -93,8 +93,16 @@ export function printThermal(html: string, widthMm: 58 | 80): void {
       }
     });
 
-    const px = slip ? Math.ceil(slip.getBoundingClientRect().height) : 0;
-    // Page height = measured content height (96 CSS px per inch), rounded up.
+    const measuredHeightPx = slip ? Math.ceil(slip.scrollHeight || slip.getBoundingClientRect().height) : 0;
+    const paddingPx = slip
+      ? Math.ceil(
+          parseFloat(getComputedStyle(slip).paddingTop || '0') +
+          parseFloat(getComputedStyle(slip).paddingBottom || '0'),
+        )
+      : 0;
+    // Include padding and a small buffer so the last row (for example
+    // "THANK YOU!" and the footer) is not clipped at the bottom edge.
+    const px = Math.ceil(measuredHeightPx + paddingPx + 8);
     const pageHeightMm = Math.max(30, Math.ceil((px || 0) * 25.4 / 96));
 
     const pageCss = `

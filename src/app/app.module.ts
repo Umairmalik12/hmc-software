@@ -53,6 +53,7 @@ import { MedicineSlipComponent } from './Components/medicine/medicine-slip/medic
 import { MedicineService } from './Services/medicine.service';
 import { MedicineDataService } from './Services/medicine-data.service';
 import { PatientTokenComponent } from './Components/patient-token/patient-token.component';
+import { TimeFormatPipe } from './Pipes/time-format.pipe';
 
 @NgModule({
   declarations: [
@@ -83,6 +84,7 @@ PreciptionComponent,
     MedicineEditComponent,
     MedicineSlipComponent,
     PatientTokenComponent,
+    TimeFormatPipe,
   ],
   imports: [
     BrowserModule,

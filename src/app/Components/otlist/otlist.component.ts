@@ -24,17 +24,14 @@ export class OtlistComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
 
-      this.userLogin.getLoginUser().then((loginUser) => {
+    const loginUser = await this.userLogin.getLoginUser();
     this.isSuperAdmin = loginUser === 'admin';
-
-    this.displayedColumns =['patientName', 'operationDate', 'operationTime', 'doctorName'];
-
+    this.displayedColumns = ['patientName', 'operationDate', 'operationTime', 'doctorName'];
     if (this.isSuperAdmin) {
       this.displayedColumns.push('action');
     }
 
-  });
-    this.loadDataFromIndexedDB();
+    await this.loadDataFromIndexedDB();
     this.realtimeSubscription = this.indexedDbService.changes.subscribe(collection => {
       if (collection === 'otFormData') {
         this.loadDataFromIndexedDB().catch(error => console.error('Unable to refresh OT records:', error));
@@ -82,10 +79,14 @@ export class OtlistComponent implements OnInit, OnDestroy {
   }
 
 async deleteOt(id: string): Promise<void> {
+  const confirmed = confirm('Are you sure you want to delete this OT record?');
+  if (!confirmed) return;
+
   const data = await this.indexedDbService.getItem<any[]>('otFormData');
   if (data) {
-    const updated = data.filter(ot => ot.id !== id);
-    await this.indexedDbService.setItem('otFormData', updated);
+    if (!data.some(ot => String(ot.id) === String(id))) return;
+    await this.indexedDbService.deleteRecord('otFormData', id);
+    const updated = data.filter(ot => String(ot.id) !== String(id));
     this.allRecords = updated;
     this.dataSource.data = this.allRecords.slice(0, this.displayLimit);
     this.total = updated.length;
