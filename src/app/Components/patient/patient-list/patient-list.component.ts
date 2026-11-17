@@ -1,7 +1,12 @@
-import { AfterViewInit, ChangeDetectorRef, Component, OnInit, ViewChild } from '@angular/core';
-import * as XLSX from 'xlsx';
+import { EventEmitter, Output } from '@angular/core';
+import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
+import { includesText, matchesDateFilter } from 'src/app/Shared/list-filters';
+import { firstValueFrom, Subscription } from 'rxjs';
+import { RecordDetailsComponent } from 'src/app/Components/record-details/record-details.component';
+import { exportRecords } from 'src/app/Shared/export-records';
+import { ChangeDetectorRef, Component, OnInit , OnDestroy } from '@angular/core';
 import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
-import { MatPaginator, MatPaginatorIntl } from '@angular/material/paginator';
+import { MatPaginatorIntl } from '@angular/material/paginator';
 import { Patient } from 'src/app/Models/patient.model';
 import { PatientDetail } from 'src/app/Models/patientDetail.model';
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
@@ -17,15 +22,33 @@ import { UserLoginService } from 'src/app/Services/user-login.service';
   templateUrl: './patient-list.component.html',
   styleUrls: ['./patient-list.component.css']
 })
-export class PatientListComponent implements OnInit, AfterViewInit {
+export class PatientListComponent implements OnInit, OnDestroy {
+  @Output() create = new EventEmitter<void>();
+
+  readonly pagination = new ScrollPagination();
+  readonly trackRecord = trackRecord;
+  private loadVersion = 0;
+  loading = false;
+  loadFailed = false;
+  deletingId: number | null = null;
+  loadMore(): void { this.pagination.loadMore(this.total); this.updateDisplayedPatients(); }
+
+  private refreshSubscription?: Subscription;
+  ngOnDestroy(): void { this.refreshSubscription?.unsubscribe(); this.loadVersion++; }
+  async viewPatient(id: number): Promise<void> {
+    try {
+      const record = await firstValueFrom(this.patientService.getPatientDetails(id));
+      if (!record) throw new Error('Record not found.');
+      this.dialog.open(RecordDetailsComponent, { data: { title: 'Operation patient', record } });
+    } catch (error) { this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Unable to load record.' }); }
+  }
+
 
   patient: Patient[] = [];
   filteredPatients: Patient[] = [];
   displayedPatients: Patient[] = [];
   dataSource: PatientDataService = new PatientDataService(this.patientService);
   displayedColumns: string[] = [];
-  displayLimit: number = 20;
-  readonly pageStep: number = 10;
 
   // 🔍 Search fields
   searchPatientId: string = '';
@@ -50,8 +73,6 @@ export class PatientListComponent implements OnInit, AfterViewInit {
     createdAt: ''
   };
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-
   total: number = 0;
   isSuperAdmin: boolean = false;
 
@@ -64,191 +85,51 @@ export class PatientListComponent implements OnInit, AfterViewInit {
     private indexedDbService: SupabaseDataService,
     private userLogin: UserLoginService
   ) {
-    this.notifyUpdate.notify.subscribe(() => {
+    this.refreshSubscription = this.notifyUpdate.notify.subscribe(() => {
       this.dataActions('', 'asc', 0, 5);
     });
   }
 
   ngOnInit(): void {
+    this.loading = true;
     this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
       this.displayedColumns = ['patientId', 'name', 'drName', 'gender', 'phone', 'procedure', 'city' , 'createdAt'];
-      if (this.isSuperAdmin) {
-        this.displayedColumns.push('action');
-      }
+      this.displayedColumns.push('action');
       this.dataActions('', 'asc', 0, 5);
-    });
+    }).catch(() => { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: 'Account permissions could not be loaded. Please refresh the page.' }); });
   }
-
-  ngAfterViewInit(): void {
-    this.paginator?.page.subscribe(() => {
-      this.dataActions('', 'asc', this.paginator.pageIndex, this.paginator.pageSize);
-    });
-  }
-
-  onTableScroll(event: Event): void {
-    const el = event.target as HTMLElement;
-    if (!el) return;
-    const threshold = 120;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
-      if (this.displayLimit < this.filteredPatients.length) {
-        this.displayLimit = Math.min(this.displayLimit + this.pageStep, this.filteredPatients.length);
-        this.updateDisplayedPatients();
-      }
-    }
-  }
-
   private updateDisplayedPatients(): void {
-    this.displayedPatients = this.filteredPatients.slice(0, this.displayLimit);
+    this.total = this.filteredPatients.length;
+    this.displayedPatients = this.pagination.slice(this.filteredPatients);
     this.dataSource.updatePatients(this.displayedPatients);
   }
 
-  dataActions(a: string, b: string, c: number, d: number): void {
-    this.dataSource.loadPatient(a, b, c, d);
-
-    if (this.paginator) {
-      this.paginator.pageIndex = c;
-      this.paginator.pageSize = d;
-    }
-
-    this.total = this.patientService.total;
-
-    this.patientService.getAllPatient().subscribe((patients) => {
-      this.patient = patients;
-      this.filteredPatients = patients;
-      this.onDateFilter();
+  dataActions(_filter: string, _sort: string, _page: number, _size: number): void {
+    const version = ++this.loadVersion;
+    this.loading = true; this.loadFailed = false;
+    this.patientService.getAllPatient().subscribe({
+      next: records => { if (version !== this.loadVersion) return; this.patient = records; this.onDateFilter(false); this.loading = false; },
+      error: error => { if (version === this.loadVersion) { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Unable to load records.' }); } }
     });
   }
 
-  // 🔍 Search
-  onDateFilter() {
-    let tempList = this.patient;
-    const now = new Date();
-
-    switch (this.dateFilter) {
-      case 'today':
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        tempList = tempList.filter(p => {
-          const createdDate = new Date(p.createdAt);
-          return createdDate >= today;
-        });
-        break;
-      case 'yesterday':
-        const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-        const yesterdayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        tempList = tempList.filter(p => {
-          const createdDate = new Date(p.createdAt);
-          return createdDate >= yesterdayStart && createdDate < yesterdayEnd;
-        });
-        break;
-      case 'seven':
-        const sevenDaysAgo = new Date(now);
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        tempList = tempList.filter(p => new Date(p.createdAt) >= sevenDaysAgo);
-        break;
-      case 'thirty':
-        const thirtyDaysAgo = new Date(now);
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        tempList = tempList.filter(p => new Date(p.createdAt) >= thirtyDaysAgo);
-        break;
-    }
-
-    // Apply search filters
-    this.filteredPatients = tempList.filter(p => {
-      const matchesId = this.searchPatientId ? p.patientId.toString().includes(this.searchPatientId) : true;
-      const matchesName = this.searchName ? p.name.toLowerCase().includes(this.searchName.toLowerCase()) : true;
-      const matchesPhone = this.searchPhone ? (p.contact || '').toString().includes(this.searchPhone) : true;
-      const matchesProcedure = this.searchProcedure ? (p.procedure || '').toLowerCase().includes(this.searchProcedure.toLowerCase()) : true;
-      const matchesCity = this.searchCity ? (p.city || '').toLowerCase().includes(this.searchCity.toLowerCase()) : true;
-      return matchesId && matchesName && matchesPhone && matchesProcedure && matchesCity;
-    });
-
-    this.displayLimit = 20;
+  onDateFilter(reset = true): void {
+    this.filteredPatients = this.patient.filter(record => matchesDateFilter(record.createdAt, this.dateFilter) && includesText(record.patientId, this.searchPatientId) && includesText(record.name, this.searchName) && includesText(record.contact, this.searchPhone) && includesText(record.procedure, this.searchProcedure) && includesText(record.city, this.searchCity));
+    if (reset) this.pagination.reset();
     this.updateDisplayedPatients();
   }
 
-  onSearch() {
-    this.onDateFilter();
-  }
+  onSearch(): void { this.onDateFilter(); }
 
-  onClearSearch() {
-    this.searchPatientId = '';
-    this.searchName = '';
-    this.searchPhone = '';
-    this.searchProcedure = '';
-    this.searchCity = '';
-    this.dateFilter = 'all';
-    this.filteredPatients = this.patient;
-    this.displayLimit = 20;
-    this.updateDisplayedPatients();
-  }
+  onClearSearch(): void { this.searchPatientId = ''; this.searchName = ''; this.searchPhone = ''; this.searchProcedure = ''; this.searchCity = ''; this.dateFilter = 'all'; this.onDateFilter(); }
 
-  // 📤 Export
-  exportToExcel() {
-    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(
-      this.filteredPatients.length ? this.filteredPatients : this.patient
-    );
-    const workbook: XLSX.WorkBook = { Sheets: { 'Patients': worksheet }, SheetNames: ['Patients'] };
-    XLSX.writeFile(workbook, 'patients.xlsx');
-  }
+  exportToExcel(): void { exportRecords(this.filteredPatients, 'operation-patients.xlsx'); }
 
-  // 📥 Import
-  async importFromExcel(event: any) {
-    const target: DataTransfer = <DataTransfer>(event.target);
-    if (target.files.length !== 1) return;
-
-    const reader: FileReader = new FileReader();
-    reader.onload = async (e: any) => {
-      const bstr: string = e.target.result;
-      const wb: XLSX.WorkBook = XLSX.read(bstr, { type: 'binary' });
-      const wsname: string = wb.SheetNames[0];
-      const ws: XLSX.WorkSheet = wb.Sheets[wsname];
-      const data = XLSX.utils.sheet_to_json(ws);
-
-      const storedPatients = await this.indexedDbService.getItem<any[]>('patientDetails') || [];
-      let added = 0;
-
-      for (const record of data) {
-        const rec: any = record;
-        const patientDetail: any = {
-          patientId: Number(rec.patientId) || await this.indexedDbService.allocateId('patientDetails'),
-          firstName: rec.firstName || rec.name?.split(' ')[0] || '',
-          lastName: rec.lastName || rec['Father Name'] || rec.name?.split(' ')[1] || '',
-          drName: rec.drName || rec['Dr Name'] || '',
-          gender: rec.gender || '',
-          age: rec.age || '',
-          maritalStatus: rec.maritalStatus || '',
-          phone: rec.phone || rec.contact || '',
-          city: rec.city || '',
-          address: rec.address || '',
-          procedure: rec.procedure || '',
-          createdAt: rec.createdAt || new Date().toISOString()
-        };
-
-        if (!storedPatients.some(p => p.patientId == patientDetail.patientId)) {
-          storedPatients.push(patientDetail);
-          added++;
-        }
-      }
-
-      if (added > 0) {
-        await this.indexedDbService.setItem('patientDetails', storedPatients);
-        this.notifyUpdate.notify.next(true);
-      }
-
-      this.patientService.getAllPatient().subscribe(patients => {
-        this.patient = patients;
-        this.filteredPatients = this.patient;
-        this.displayLimit = 20;
-        this.updateDisplayedPatients();
-      });
-    };
-    reader.readAsBinaryString(target.files[0]);
-  }
 
   // ✏️ Edit
   editPatient(id: number) {
-    this.patientService.getPatientDetails(id).subscribe(data => {
+    this.patientService.getPatientDetails(id).subscribe({ next: data => {
       if (data) {
         this.tempPatient = data;
         this.tempPatient.oldId = id;
@@ -269,7 +150,7 @@ export class PatientListComponent implements OnInit, AfterViewInit {
             } catch (error) {
               console.error('Unable to update operation patient:', error);
             }
-            const msg = saved ? 'Patient data updated successfully.' : 'Unable to update patient data.';
+            const msg = saved ? 'Operation patient updated successfully.' : 'Operation patient could not be updated. Please try again.';
             const type = saved ? 'success' : 'error';
             if (saved) {
               this.notifyUpdate.notify.next(true);
@@ -280,24 +161,19 @@ export class PatientListComponent implements OnInit, AfterViewInit {
       } else {
         this.notifyUpdate.alertNotify.next({ msg: "Patient not found", type: "error" });
       }
-    });
+    }, error: () => this.notifyUpdate.alertNotify.next({ type: 'error', msg: 'Operation patient details could not be loaded. Refresh the list and try again.' }) });
   }
 
   // 🗑️ Delete
-  async deletePatient(id: number) {
-    const confirmed = confirm('Are you sure you want to delete this patient?');
-    if (!confirmed) return;
-
-    const result = await this.patientService.deletePatient(id);
-    let msg = 'Failed to delete patient.';
-    let type = 'error';
-
-    if (result) {
-      msg = 'Patient deleted successfully.';
-      type = 'success';
+  async deletePatient(id: number): Promise<void> {
+    if (this.deletingId !== null || !window.confirm('Delete this operation patient? This action cannot be undone.')) return;
+    this.deletingId = id;
+    try {
+      const saved = await this.patientService.deletePatient(id);
+      if (!saved) throw new Error('Operation patient could not be deleted. Refresh the list and try again.');
       this.notifyUpdate.notify.next(true);
-    }
-
-    this.notifyUpdate.alertNotify.next({ msg, type });
+      this.notifyUpdate.alertNotify.next({ type: 'success', msg: 'Operation patient deleted successfully.' });
+    } catch (error) { this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Operation patient could not be deleted. Please try again.' }); }
+    finally { this.deletingId = null; }
   }
 }

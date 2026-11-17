@@ -66,11 +66,118 @@ To get more help on the Angular CLI use `ng help` or go check out the [Angular C
 
 ## Supabase setup (shared database and authentication)
 
+To apply **all database updates in one SQL Editor run**, execute the complete
+[`supabase/schema.sql`](./supabase/schema.sql). It includes the shared tables,
+CRUD/ID/token functions, permissions, token-name editing and all four catalogue
+seeds: 14 procedures, 4 rooms/beds, 90 prescription medicines and 70 OT medicines
+and supplies. Catalogue entries use the existing `hmc_records` table. Re-running
+the seeds preserves existing edits, inactive entries, removal markers and custom
+records; patient histories are unchanged.
+
+For an existing installation that already has the base tables and functions, run
+[`supabase/migrations/20261118_catalogue_defaults.sql`](./supabase/migrations/20261118_catalogue_defaults.sql)
+to persist all four sets of starter options. The application already supplies these
+defaults, so this is an optional data seed rather than a new table requirement.
+The SQL is generated from the application constants. Before first deployment,
+`node scripts/generate-catalogue-sql.cjs` regenerates it; use `--check` to verify
+alignment. Keep applied migration files unchanged and create a new dated migration
+for future catalogue additions.
+
+If applying individual migrations instead of the complete schema, also run
+[`supabase/migrations/20261117_token_patient_name_update.sql`](./supabase/migrations/20261117_token_patient_name_update.sql)
+if token patient-name editing is not yet enabled. The complete `supabase/schema.sql`
+already includes this permission. Only the patient name can be updated;
+the queue number, sequence, issue date and issue time stay unchanged.
+
+The **Procedures** page manages the fourteen default procedure choices plus any
+custom additions. Operation, inpatient and OT forms share this catalog. Removing
+or renaming a choice preserves the procedure text on existing records.
+
+All record lists provide Excel export. Import controls are removed. Exports use
+the current search/filter results. OT records support a compact one-page A4
+preview and print layout.
+
 The application stores patient, OPD, laboratory, medicine, inpatient, operation, payment,
 prescription, and token records in Supabase so authenticated workstations use the same
 database, with real-time updates between open workstations. Business records no longer use
 IndexedDB or localStorage; Supabase Auth separately persists its sign-in session in the
 browser.
+
+Payments save the counter staff name, shift name, shift date, optional counter name,
+and signed-in account with each receipt in the existing `payments` collection. New
+payments require a staff name and shift; the staff name defaults to the account's
+display name or email. Counter defaults are remembered per account on the device,
+while payment records remain in Supabase. For overnight shifts, select the date the
+shift started. The actual receipt time comes from the computer when saving.
+Staff/shift/date filters, collection totals, and exports use every matching record,
+including rows not yet shown by scroll pagination. Only completed payments count
+as collections. Blank cash tendered means exact cash for completed payments;
+pending payments do not infer cash received. Edits preserve the original recording
+account and receipt time and save the updating account separately. Older receipts
+without attribution remain marked as not recorded. No additional database migration
+is required for these payment fields.
+
+Daily medicines use a shared **Rooms & beds** catalogue, available to administrators
+from the sidebar or daily medicine list. It starts with Room 1, Room 2, GW Bed 1 and
+GW Bed 2. Add, rename, search, preview, export or remove options there; changes are
+saved in the existing Supabase `rooms` collection without an additional migration.
+Deleting a built-in option records its removal so it stays removed after reload.
+Existing medicine records retain their original room text after catalogue changes,
+and the dropdown continues to show those saved values when editing or filtering.
+The daily medicine Print action previews only the selected record and prints through
+the shared thermal window, with 80 mm as the default and a saved 58 mm option. Long
+medicine and room labels wrap within the printable width, and the receipt includes
+bottom padding and paper feed after the footer.
+The receipt groups patient and room details, numbers the medicine lines and aligns
+quantities in a separate column. The preview uses the same font and printable text
+width as the selected thermal roll.
+
+Prescription medicine fields use a themed, searchable autocomplete with keyboard
+selection and manual medicine/dose entry. **Manage medicines** opens the catalogue
+inside the prescription editor without leaving the draft; **Medicine catalogue**
+in the sidebar opens the same add/edit/delete/search/preview/export list. A new name
+can also be added explicitly from a no-match dropdown result. Typing or leaving a
+medicine field does not write suggestions automatically. The catalogue preserves
+the existing common medicines and legacy `customMedicines` values, and saves edits
+and removals as individual records in `prescriptionMedicineCatalog`. Removed default
+and legacy names stay removed after reload. Saved prescriptions retain their original
+medicine and dose text. The existing database schema supports the catalogue fields.
+The **New medicine record** and **Edit medicine record** dialogs use this same
+searchable catalogue for every medicine-name row, with the existing required-name
+and quantity validation. Their **Manage catalogue** button opens the shared list
+without discarding patient, room or quantity entries. Selecting a suggestion saves
+the selected name and quantity in the daily record; it does not duplicate catalogue
+entries. Historical names remain editable even if a catalogue option is removed.
+
+OPD slips use a dedicated thermal preview and print window with a saved 80 mm or
+58 mm roll setting. Patient, doctor and follow-up text wrap within the printable
+width; the footer has bottom padding and a paper feed. A single-slip action reloads
+the selected saved visit. **Print matching slips** includes the full filtered list,
+including rows beyond the visible scroll batch, and prints a continuous roll job
+with gaps between receipts. An empty filter result does not print unrelated visits.
+
+The administrator's **OT medicine catalogue** is available in the Pharmacy sidebar,
+from **OT medicine records → Manage medicines**, or inside an OT slip. It supports
+name/generic/strength search, category and status filters, scroll pagination, preview,
+export, add, edit and confirmed removal. Only the medicine name is required; generic
+name, category, type, strength, unit and description are optional. Changes are saved
+as individual JSON records in the existing `hmc_records` table under
+`otMedicineCatalog`, so no new table or migration is needed. The original OT medicines
+and supplies remain starter options; saved overrides, inactive status and removal
+markers persist across reloads. Removal is soft deletion and never rewrites patient
+records. Only active options can be newly selected on OT slips. New slips save the
+catalogue ID and medicine details together; historical slips preserve their original
+names, strength, unit, quantities and amounts even if the master entry changes.
+Managing the catalogue from a slip preserves the patient draft and its selections.
+
+Notifications use an app-wide toast stack that survives page navigation and appears
+above dialogs. Success, error, warning and information messages have distinct icons
+and restrained status colors. Each notification has its own timer and dismiss button;
+hovering or focusing it pauses dismissal, and repeated visible messages are combined.
+CRUD messages identify the affected module and report success only after saving.
+Database and account requests share a concurrent-request loading indicator, while
+lists and pending action buttons show local loading states. Failed requests release
+their loading state, and delete actions prevent repeated submissions while pending.
 
 1. Create a Supabase project and open **SQL Editor**.
 2. Run the complete script in [`supabase/schema.sql`](./supabase/schema.sql). It creates

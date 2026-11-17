@@ -1,3 +1,5 @@
-<div class="alert-box" [ngClass]="{'error': check==false , 'success': check==true}">
-    <p>{{message}}</p>
+<div class="alert-box" [ngClass]="type" [attr.role]="type === 'error' ? 'alert' : 'status'" aria-atomic="true">
+  <span class="toast-icon material-icons" aria-hidden="true">{{ icon }}</span>
+  <div class="toast-copy"><strong>{{ title }}</strong><p>{{ message }}</p></div>
+  <button class="toast-close" type="button" (click)="dismissed.emit()" aria-label="Dismiss notification"><span aria-hidden="true">×</span></button>
 </div>

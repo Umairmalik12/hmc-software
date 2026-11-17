@@ -1,88 +1,25 @@
-<h2 mat-dialog-title>{{edit ? 'Update OPD Patient Data' : 'Add OPD Patient'}}</h2>
-
+<h2 mat-dialog-title><mat-icon>assignment</mat-icon><span>{{ edit ? 'Edit OPD visit' : 'New OPD visit' }}<small>Outpatient registration &amp; visit notes</small></span></h2>
 <form [formGroup]="opdForm" (ngSubmit)="onSubmit()" novalidate>
-    <mat-dialog-content>
-        <div class="input-section">
-            <mat-form-field appearance="fill">
-                <mat-label>MR No.</mat-label>
-                <input matInput type="number" formControlName="patientId" [readonly]="edit">
-            </mat-form-field>
-
-          
-            <mat-form-field appearance="fill">
-                <mat-label>Created At</mat-label>
-<input matInput type="text" [value]="opdForm.get('createdAt')?.value | date:'dd/MM/yy h:mm a'" readonly>
-            </mat-form-field>
-       
-
-            <mat-form-field appearance="fill">
-                <mat-label>Patient Name</mat-label>
-                <input matInput type="text" formControlName="patientName">
-            </mat-form-field>
-
-            <mat-form-field appearance="fill">
-                <mat-label>Age</mat-label>
-                <input matInput type="number" formControlName="age">
-            </mat-form-field>
-       
-            <mat-radio-group formControlName="sex" class="radio-group">
-                <mat-radio-button value="Male">Male</mat-radio-button>
-                <mat-radio-button value="Female">Female</mat-radio-button>
-            </mat-radio-group> 
-
-            <mat-form-field appearance="fill">
-                <mat-label>BP</mat-label>
-                <input matInput type="text" formControlName="bp">
-            </mat-form-field>
-
-            <mat-form-field appearance="fill">
-                <mat-label>Temp</mat-label>
-                <input matInput type="text" formControlName="temp">
-            </mat-form-field>
-
-            <!-- <mat-form-field appearance="fill">
-                <mat-label>Weight</mat-label>
-                <input matInput type="text" formControlName="weight">
-            </mat-form-field> -->
-
-            <mat-form-field appearance="fill">
-                <mat-label>Patient Category</mat-label>
-                <input matInput type="text" formControlName="patientCategory">
-            </mat-form-field>
-
-            <mat-form-field appearance="fill">
-                <mat-label>Amount</mat-label>
-                <input matInput type="number" formControlName="amount">
-            </mat-form-field>
-
-            <mat-form-field appearance="fill">
-                <mat-label>Phone</mat-label>
-                <input matInput type="tel" formControlName="phone">
-            </mat-form-field>
-
-            <mat-form-field appearance="fill">
-                <mat-label>Address</mat-label>
-                <textarea matInput formControlName="address"></textarea>
-            </mat-form-field>
-
-            <mat-form-field appearance="fill">
-                <mat-label>History</mat-label>
-                <textarea matInput formControlName="history"></textarea>
-            </mat-form-field>
-
-            <mat-form-field appearance="fill">
-                <mat-label>Doctor Name</mat-label>
-                <input matInput type="text" formControlName="drName">
-            </mat-form-field>
-            <mat-form-field appearance="fill">
-                <mat-label>followUp</mat-label>
-                <input matInput type="text" formControlName="followUp">
-            </mat-form-field>
-        </div>
-    </mat-dialog-content>
-
-    <mat-dialog-actions>
-        <button mat-raised-button color="primary" type="submit">Submit</button>
-        <button mat-raised-button color="warn" type="button" (click)="close()">Cancel</button>
-    </mat-dialog-actions>
+  <mat-dialog-content>
+    <p class="form-note">Only the patient name is required. Complete the visit details when available.</p>
+    <div class="form-grid">
+      <mat-form-field appearance="outline"><mat-label>MR number</mat-label><input matInput type="number" formControlName="patientId" [readonly]="edit" placeholder="Auto-assigned"><mat-error>Enter a number greater than zero</mat-error></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Registered on</mat-label><input matInput [value]="opdForm.get('createdAt')?.value | date:'dd MMM y, h:mm a'" readonly></mat-form-field>
+      <div class="form-section-title"><mat-icon>person_outline</mat-icon>Patient information</div>
+      <mat-form-field appearance="outline"><mat-label>Patient name</mat-label><input matInput formControlName="patientName" autocomplete="name"><mat-error>Enter the patient name</mat-error></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Age in years</mat-label><input matInput type="number" min="0" max="120" formControlName="age"><mat-error>Enter an age between 0 and 120</mat-error></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Gender</mat-label><mat-select formControlName="sex"><mat-option value="">Not specified</mat-option><mat-option value="Male">Male</mat-option><mat-option value="Female">Female</mat-option><mat-option value="Other">Other</mat-option></mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Phone number</mat-label><input matInput type="tel" formControlName="phone" autocomplete="tel"><mat-error>Enter a valid phone number</mat-error></mat-form-field>
+      <div class="form-section-title"><mat-icon>monitor_heart</mat-icon>Visit details</div>
+      <mat-form-field appearance="outline"><mat-label>Blood pressure</mat-label><input matInput formControlName="bp" placeholder="e.g. 120/80"></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Temperature</mat-label><input matInput formControlName="temp"></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Patient category</mat-label><input matInput formControlName="patientCategory"></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Visit fee (PKR)</mat-label><input matInput type="number" min="0" formControlName="amount"><mat-error>Amount cannot be negative</mat-error></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Doctor name</mat-label><input matInput formControlName="drName"></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Follow-up</mat-label><input matInput formControlName="followUp"></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>History / notes</mat-label><textarea matInput formControlName="history" rows="2"></textarea></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Address</mat-label><textarea matInput formControlName="address" rows="2" autocomplete="street-address"></textarea></mat-form-field>
+    </div>
+  </mat-dialog-content>
+  <mat-dialog-actions><button mat-stroked-button type="button" (click)="close()">Cancel</button><button mat-flat-button color="primary" type="submit"><mat-icon>check</mat-icon>{{ edit ? 'Save changes' : 'Save visit' }}</button></mat-dialog-actions>
 </form>

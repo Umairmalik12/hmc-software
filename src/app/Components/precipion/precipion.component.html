@@ -1,129 +1,43 @@
-<div class="prescription" id="prescription">
-  <datalist id="medicineDatalist">
-    <option *ngFor="let med of customMedicines" [value]="med"></option>
-    <option *ngFor="let med of commonMedicines" [value]="med"></option>
-  </datalist>
-
-  <header class="header">
-    <div class="urdu-title">بسم الله الرحمن الرحيم</div>
-    <div class="clinic-title">Haq Medical Center</div>
-    <div class="doc-info">
-      <h2>Dr. Tanveer ul Haq</h2>
-      <p>M.B.B.S, F.C.P.S (Urology)</p>
-      <p>Senior Consultant – Urology</p>
-      <p>Multan Institute of Kidney Diseases</p>
-      <p>PHC Reg #: 290710 | 0300-1234567</p>
-    </div>
+<section class="prescription-editor">
+  <header class="list-header">
+    <div class="list-intro"><span class="list-icon"><mat-icon>description</mat-icon></span><div><h1>{{ record.id ? 'Edit prescription' : 'New prescription' }}</h1><p>Patient details, medicines and a clear, one-page prescription.</p></div></div>
+    <a mat-stroked-button routerLink="/prescriptions"><mat-icon>arrow_back</mat-icon>Prescription records</a>
   </header>
-
-  <section class="patient-section">
-    <h3>Patient Information</h3>
-    <div class="patient-grid">
-      <label class="field">
-        <span>MR No.</span>
-        <input [(ngModel)]="patient.refId" class="form-input" />
-      </label>
-      <label class="field">
-        <span>Date</span>
-        <input [ngModel]="today" class="form-input" readonly />
-      </label>
-      <label class="field field-wide">
-        <span>Patient Name</span>
-        <input [(ngModel)]="patient.name" class="form-input" />
-      </label>
-      <label class="field">
-        <span>Visit No.</span>
-        <input [(ngModel)]="patient.visit" class="form-input" />
-      </label>
-      <label class="field">
-        <span>Age</span>
-        <input [(ngModel)]="patient.age" class="form-input" />
-      </label>
-      <label class="field">
-        <span>Sex</span>
-        <input [(ngModel)]="patient.sex" class="form-input" />
-      </label>
-      <label class="field">
-        <span>Weight</span>
-        <input [(ngModel)]="patient.weight" class="form-input" />
-      </label>
-      <label class="field">
-        <span>Contact</span>
-        <input [(ngModel)]="patient.contact" class="form-input" />
-      </label>
-      <label class="field field-wide">
-        <span>Allergies</span>
-        <input [(ngModel)]="patient.allergies" class="form-input" />
-      </label>
-      <label class="field field-wide">
-        <span>Findings</span>
-        <input [(ngModel)]="patient.findings" class="form-input" />
-      </label>
-      <label class="field field-wide">
-        <span>Symptoms / Complaints</span>
-        <input [(ngModel)]="patient.symptoms" class="form-input" />
-      </label>
-      <label class="field field-wide">
-        <span>Diagnosis</span>
-        <input [(ngModel)]="patient.diagnosis" class="form-input" />
-      </label>
-    </div>
-  </section>
-
-  <section class="rx-section">
-    <div class="section-header">
-      <h3>Prescription (Rx)</h3>
-      <button type="button" class="btn-add small" (click)="addMedicine()">Add Medicine</button>
-    </div>
-
-    <div *ngIf="prescribedMedicines.length === 0" class="empty-state">No medicines added yet.</div>
-
-    <table class="medicine-table" *ngIf="prescribedMedicines.length > 0">
-      <thead>
-        <tr>
-          <th>Medicine</th>
-          <th>Morning</th>
-          <th>Afternoon</th>
-          <th>Evening</th>
-          <th class="action-col">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let med of prescribedMedicines; let i = index" class="medicine-row">
-          <td>
-            <input list="medicineDatalist" type="text" [(ngModel)]="med.name" class="form-input medicine-input" placeholder="Medicine name / dose" (input)="onMedicineInput($event, med.name)" (blur)="addCustomMedicine(med.name)" />
-          </td>
-          <td><label class="dose-checkbox"><input type="checkbox" [(ngModel)]="med.morning" /></label></td>
-          <td><label class="dose-checkbox"><input type="checkbox" [(ngModel)]="med.afternoon" /></label></td>
-          <td><label class="dose-checkbox"><input type="checkbox" [(ngModel)]="med.evening" /></label></td>
-          <td class="action-col">
-            <button type="button" class="remove-row" (click)="removeMedicine(i)" *ngIf="prescribedMedicines.length > 1" aria-label="Remove medicine row">×</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <small class="dropdown-hint no-print">Type to select from saved/custom medicines.</small>
-  </section>
-
-  <footer class="footer-section">
-    <div class="instructions">
-      <strong>Instructions:</strong> Take medicines as prescribed. Complete the full course and return for follow-up in 7 days. Report side effects immediately.
-    </div>
-    <div class="signature-area">
-      <div class="signature-box">
-        <p>Dr. Tanveer ul Haq</p>
-        <p>Senior Consultant Urologist</p>
-        <p>Multan Institute of Kidney Diseases</p>
-      </div>
-      <div class="stamp-box">Doctor's Signature</div>
-    </div>
-  </footer>
-
-  <p class="no-print" role="alert" *ngIf="storageError">{{storageError}}</p>
-  <div class="no-print actions" *ngIf="!isPrinting">
-    <button class="btn-save" (click)="save()">Save</button>
-    <button class="btn-print" (click)="print()">Print</button>
-    <button class="btn-add" (click)="addMedicine()">Add Medicine</button>
-  </div>
-</div>
+  <div *ngIf="loading" class="hmc-loading-state rx-editor-status" role="status">Loading prescription…</div>
+  <p *ngIf="storageError" class="form-error" role="alert">{{ storageError }}</p>
+  <p *ngIf="successMessage" class="rx-editor-success" role="status">{{ successMessage }}</p>
+  <button *ngIf="loadFailed" mat-stroked-button (click)="load()">Try again</button>
+  <ng-container *ngIf="!loading && !loadFailed">
+    <div class="rx-editor-toolbar"><span><mat-icon>schedule</mat-icon>Date and time use this PC’s clock</span><div><button mat-stroked-button type="button" (click)="preview()"><mat-icon>visibility</mat-icon>Preview</button><button mat-stroked-button type="button" (click)="print()"><mat-icon>print</mat-icon>Print</button></div></div>
+    <form class="rx-editor-paper" (ngSubmit)="save()" novalidate>
+      <article class="rx-sheet rx-editor">
+        <div [innerHTML]="headerHtml"></div>
+        <div class="rx-section-title">Patient’s information</div>
+        <div class="rx-patient-grid">
+          <label *ngFor="let field of fields" class="rx-cell" [class.rx-wide]="(field.span || 1) > 1" [style.grid-column]="'span ' + (field.span || 1)">
+            <span class="rx-cell-label">{{ field.label }}</span>
+            <input class="rx-input" [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{ standalone: true }" [readOnly]="saving || field.key === 'date' || field.key === 'time'" [attr.aria-label]="field.label" [attr.aria-required]="field.key === 'name' ? true : null" />
+          </label>
+        </div>
+        <div class="rx-section-title rx-section-actions"><span>Prescription (Rx)</span><div class="rx-medicine-tools"><button mat-button type="button" (click)="manageMedicines()" [disabled]="saving"><mat-icon>settings</mat-icon>Manage medicines</button><button mat-button type="button" (click)="addMedicine()" [disabled]="saving"><mat-icon>add</mat-icon>Add medicine</button></div></div>
+        <table class="rx-medicines" aria-label="Prescribed medicines">
+          <thead><tr><th>Medicine / dose</th><th>Morning</th><th>Afternoon</th><th>Evening</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let med of record.medicines; let i = index">
+              <td><div class="rx-medicine-name"><app-prescription-medicine-select [(ngModel)]="med.name" [ngModelOptions]="{ standalone: true }" [disabled]="saving" [label]="'Medicine ' + (i + 1)"></app-prescription-medicine-select><button class="rx-remove" type="button" (click)="removeMedicine(i)" *ngIf="record.medicines.length > 1" [disabled]="saving" [attr.aria-label]="'Remove medicine ' + (i + 1)" title="Remove medicine">×</button></div></td>
+              <td class="rx-dose"><input type="checkbox" [(ngModel)]="med.morning" [ngModelOptions]="{ standalone: true }" [disabled]="saving" [attr.aria-label]="'Morning, medicine ' + (i + 1)"></td>
+              <td class="rx-dose"><input type="checkbox" [(ngModel)]="med.afternoon" [ngModelOptions]="{ standalone: true }" [disabled]="saving" [attr.aria-label]="'Afternoon, medicine ' + (i + 1)"></td>
+              <td class="rx-dose"><input type="checkbox" [(ngModel)]="med.evening" [ngModelOptions]="{ standalone: true }" [disabled]="saving" [attr.aria-label]="'Evening, medicine ' + (i + 1)"></td>
+            </tr>
+            <tr *ngFor="let blank of blankRows" aria-hidden="true"><td>&nbsp;</td><td></td><td></td><td></td></tr>
+          </tbody>
+        </table>
+        <section class="rx-instructions"><div class="rx-section-title">Instructions</div><p>{{ instructions }}</p></section>
+        <div class="rx-signature"><div><strong>Doctor’s name and signature</strong>Dr. Tanveer ul Haq<small>Senior Consultant Urologist</small></div><div><strong>Date &amp; time</strong>{{ fieldValue(fields[1]) }} · {{ fieldValue(fields[2]) }}</div></div>
+        <div class="rx-footer">Haq Medical Center · Multan Institute of Kidney Diseases</div>
+      </article>
+      <p class="rx-editor-help">Patient name is required to save. All other patient details are optional.</p>
+      <footer class="rx-editor-actions"><a mat-stroked-button routerLink="/prescriptions" [class.rx-disabled-link]="saving">Cancel</a><button [appBusy]="saving" mat-flat-button color="primary" type="submit" [disabled]="saving"><mat-icon>save</mat-icon>{{ saving ? 'Saving…' : (record.id ? 'Save changes' : 'Save prescription') }}</button></footer>
+    </form>
+  </ng-container>
+</section>

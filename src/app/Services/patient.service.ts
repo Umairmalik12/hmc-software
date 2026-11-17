@@ -14,7 +14,6 @@ export class PatientService {
   patientDetail: PatientDetail[] = [];
 
   constructor(private indexedDb: SupabaseDataService) {
-    this.loadPatientData();
   }
 
   private async loadPatientData(): Promise<void> {
@@ -41,7 +40,7 @@ export class PatientService {
         this.total = patients.length;
         observer.next(this.getPatientBrief(patients));
         observer.complete();
-      });
+      }).catch(error => observer.error(error));
     });
   }
 
@@ -57,7 +56,7 @@ export class PatientService {
         const end = Math.min(start + pageSize, all.length);
         observer.next(all.slice(start, end));
         observer.complete();
-      });
+      }).catch(error => observer.error(error));
     });
   }
 
@@ -67,7 +66,7 @@ export class PatientService {
         const patient:any = (data || []).find(p => p.patientId === id);
         observer.next(patient);
         observer.complete();
-      });
+      }).catch(error => observer.error(error));
     });
   }
 
@@ -87,7 +86,7 @@ export class PatientService {
         data.patientId = await this.indexedDb.allocateId(STORAGE_KEY);
       }
 
-      await this.indexedDb.setItem(STORAGE_KEY, [...storedPatients, data]);
+      await this.indexedDb.upsertRecord(STORAGE_KEY, data.patientId, data);
       storedPatients.push(data);
       this.patientDetail = storedPatients;
       this.total = storedPatients.length;
@@ -119,7 +118,7 @@ export class PatientService {
         } else {
           await this.indexedDb.moveRecord(STORAGE_KEY, oldId, newId, updatedPatient);
         }
-        this.patientDetail = storedPatients;
+        this.patientDetail = storedPatients.map((patient, row) => row === index ? updatedPatient : patient);
         return true;
       }
       return false;
@@ -132,7 +131,7 @@ export class PatientService {
   private getPatientBrief(patients: PatientDetail[]): Patient[] {
     return patients.map(p => ({
       patientId: p.patientId,
-      name: `${p.firstName} ${p.lastName}`,
+      name: [p.firstName, p.lastName].filter(Boolean).join(' '),
       contact: p.phone,
       drName: p.drName,
       gender: p.gender,

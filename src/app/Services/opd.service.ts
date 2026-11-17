@@ -82,7 +82,7 @@ export class OpdService {
       } else {
         data.patientId = await this.dbService.allocateId('opdDetails');
       }
-      await this.dbService.setItem('opdDetails', [...this.opdDetail, data]);
+      await this.dbService.upsertRecord('opdDetails', data.patientId, data);
       this.opdDetail.push(data);
       return true;
     } catch (e) {

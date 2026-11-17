@@ -3,7 +3,7 @@ import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { PatientDetail } from 'src/app/Models/patientDetail.model';
-import { ValidatorsService } from 'src/app/Services/validators.service';
+import { requiredText, ValidatorsService } from 'src/app/Services/validators.service';
 
 @Component({
   selector: 'app-patient-edit',
@@ -22,14 +22,13 @@ export class PatientEditComponent {
     private dialogRef: MatDialogRef<PatientEditComponent>,
     @Inject(MAT_DIALOG_DATA) patientDetails: PatientDetail) {
 
-    this.patientDetails = patientDetails;
+    this.patientDetails = { ...patientDetails };
 
     if (patientDetails.patientId) {
       this.edit = true;
       this.tempAge = this.patientDetails.age;
     }
     else {
-      this.patientDetails.gender = "Male";
       this.patientDetails.createdAt = new Date().toISOString();
       this.patientDetails.procedure = '';
     }
@@ -39,26 +38,23 @@ export class PatientEditComponent {
            patientId: [this.patientDetails.patientId || null, [Validators.min(1)]],
            createdAt: [this.patientDetails.createdAt || '', []],
         fullName: this.fb.group({
-          firstName: [this.patientDetails.firstName, [Validators.required]],
-          lastName: [this.patientDetails.lastName, [Validators.required]],
-          drName: [this.patientDetails.drName, [Validators.required]],
+          firstName: [this.patientDetails.firstName, [Validators.required, requiredText]],
+          lastName: [this.patientDetails.lastName || ''],
+          drName: [this.patientDetails.drName || ''],
         }),
         bioDetail: this.fb.group({
-          gender: [this.patientDetails.gender, Validators.required],
-          age: [ this.tempAge , Validators.required],
+          gender: [this.patientDetails.gender || ''],
+          age: [this.tempAge, [Validators.min(0), Validators.max(120)]],
         }),
         procedureInfo: this.fb.group({
-          procedure: [this.patientDetails.procedure || '', Validators.required],
-        }),
-        familyStatus: this.fb.group({
-          maritalStatus: [this.patientDetails.maritalStatus, Validators.required],
+          procedure: [this.patientDetails.procedure || ''],
         }),
         socialDetail: this.fb.group({
-          phone: [this.patientDetails.phone, [Validators.required]],
+          phone: [this.patientDetails.phone || '', Validators.pattern(/^[+\d\s()-]{7,20}$/)],
         }),
         addressDetail: this.fb.group({
-          city: [this.patientDetails.city, [Validators.required, Validators.pattern('[a-z A-Z]+')]],
-          address: [this.patientDetails.address, Validators.required]
+          city: [this.patientDetails.city || ''],
+          address: [this.patientDetails.address || '']
         })
       })
     });
@@ -71,7 +67,6 @@ export class PatientEditComponent {
   get b() { return (this.patientForm.get('patientDetail') as FormGroup).controls; }
   get c() { return ((this.patientForm.get('patientDetail') as FormGroup).get('fullName') as FormGroup).controls; }
   get d() { return ((this.patientForm.get('patientDetail') as FormGroup).get('bioDetail') as FormGroup).controls; }
-  get e() { return ((this.patientForm.get('patientDetail') as FormGroup).get('familyStatus') as FormGroup).controls; }
   get f() { return ((this.patientForm.get('patientDetail') as FormGroup).get('socialDetail') as FormGroup).controls; }
   get g() { return ((this.patientForm.get('patientDetail') as FormGroup).get('addressDetail') as FormGroup).controls; }
   get h() { return ((this.patientForm.get('patientDetail') as FormGroup).get('procedureInfo') as FormGroup).controls; }
@@ -83,17 +78,11 @@ export class PatientEditComponent {
       return;
     }
 
-      let choice = true;
-      if (this.patientForm.dirty) choice = confirm('Submit operation patient details?');
-
-      if (choice) {
-        this.patientForm.enable();
-        let result: PatientDetail = this.ResultRefactoring();
-        if (this.edit) {
-          result.oldId = this.patientDetails.patientId;
-        }
-        this.dialogRef.close(result);
-      }
+    const result = this.ResultRefactoring();
+    if (this.edit) {
+      result.oldId = this.patientDetails.patientId;
+    }
+    this.dialogRef.close(result);
   }
 
   close() {
@@ -106,9 +95,10 @@ export class PatientEditComponent {
     let tempPatient: PatientDetail = {
       patientId: Number(this.b['patientId'].value) || 0,
       createdAt: this.b['createdAt'].value,
-      firstName: this.c['firstName'].value, lastName: this.c['lastName'].value, drName: this.c['drName'].value,
+      firstName: this.c['firstName'].value.trim(), lastName: this.c['lastName'].value, drName: this.c['drName'].value,
       gender: this.d['gender'].value, age: this.d['age'].value,
-      maritalStatus: this.e['maritalStatus'].value,
+      // Preserve existing data without collecting marital status in the form.
+      maritalStatus: this.patientDetails.maritalStatus || '',
       phone: this.f['phone'].value,
       city: this.g['city'].value,
       address: this.g['address'].value,

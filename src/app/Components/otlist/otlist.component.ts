@@ -1,95 +1,59 @@
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
+import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { MatTableDataSource } from '@angular/material/table';
-import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { Subscription } from 'rxjs';
+import { OtMedicineRecord } from 'src/app/Models/ot-medicine.model';
+import { OtMedicineService } from 'src/app/Services/ot-medicine.service';
 import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
 import { UserLoginService } from 'src/app/Services/user-login.service';
-import { Subscription } from 'rxjs';
+import { exportRecords } from 'src/app/Shared/export-records';
+import { OtMedicinePreviewComponent } from '../otslip/ot-medicine-preview.component';
+import { printOtMedicine } from '../otslip/ot-medicine-document';
 
-@Component({
-  selector: 'app-otlist',
-  templateUrl: './otlist.component.html',
-  styleUrls: ['./otlist.component.css']
-})
+@Component({ selector: 'app-otlist', templateUrl: './otlist.component.html', styleUrls: ['./otlist.component.css'] })
 export class OtlistComponent implements OnInit, OnDestroy {
-  displayedColumns: string[] = [];
-  dataSource = new MatTableDataSource<any>();
-  allRecords: any[] = [];
-  total: number = 0;
-  displayLimit: number = 20;
-  readonly pageStep: number = 10;
-  isSuperAdmin: boolean = false;
-  private realtimeSubscription?: Subscription;
-
-  constructor(private router: Router, private indexedDbService: SupabaseDataService, private userLogin: UserLoginService) {}
-
-  async ngOnInit(): Promise<void> {
-
-    const loginUser = await this.userLogin.getLoginUser();
-    this.isSuperAdmin = loginUser === 'admin';
-    this.displayedColumns = ['patientName', 'operationDate', 'operationTime', 'doctorName'];
-    if (this.isSuperAdmin) {
-      this.displayedColumns.push('action');
-    }
-
-    await this.loadDataFromIndexedDB();
-    this.realtimeSubscription = this.indexedDbService.changes.subscribe(collection => {
-      if (collection === 'otFormData') {
-        this.loadDataFromIndexedDB().catch(error => console.error('Unable to refresh OT records:', error));
-      }
-    });
+  readonly trackRecord = trackRecord;
+  allRecords: OtMedicineRecord[] = [];
+  query = '';
+  readonly pagination = new ScrollPagination();
+  onSearch(): void { this.pagination.reset(); }
+  loadMore(): void { this.pagination.loadMore(this.filteredRecords.length); }
+  isSuperAdmin = false;
+  loading = false;
+  deletingId = '';
+  errorMessage = '';
+  private changes?: Subscription;
+  private version = 0;
+  constructor(private records: OtMedicineService, private db: SupabaseDataService, private user: UserLoginService, private dialog: MatDialog, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
+  ngOnInit(): void {
+    this.user.getLoginUser().then(role => this.isSuperAdmin = role === 'admin').catch(() => this.errorMessage = 'Unable to load account permissions.');
+    this.changes = this.db.changes.subscribe(collection => { if (collection === 'otFormData') void this.load(); });
+    void this.load();
   }
-
-  ngOnDestroy(): void {
-    this.realtimeSubscription?.unsubscribe();
+  ngOnDestroy(): void { this.changes?.unsubscribe(); this.version++; }
+  get filteredRecords(): OtMedicineRecord[] {
+    const query = this.query.trim().toLocaleLowerCase();
+    return this.allRecords.filter(record => !query || [record.patientName, record.doctorName, record.procedure, record.roomNumber, record.operationDate, record.id,
+      ...record.products.map(product => product.name)].some(value => String(value || '').toLocaleLowerCase().includes(query)));
   }
-
-  onTableScroll(event: Event): void {
-    const el = event.target as HTMLElement;
-    if (!el) return;
-    const threshold = 120;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
-      if (this.displayLimit < this.allRecords.length) {
-        this.displayLimit = Math.min(this.displayLimit + this.pageStep, this.allRecords.length);
-        this.dataSource.data = this.allRecords.slice(0, this.displayLimit);
-      }
-    }
+  get visibleRecords(): OtMedicineRecord[] { return this.pagination.slice(this.filteredRecords); }
+  async load(): Promise<void> {
+    const version = ++this.version;
+    this.loading = true;
+    try { const records = await this.records.getAll(); if (version !== this.version) return;
+      this.allRecords = records; this.errorMessage = '';
+    } catch (error) { if (version === this.version) { this.errorMessage = error instanceof Error ? error.message : 'Unable to load OT records.'; if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' }); } }
+    finally { if (version === this.version) this.loading = false; }
   }
-
-  async loadDataFromIndexedDB(): Promise<void> {
-    const data = await this.indexedDbService.getItem<any[]>('otFormData');
-    if (data) {
-      const records = (Array.isArray(data) ? data : [data]).sort((a, b) => {
-        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        if (timeA && timeB && timeA !== timeB) return timeB - timeA;
-        return String(b.id || '').localeCompare(String(a.id || ''));
-      });
-      this.allRecords = records;
-      this.total = records.length;
-      this.dataSource.data = this.allRecords.slice(0, this.displayLimit);
-    } else {
-      this.allRecords = [];
-      this.dataSource.data = [];
-      this.total = 0;
-    }
+  preview(record: OtMedicineRecord): void { this.dialog.open(OtMedicinePreviewComponent, { data: { record }, width: '940px', maxWidth: '96vw', maxHeight: '94dvh', panelClass: 'ot-preview-panel' }); }
+  print(record: OtMedicineRecord): void { this.errorMessage = printOtMedicine(record) ? '' : 'Allow pop-ups to print the OT medicine list.'; if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' }); }
+  async deleteOt(record: OtMedicineRecord): Promise<void> {
+    if (this.deletingId || !window.confirm('Delete the OT medicine record for ' + record.patientName + '?')) return;
+    this.deletingId = record.id;
+    try { await this.records.delete(record.id); this.feedback.success('OT medicine record deleted successfully.'); this.allRecords = this.allRecords.filter(item => item.id !== record.id); await this.load(); }
+    catch (error) { this.errorMessage = error instanceof Error ? error.message : 'Unable to delete the OT record.'; if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' }); }
+    finally { this.deletingId = ''; }
   }
-
-  editOt(patientId: string): void {
-    this.router.navigate(['/home'], { queryParams: { patientId } });
-  }
-
-async deleteOt(id: string): Promise<void> {
-  const confirmed = confirm('Are you sure you want to delete this OT record?');
-  if (!confirmed) return;
-
-  const data = await this.indexedDbService.getItem<any[]>('otFormData');
-  if (data) {
-    if (!data.some(ot => String(ot.id) === String(id))) return;
-    await this.indexedDbService.deleteRecord('otFormData', id);
-    const updated = data.filter(ot => String(ot.id) !== String(id));
-    this.allRecords = updated;
-    this.dataSource.data = this.allRecords.slice(0, this.displayLimit);
-    this.total = updated.length;
-  }
-}
+  exportToExcel(): void { exportRecords(this.filteredRecords, 'ot-medicines.xlsx', 'OT medicines'); }
 }

@@ -8,7 +8,7 @@
   padding: 32px 20px 70px;
   color: #fff;
   text-align: center;
-  background: linear-gradient(130deg, #123f42, #0c7c72);
+  background: linear-gradient(125deg, #122e37, #1a5257);
 }
 .header h1 { margin: 0; font-size: clamp(24px, 4vw, 36px); font-weight: 750; letter-spacing: .3px; }
 .header p { margin: 10px 0 0; color: #d3ebe6; font-size: 13px; }
@@ -29,3 +29,7 @@
   .login-form mat-card { padding: 20px; }
   .footer-credit { line-height: 1.7; }
 }
+
+.login-brand { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 16px; border: 1px solid #ffffff38; border-radius: 16px; background: #ffffff12; }
+.login-brand mat-icon { width: 30px; height: 30px; font-size: 30px; }
+.login-error { margin: 8px 0; padding: 12px; color: #a13a3a; border-radius: 8px; background: #fff0ef; font-size: 12px; }

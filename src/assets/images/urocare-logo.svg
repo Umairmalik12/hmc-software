@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title id="title">UROCARE kidney emblem</title>
+  <defs><path id="ring" d="M 80,16 A 64,64 0 1,1 79.99,16"/></defs>
+  <g fill="#20284e" stroke="#20284e">
+    <circle cx="80" cy="80" r="50" fill="none" stroke-width="1.7"/>
+    <text stroke="none" font-family="Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="2.2"><textPath href="#ring" startOffset="0%">UROCARE ★ UROCARE ★ UROCARE ★</textPath></text>
+    <path d="M65 51c-12-6-24 5-24 20 0 16 9 26 19 24 9-2 13-10 7-15-7-5-8-12-2-17 4-4 5-9 0-12z" stroke="none"/>
+    <path d="M95 51c12-6 24 5 24 20 0 16-9 26-19 24-9-2-13-10-7-15 7-5 8-12 2-17-4-4-5-9 0-12z" stroke="none"/>
+    <path d="M76 37v54m8-54v54M61 75c9 1 13 8 13 23v9m25-32c-9 1-13 8-13 23v9M69 109c0-11 22-11 22 0 0 10-11 15-11 15s-11-5-11-15zM80 124v7" fill="none" stroke-width="2.3" stroke-linecap="round"/>
+  </g>
+</svg>

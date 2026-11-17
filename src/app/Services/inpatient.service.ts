@@ -23,7 +23,6 @@ export class InpatientService {
   inpatientDetail: InPatientDetail[] = [];
 
   constructor(private indexedDb: SupabaseDataService) {
-    this.loadInpatientData();
   }
 
   private async loadInpatientData(): Promise<void> {
@@ -52,7 +51,7 @@ export class InpatientService {
         this.total = inpatients.length;
         observer.next(this.getInpatientBrief(inpatients));
         observer.complete();
-      });
+      }).catch(error => observer.error(error));
     });
   }
 
@@ -68,7 +67,7 @@ export class InpatientService {
         const end = Math.min(start + pageSize, all.length);
         observer.next(all.slice(start, end));
         observer.complete();
-      });
+      }).catch(error => observer.error(error));
     });
   }
 
@@ -78,7 +77,7 @@ export class InpatientService {
         const inpatient: any = (data || []).find(p => p.inpatientId === id);
         observer.next(inpatient);
         observer.complete();
-      });
+      }).catch(error => observer.error(error));
     });
   }
 
@@ -91,7 +90,7 @@ export class InpatientService {
         data.createdAt = new Date().toISOString();
       }
 
-      await this.indexedDb.setItem(STORAGE_KEY, [...storedInpatients, data]);
+      await this.indexedDb.upsertRecord(STORAGE_KEY, data.inpatientId, data);
       storedInpatients.push(data);
       this.inpatientDetail = storedInpatients;
       return true;

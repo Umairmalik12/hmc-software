@@ -1,6 +1,6 @@
 <form [formGroup]="otForm" (ngSubmit)="submitForm()" novalidate>
   <div id="ot-form">
-    <mat-card>
+    <mat-card [attr.inert]="isSaving || loading ? '' : null">
       <header class="ot-form-heading">
         <div class="ot-heading-mark" aria-hidden="true">OT</div>
         <div>
@@ -10,10 +10,10 @@
         </div>
       </header>
 
-      <mat-card-content>
+      <p *ngIf="loading" role="status" class="hmc-loading-state">Loading OT record...</p><p *ngIf="loadFailed" class="ot-validation" role="alert">{{ validationMessage }} <button mat-stroked-button type="button" (click)="load()">Retry</button></p><mat-card-content [attr.inert]="loadFailed ? '' : null"><div class="full-width" style="grid-column:1 / -1"><app-procedure-select formControlName="procedure"></app-procedure-select></div>
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Patient Name</mat-label>
-          <input matInput formControlName="patientName" />
+          <input matInput formControlName="patientName" /><mat-error>Enter the patient name</mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
@@ -36,8 +36,8 @@
           <input matInput type="time" formControlName="operationTime" />
         </mat-form-field>
 
-        <mat-form-field appearance="fill" class="full-width">
-          <mat-label>Medicine Status</mat-label>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Slip heading</mat-label>
           <mat-select formControlName="includeMedicineHeader">
             <mat-option value="withMedicine">With Medicine</mat-option>
             <mat-option value="withoutMedicine">Without Medicine</mat-option>
@@ -48,41 +48,45 @@
           <div class="inventory-heading">
             <div>
               <h4 id="inventory-title">Medicine &amp; supplies</h4>
-              <p>{{ selectedProductCount }} item{{ selectedProductCount === 1 ? '' : 's' }} selected</p>
+              <p>{{ selectedProductCount }} item{{ selectedProductCount === 1 ? '' : 's' }} selected <span class="catalogue-count">· {{ activeProductCount }} active catalogue items</span></p>
             </div>
-            <div class="inventory-tools">
+            <button *ngIf="canManageMedicines" mat-stroked-button type="button" (click)="manageMedicines()" [disabled]="isSaving || loading"><mat-icon>vaccines</mat-icon>Manage medicines</button>
+          </div>
+          <div class="inventory-tools">
               <mat-form-field appearance="outline" class="product-search">
                 <mat-label>Find medicine or supply</mat-label>
-                <input matInput type="search" [(ngModel)]="productSearch" (ngModelChange)="onFilterChange()" [ngModelOptions]="{standalone: true}" placeholder="Search list">
+                <input matInput type="search" [(ngModel)]="productSearch" (ngModelChange)="onFilterChange()" [ngModelOptions]="{standalone: true}" placeholder="Name, generic name or strength">
               </mat-form-field>
+              <mat-form-field appearance="outline" class="category-filter"><mat-label>Category</mat-label><mat-select [(ngModel)]="productCategory" (ngModelChange)="onFilterChange()" [ngModelOptions]="{standalone: true}"><mat-option value="">All categories</mat-option><mat-option *ngFor="let category of categories" [value]="category">{{ category }}</mat-option></mat-select></mat-form-field>
+              <button [appBusy]="catalogueLoading" mat-icon-button type="button" (click)="refreshCatalogue()" [disabled]="catalogueLoading" aria-label="Refresh OT medicines" title="Refresh catalogue"><mat-icon>refresh</mat-icon></button>
               <mat-checkbox [(ngModel)]="selectedOnly" (ngModelChange)="onFilterChange()" [ngModelOptions]="{standalone: true}">Selected only</mat-checkbox>
-            </div>
           </div>
-
+          <p *ngIf="catalogueLoading" role="status" class="hmc-loading-state catalogue-notice">Loading medicine catalogue...</p>
+          <p *ngIf="catalogueError" role="alert" class="ot-validation">{{ catalogueError }} <button [appBusy]="catalogueLoading" mat-stroked-button type="button" (click)="refreshCatalogue()" [disabled]="catalogueLoading">Retry</button></p>
           <div formArrayName="products" class="product-list">
-            <div *ngFor="let product of visibleProducts; trackBy: trackByProductIndex" [formGroupName]="product.index" class="product-item" [class.product-selected]="productControls.at(product.index).get('selected')?.value">
-              <mat-checkbox formControlName="selected" (change)="onProductSelectionChange(product.index, $event.checked)" class="product-checkbox">
-                {{ product.name }}
-              </mat-checkbox>
+            <div *ngFor="let product of visibleProducts; trackBy: trackByProductIndex" [formGroupName]="product.index" class="product-item" [class.product-unavailable]="product.unavailable" [class.product-selected]="productControls.at(product.index).get('selected')?.value">
+              <div class="product-details"><mat-checkbox formControlName="selected" (change)="onProductSelectionChange(product.index, $event.checked)" class="product-checkbox">
+                <span class="product-name">{{ product.name }}</span>
+              </mat-checkbox><p *ngIf="product.genericName" class="product-meta">{{ product.genericName }}</p><p *ngIf="product.type || product.strength || product.unit" class="product-meta">{{ product.type }}<span *ngIf="product.strength"> · {{ product.strength }}</span><span *ngIf="product.unit"> · {{ product.unit }}</span></p><span *ngIf="product.note" class="product-note">{{ product.note }}</span></div>
               <mat-form-field appearance="outline" class="quantity-field">
                 <mat-label>Qty</mat-label>
-                <input matInput type="number" min="1" step="1" formControlName="quantity" [disabled]="!productControls.at(product.index).get('selected')?.value" [attr.aria-label]="'Quantity for ' + product.name" placeholder="0">
+                <input matInput type="number" min="0.000001" step="any" formControlName="quantity"  [attr.aria-label]="'Quantity for ' + product.name" placeholder="0"><mat-error>Enter a positive quantity</mat-error>
               </mat-form-field>
             </div>
-            <p *ngIf="!visibleProducts.length" class="empty-products">No items match your search.</p>
+            <p *ngIf="!catalogueLoading && !catalogueError && !visibleProducts.length" class="empty-products">{{ activeProductCount ? 'No items match your filters.' : 'No active OT medicines. Add or activate an item in the catalogue.' }}</p>
           </div>
         </section>
-        <p *ngIf="validationMessage" class="ot-validation" role="alert">{{ validationMessage }}</p>
+        <p *ngIf="validationMessage && !loadFailed" class="ot-validation" role="alert">{{ validationMessage }}</p>
       </mat-card-content>
     </mat-card>
   </div>
 
   <mat-card-actions>
-    <span class="form-action-note">{{ isEditMode ? 'Update saved OT slip' : 'Save and print the OT slip' }}</span>
-    <button mat-stroked-button type="button" color="warn" (click)="cancelForm()">Cancel</button>
-    <button mat-raised-button type="submit" color="primary" [disabled]="isSaving">
+    <button mat-stroked-button type="button" (click)="preview()" [disabled]="isSaving || loading || loadFailed || catalogueLoading || !!catalogueError"><mat-icon>visibility</mat-icon>Preview</button><span class="form-action-note">{{ isEditMode ? 'Update saved OT slip' : 'Save and print the OT slip' }}</span>
+    <button mat-stroked-button type="button" color="warn" (click)="cancelForm()" [disabled]="isSaving">Cancel</button>
+    <button [appBusy]="isSaving" mat-raised-button type="submit" color="primary" [disabled]="isSaving || loading || loadFailed || catalogueLoading || !!catalogueError">
       <mat-icon>{{ isEditMode ? 'save' : 'print' }}</mat-icon>
-      {{ isSaving ? 'Saving…' : (isEditMode ? 'Update & Print' : 'Save & Print') }}
+      {{ isSaving ? 'Saving...' : (isEditMode ? 'Update & Print' : 'Save & Print') }}
     </button>
   </mat-card-actions>
 </form>

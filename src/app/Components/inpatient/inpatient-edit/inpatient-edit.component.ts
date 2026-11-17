@@ -2,6 +2,7 @@ import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { InpatientService } from '../../../Services/inpatient.service';
+import { requiredText } from 'src/app/Services/validators.service';
 
 @Component({
   selector: 'app-inpatient-edit',
@@ -18,7 +19,7 @@ export class InpatientEditComponent {
     private dialogRef: MatDialogRef<InpatientEditComponent>,
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {
-    const defaultData = data || { inpatientId: 0, patientName: '', procedure: '', admissionDate: '', dischargeDate: '', surgeonName: '', createdAt: '' };
+    const defaultData = { inpatientId: 0, patientName: '', procedure: '', admissionDate: '', dischargeDate: '', surgeonName: '', createdAt: '', ...data };
 
     if (!defaultData.inpatientId && !defaultData.createdAt) {
       defaultData.createdAt = new Date().toISOString();
@@ -33,15 +34,15 @@ export class InpatientEditComponent {
         inpatientId: [defaultData.inpatientId],
         createdAt: [defaultData.createdAt || ''],
         basicInfo: this.fb.group({
-          patientName: [defaultData.patientName, Validators.required],
-          surgeonName: [defaultData.surgeonName, Validators.required],
+          patientName: [defaultData.patientName, [Validators.required, requiredText]],
+          surgeonName: [defaultData.surgeonName],
         }),
         procedureInfo: this.fb.group({
-          procedure: [defaultData.procedure, Validators.required],
+          procedure: [defaultData.procedure],
         }),
         dates: this.fb.group({
-          admissionDate: [defaultData.admissionDate, Validators.required],
-          dischargeDate: [defaultData.dischargeDate, Validators.required],
+          admissionDate: [defaultData.admissionDate || null],
+          dischargeDate: [defaultData.dischargeDate || null],
         })
       })
     });
@@ -56,15 +57,11 @@ export class InpatientEditComponent {
   get f() { return this.b['createdAt']; }
 
   onSubmit() {
-    if (this.inpatientForm.valid) {
-      let choice = true;
-      if (this.inpatientForm.dirty) choice = confirm(this.edit ? "Update InnPatient?" : "Submit New InnPatient?");
-
-      if (choice) {
-        const result: any = this.ResultRefactoring();
-        this.dialogRef.close(result);
-      }
+    if (this.inpatientForm.invalid) {
+      this.inpatientForm.markAllAsTouched();
+      return;
     }
+    this.dialogRef.close(this.ResultRefactoring());
   }
 
   close() {

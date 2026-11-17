@@ -1,10 +1,11 @@
 <div class="body">
-    <h1>Lab Patient Test List</h1>
-    <div class="table-scroll-container" (scroll)="onTableScroll($event)">
-    <mat-table class="lab-table mat-elevation-z8" [dataSource]="dataSource">
-        
+    <header class="list-header"><div class="list-intro"><span class="list-icon"><mat-icon>science</mat-icon></span><div><h1>Laboratory</h1><p>Patient tests, referrals and thermal test receipts.</p></div></div><span class="record-count"><strong>{{ filteredPatients.length }}</strong> records</span><button mat-stroked-button (click)="exportToExcel()"><mat-icon>file_download</mat-icon>Export</button><button mat-flat-button color="primary" (click)="create.emit()"><mat-icon>add</mat-icon>New lab test</button></header>
+    <p *ngIf="loading" class="hmc-loading-state" role="status">Loading lab test records...</p><p *ngIf="loadFailed" class="form-error" role="alert">Records could not be loaded. <button mat-stroked-button type="button" (click)="dataActions('', 'asc', 0, 20)" [disabled]="loading">Retry</button></p><div class="search-bar"><mat-form-field appearance="outline"><mat-label>Search lab tests</mat-label><input matInput type="search" [(ngModel)]="searchQuery" (ngModelChange)="onSearch()" placeholder="Patient, test, doctor or MR number"></mat-form-field></div>
+    <div class="table-scroll-container" appScrollPagination [scrollDisabled]="loading" [scrollTotal]="total" [scrollShown]="displayedPatients.length" [scrollResetKey]="pagination.revision" (loadMore)="loadMore()" scrollLabel="Lab patients">
+    <mat-table class="lab-table mat-elevation-z8" [dataSource]="dataSource" [trackBy]="trackRecord">
+
         <ng-container matColumnDef="patientId">
-            <mat-header-cell *matHeaderCellDef>Mr No.</mat-header-cell>
+            <mat-header-cell *matHeaderCellDef>MR number</mat-header-cell>
             <mat-cell *matCellDef="let lab">{{ lab.patientId }}</mat-cell>
         </ng-container>
 
@@ -33,17 +34,17 @@
             <mat-cell *matCellDef="let lab">{{ lab.dateTime | date: 'M/d/yy, h:mm a' }}</mat-cell>
         </ng-container>
 
-   <ng-container matColumnDef="action" *ngIf="isSuperAdmin" >
+   <ng-container matColumnDef="action" >
     <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
     <mat-cell *matCellDef="let lab">
-        <div class="action-buttons">
-            <button mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit lab slip" (click)="editLabPatient(lab.patientId)">
-                <mat-icon>edit</mat-icon>
+        <div class="action-buttons"><button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Preview lab test" title="Preview" (click)="viewLab(lab.patientId)"><mat-icon>visibility</mat-icon></button>
+            <button *ngIf="isSuperAdmin" mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit lab slip" title="Edit lab slip" (click)="editLabPatient(lab.patientId)">
+                <mat-icon>edit_note</mat-icon>
             </button>
-            <button mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete lab slip" (click)="deleteLabPatient(lab.patientId)">
-                <mat-icon>delete</mat-icon>
+            <button [appBusy]="deletingId === lab.patientId" [disabled]="deletingId !== null" *ngIf="isSuperAdmin" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete lab slip" title="Delete lab slip" (click)="deleteLabPatient(lab.patientId)">
+                <mat-icon>delete_outline</mat-icon>
             </button>
-            <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print lab slip" (click)="printLabSlip(lab.patientId)">
+            <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print lab slip" title="Print lab slip" (click)="printLabSlip(lab.patientId)">
                 <mat-icon>print</mat-icon>
             </button>
         </div>
@@ -53,11 +54,8 @@
         <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
         <mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></mat-row>
     </mat-table>
+<div class="list-empty" *ngIf="!loading && !loadFailed && !filteredPatients.length"><mat-icon>inbox</mat-icon><span>No records to display.</span></div>
     </div>
 </div>
 
-<mat-paginator class="page"
-               [length]="total"
-               [pageSize]="5"
-               [pageSizeOptions]="[5, 10, 15, 20]">
-</mat-paginator>
+<app-scroll-list-footer [total]="total" [shown]="displayedPatients.length" (loadMore)="loadMore()"></app-scroll-list-footer>

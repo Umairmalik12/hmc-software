@@ -29,6 +29,10 @@ module.exports = function (config) {
     logLevel: config.LOG_INFO,
     autoWatch: true,
     browsers: ['Chrome'],
+    customLaunchers: {
+      ChromeHeadlessDesktop: { base: 'ChromeHeadless', flags: ['--window-size=1440,1000'] },
+      ChromeHeadlessMobile: { base: 'ChromeHeadless', flags: ['--window-size=390,844'] }
+    },
     singleRun: false,
     restartOnFileChange: true
   });

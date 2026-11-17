@@ -1,3 +1,4 @@
+import { FeedbackModule } from 'src/app/Shared/feedback.module';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 
@@ -9,8 +10,8 @@ describe('AlertboxComponent', () => {
   let fixture: ComponentFixture<AlertboxComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [ AlertboxComponent ]
+    await TestBed.configureTestingModule({imports: [FeedbackModule],
+      declarations: []
     })
     .compileComponents();
   });
@@ -27,14 +28,14 @@ describe('AlertboxComponent', () => {
 
   it('should correctly render the passed message', () => {
     component.message= "Testing Alert Box"
-    fixture.detectChanges(); 
-    let ele = fixture.debugElement.nativeElement; 
-    expect(ele.querySelector('p').textContent).toBe('Testing Alert Box'); 
+    fixture.detectChanges();
+    let ele = fixture.debugElement.nativeElement;
+    expect(ele.querySelector('p').textContent).toBe('Testing Alert Box');
   });
 
   it('should add error class to alert-box on error message',()=>{
     component.type="error"
-    component.check=false;
+
 
     fixture.detectChanges();
     let ele: HTMLElement= fixture.nativeElement.querySelector('div');
@@ -43,7 +44,7 @@ describe('AlertboxComponent', () => {
 
   it('should add success class to alert-box on success message',()=>{
     component.type="success"
-    component.check=true;
+
 
     fixture.detectChanges();
     let ele: HTMLElement= fixture.nativeElement.querySelector('div');

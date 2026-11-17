@@ -18,6 +18,8 @@ describe('SupabaseDataService', () => {
       order: jasmine.createSpy('order').and.callFake(() => query),
       range: jasmine.createSpy('range').and.returnValue(Promise.resolve({ data: [], error: null })),
       upsert: jasmine.createSpy('upsert').and.returnValue(Promise.resolve({ error: null })),
+      update: jasmine.createSpy('update').and.callFake(() => query),
+      single: jasmine.createSpy('single'),
       delete: jasmine.createSpy('delete').and.callFake(() => query),
     };
     client = {
@@ -40,6 +42,15 @@ describe('SupabaseDataService', () => {
       p_updates: [],
       p_delete_ids: [],
     });
+  });
+
+  it('updates only a token patient name and returns its unchanged queue identity', async () => {
+    query.single.and.resolveTo({ data: { id: 7, token_number: 'A003', sequence: 3, customer_name: 'Ali Khan', token_date: '2026-11-17', token_time: '01:35 PM', created_at: '2026-11-17T08:35:00Z' }, error: null });
+    const saved = await service.updatePatientTokenName(7, ' Ali Khan ');
+    expect(query.update).toHaveBeenCalledWith({ customer_name: 'Ali Khan' });
+    expect(saved.tokenNumber).toBe('A003');
+    expect(saved.sequence).toBe(3);
+    expect(saved.customerName).toBe('Ali Khan');
   });
 
   it('updates existing IDs in collections with nonstandard record keys', async () => {
@@ -67,12 +78,7 @@ describe('SupabaseDataService', () => {
     }));
     await service.setItem('patientDetails', [{ patientId: 1 }]);
 
-    expect(client.rpc).toHaveBeenCalledWith('apply_hmc_record_changes', {
-      p_collection: 'patientDetails',
-      p_inserts: [],
-      p_updates: [],
-      p_delete_ids: [],
-    });
+    expect(client.rpc).not.toHaveBeenCalled();
   });
 
   it('updates remote rows removed from the application array without deleting unrelated records', async () => {

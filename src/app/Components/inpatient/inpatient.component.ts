@@ -1,3 +1,4 @@
+import { EventEmitter, Output } from '@angular/core';
 import { Component } from '@angular/core';
 
 @Component({
@@ -6,5 +7,7 @@ import { Component } from '@angular/core';
   styleUrls: ['./inpatient.component.css']
 })
 export class InpatientComponent {
+  @Output() create = new EventEmitter<void>();
+
 
 }

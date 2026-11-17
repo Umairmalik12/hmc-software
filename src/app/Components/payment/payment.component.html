@@ -1,144 +1,82 @@
-<div class="payment-dashboard">
-    <mat-card class="payment-card">
-      <!-- <mat-card-header class="payment-card-header"> -->
-        <!-- <mat-card-title class="payment-card-title">Payment Dashboard</mat-card-title> -->
-      <!-- </mat-card-header> -->
-  
-      <!-- Payment Form -->
-      <form [formGroup]="paymentForm" (ngSubmit)="processPayment()" class="payment-form">
-        <!-- <mat-card class="payment-card"> -->
-          <mat-card-header class="payment-card-header">
-            <mat-card-title class="payment-title">Point of Sale</mat-card-title>
-          </mat-card-header>
-      
-          <mat-card-content class="form-content">
-            <!-- Patient Name -->
-            <div class="form-field">
-              <mat-form-field appearance="fill" class="full-width">
-                <mat-label>Patient Name</mat-label>
-                <input matInput formControlName="patientName" required class="input-field"/>
-              </mat-form-field>
-            </div>
-      
-            <!-- Auto-generated Patient ID -->
-            <div class="form-field">
-              <mat-form-field appearance="fill" class="full-width">
-                <mat-label>Patient ID</mat-label>
-                <input matInput [value]="patientId" formControlName="patientId" class="input-field"/>
-              </mat-form-field>
-            </div>
-      
-            <!-- Amount -->
-            <div class="form-field">
-              <mat-form-field appearance="fill" class="full-width">
-                <mat-label class="amount-label">Amount</mat-label>
-                <input matInput type="number" formControlName="amount" required class="input-field" />
-              </mat-form-field>
-            </div>
-      
-            <!-- Cash Given -->
-            <div class="form-field">
-              <mat-form-field appearance="fill" class="full-width">
-                <mat-label class="cash-label">Cash Given</mat-label>
-                <input matInput type="number" formControlName="cashGiven" (input)="calculateCashReturn()" required class="input-field" />
-              </mat-form-field>
-            </div>
-      
-            <!-- Payment Method -->
-            <div class="form-field">
-              <mat-form-field appearance="fill" class="full-width">
-                <mat-label>Payment Method</mat-label>
-                <mat-select formControlName="paymentMethod" required>
-                  <mat-option value="cash">Cash</mat-option>
-                  <mat-option value="card">Card</mat-option>
-                </mat-select>
-              </mat-form-field>
-            </div>
-      
-            <!-- Payment Status -->
-            <div class="form-field">
-              <mat-form-field appearance="fill" class="full-width">
-                <mat-label>Payment Status</mat-label>
-                <mat-select formControlName="paymentStatus" required>
-                  <mat-option value="completed">Completed</mat-option>
-                  <mat-option value="pending">Pending</mat-option>
-                  <mat-option value="failed">Failed</mat-option>
-                </mat-select>
-              </mat-form-field>
-            </div>
-      
-            <!-- Cash Return -->
-            <div class="form-field" *ngIf="cashReturn >= 0">
-              <mat-form-field appearance="fill" class="full-width">
-                <mat-label>Cash Return</mat-label>
-                <input matInput [value]="cashReturn" disabled class="input-field" />
-              </mat-form-field>
-            </div>
-      
-            <!-- Action Buttons -->
-            <div class="form-actions">
-              <button mat-raised-button color="primary" type="submit" [disabled]="paymentForm.invalid" class="submit-btn">
-                Process Payment
-              </button>
-              <button mat-raised-button color="warn" (click)="resetForm()" class="cancel-btn">Cancel</button>
-            </div>
-          </mat-card-content>
-        <!-- </mat-card> -->
-      </form>
-  
-      <!-- Payment History -->
-      <mat-card-content *ngIf="payments.length > 0" class="payment-history">
-        <h3>Payment History</h3>
-        <div class="table-scroll-container" (scroll)="onTableScroll($event)">
-        <table mat-table [dataSource]="displayedPayments" class="payment-table">
-          <ng-container matColumnDef="patientName">
-            <th mat-header-cell *matHeaderCellDef> Patient Name </th>
-            <td mat-cell *matCellDef="let payment"> {{payment.patientName}} </td>
-          </ng-container>
-  
-          <ng-container matColumnDef="amount">
-            <th mat-header-cell *matHeaderCellDef> Amount </th>
-            <td mat-cell *matCellDef="let payment"> Rs{{payment.amount}} </td>
-          </ng-container>
-  
-          <ng-container matColumnDef="cashGiven">
-            <th mat-header-cell *matHeaderCellDef> Cash Given </th>
-            <td mat-cell *matCellDef="let payment"> RS{{payment.cashGiven}} </td>
-          </ng-container>
-  
-          <ng-container matColumnDef="cashReturn">
-            <th mat-header-cell *matHeaderCellDef> Cash Return </th>
-            <td mat-cell *matCellDef="let payment"> Rs{{payment.cashReturn}} </td>
-          </ng-container>
-  
-          <ng-container matColumnDef="paymentMethod">
-            <th mat-header-cell *matHeaderCellDef> Payment Method </th>
-            <td mat-cell *matCellDef="let payment"> {{payment.paymentMethod}} </td>
-          </ng-container>
-  
-          <ng-container matColumnDef="paymentStatus">
-            <th mat-header-cell *matHeaderCellDef> Status </th>
-            <td mat-cell *matCellDef="let payment">
-              <mat-select [(ngModel)]="payment.paymentStatus" (selectionChange)="updatePaymentStatus(payment.id, $event.value)">
-                <mat-option value="completed">Completed</mat-option>
-                <mat-option value="pending">Pending</mat-option>
-                <mat-option value="failed">Failed</mat-option>
-              </mat-select>
-            </td>
-          </ng-container>
-  
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef> Actions </th>
-            <td mat-cell *matCellDef="let payment">
-              <button mat-button (click)="showReceipt(payment)" class="print-receipt-btn">Print Receipt</button>
-            </td>
-          </ng-container>
-  
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
+<main class="payment-dashboard">
+  <header class="list-header">
+    <div class="list-intro"><span class="list-icon"><mat-icon>account_balance_wallet</mat-icon></span><div><h1>Payments &amp; counter</h1><p>Patient collections, staff attribution and shift reconciliation.</p></div></div>
+    <div class="payment-clock"><mat-icon>schedule</mat-icon><div><strong>{{ currentTime | date:'dd MMM yyyy' }}</strong><span>{{ currentTime | date:'h:mm:ss a' }} &middot; Computer time</span></div></div>
+  </header>
+
+  <p *ngIf="errorMessage" class="form-error payment-message" role="alert">{{ errorMessage }} <button *ngIf="!identity && !accountLoading" type="button" mat-button (click)="retryAccount()">Retry staff account</button></p>
+  <p *ngIf="successMessage" class="payment-success payment-message" role="status"><mat-icon>check_circle</mat-icon>{{ successMessage }}</p>
+
+  <mat-card class="payment-card" id="payment-form">
+    <div class="payment-section-heading"><div><p class="eyebrow">COUNTER DESK</p><h2>{{ editingId ? 'Edit payment #' + editingId : 'Record a payment' }}</h2><p>{{ editingId ? 'Review this receipt and save the corrections.' : 'Payment date and time are recorded automatically when you save.' }}</p></div><span *ngIf="identity" class="account-tag"><mat-icon>verified_user</mat-icon>{{ identity.email || identity.name }}</span><span *ngIf="accountLoading" role="status">Loading staff account...</span></div>
+    <form *ngIf="paymentForm" [formGroup]="paymentForm" (ngSubmit)="processPayment()" class="payment-form" novalidate>
+      <div class="payment-entry-layout">
+        <div class="form-content">
+          <h3 class="form-section-title"><mat-icon>badge</mat-icon>Counter staff &amp; shift</h3>
+          <mat-form-field appearance="outline"><mat-label>Counter staff name</mat-label><input matInput formControlName="staffName" maxlength="120" list="payment-staff-names"><mat-error>Enter the counter staff name</mat-error></mat-form-field>
+          <datalist id="payment-staff-names"><option *ngFor="let staff of staffOptions" [value]="staff"></option></datalist>
+          <mat-form-field appearance="outline"><mat-label>Shift name</mat-label><input matInput formControlName="shiftName" list="payment-shift-names" maxlength="60" placeholder="Morning, Evening, Night..."><mat-error>Enter the shift name</mat-error></mat-form-field>
+          <datalist id="payment-shift-names"><option *ngFor="let shift of shiftSuggestions" [value]="shift"></option></datalist>
+          <mat-form-field appearance="outline"><mat-label>Shift date</mat-label><input matInput type="date" formControlName="shiftDate"><mat-hint>For an overnight shift, use the date it started.</mat-hint><mat-error>Enter a valid shift date</mat-error></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Counter / desk (optional)</mat-label><input matInput formControlName="counterName" maxlength="60" placeholder="e.g. Reception 1"></mat-form-field>
+          <p class="counter-hint form-span">{{ editingId ? 'Original account and receipt time are retained. Older payments may have no staff or shift recorded.' : 'Staff and shift are required for new payments. These names are remembered for your account on this device.' }}</p>
+
+          <h3 class="form-section-title"><mat-icon>person_outline</mat-icon>Patient &amp; payment</h3>
+          <mat-form-field appearance="outline"><mat-label>Patient name</mat-label><input matInput formControlName="patientName" maxlength="120"><mat-error>Enter the patient name</mat-error></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Patient reference</mat-label><input matInput formControlName="patientId"><mat-hint>Automatically generated payment reference</mat-hint></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Amount</mat-label><span matTextPrefix>Rs&nbsp;</span><input matInput type="number" min="0" step="0.01" formControlName="amount"><mat-error>Enter a non-negative amount with up to 2 decimals</mat-error></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Payment method</mat-label><mat-select formControlName="paymentMethod"><mat-option value="cash">Cash</mat-option><mat-option value="card">Card</mat-option></mat-select></mat-form-field>
+          <mat-form-field appearance="outline" *ngIf="paymentForm.get('paymentMethod')?.value === 'cash'"><mat-label>Cash tendered (optional)</mat-label><span matTextPrefix>Rs&nbsp;</span><input matInput type="number" min="0" step="0.01" formControlName="cashGiven"><mat-hint>Leave blank for exact cash on completed payments.</mat-hint><mat-error>Enter valid cash with up to 2 decimals</mat-error></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Payment status</mat-label><mat-select formControlName="paymentStatus"><mat-option value="completed">Completed</mat-option><mat-option value="pending">Pending</mat-option><mat-option value="failed">Failed</mat-option></mat-select></mat-form-field>
         </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
-  
+
+        <aside class="checkout-summary" aria-label="Payment summary">
+          <p class="eyebrow">PAYMENT SUMMARY</p>
+          <div class="checkout-total"><span>Amount</span><strong>Rs {{ (paymentForm.get('amount')?.value || 0) | number:'1.2-2' }}</strong></div>
+          <dl><div><dt>Staff</dt><dd>{{ paymentForm.get('staffName')?.value || 'Enter staff name' }}</dd></div><div><dt>Shift</dt><dd>{{ paymentForm.get('shiftName')?.value || 'Enter shift name' }}</dd></div><div><dt>Shift date</dt><dd>{{ paymentForm.get('shiftDate')?.value || 'Not recorded' }}</dd></div><div><dt>Method</dt><dd>{{ paymentForm.get('paymentMethod')?.value | titlecase }}</dd></div><div class="change-row" *ngIf="paymentForm.get('paymentMethod')?.value === 'cash'"><dt>Change due</dt><dd>Rs {{ cashReturn | number:'1.2-2' }}</dd></div></dl>
+          <p class="summary-note">Only completed payments count towards collected totals. Pending and failed payments are excluded.</p>
+          <label class="print-preference"><input type="checkbox" [(ngModel)]="printAfterSave" [ngModelOptions]="{standalone:true}">Print receipt after saving</label>
+          <div class="payment-submit-actions"><button [appBusy]="saving" mat-flat-button color="primary" type="submit" [disabled]="saving || !!deletingId || accountLoading || !identity"><mat-icon>check</mat-icon>{{ saving ? 'Saving...' : (editingId ? 'Save changes' : 'Save payment') }}</button><button mat-stroked-button type="button" (click)="resetForm()" [disabled]="saving">{{ editingId ? 'Cancel edit' : 'Clear patient' }}</button></div>
+        </aside>
+      </div>
+    </form>
+  </mat-card>
+
+  <mat-card class="payment-card history-card" id="payment-history">
+    <div class="payment-section-heading"><div><p class="eyebrow">COLLECTION REGISTER</p><h2>Payment history</h2><p>Filter by staff, shift and shift date to review a counter handover.</p></div><div class="history-tools"><button [appBusy]="loading" mat-stroked-button type="button" (click)="refresh()" [disabled]="loading"><mat-icon>refresh</mat-icon>Refresh</button><button mat-stroked-button type="button" (click)="exportToExcel()" [disabled]="!filteredPayments.length"><mat-icon>file_download</mat-icon>Export</button></div></div>
+    <div class="payment-filters">
+      <mat-form-field appearance="outline" class="payment-search"><mat-label>Search payments</mat-label><mat-icon matPrefix>search</mat-icon><input matInput type="search" [(ngModel)]="paymentSearch" (ngModelChange)="applyPaymentFilter()" placeholder="Patient, receipt, counter or staff"></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Counter staff</mat-label><mat-select [(ngModel)]="staffFilter" (selectionChange)="applyPaymentFilter()"><mat-option value="">All staff</mat-option><mat-option *ngFor="let staff of staffOptions" [value]="staff">{{ staff }}</mat-option><mat-option value="__unrecorded__">Not recorded</mat-option></mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Shift</mat-label><mat-select [(ngModel)]="shiftFilter" (selectionChange)="applyPaymentFilter()"><mat-option value="">All shifts</mat-option><mat-option *ngFor="let shift of shiftOptions" [value]="shift">{{ shift }}</mat-option><mat-option value="__unrecorded__">Not recorded</mat-option></mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Status</mat-label><mat-select [(ngModel)]="statusFilter" (selectionChange)="applyPaymentFilter()"><mat-option value="">All statuses</mat-option><mat-option value="completed">Completed</mat-option><mat-option value="pending">Pending</mat-option><mat-option value="failed">Failed</mat-option></mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Method</mat-label><mat-select [(ngModel)]="methodFilter" (selectionChange)="applyPaymentFilter()"><mat-option value="">All methods</mat-option><mat-option value="cash">Cash</mat-option><mat-option value="card">Card</mat-option></mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Shift date from</mat-label><input matInput type="date" [(ngModel)]="fromDate" (ngModelChange)="applyPaymentFilter()"></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Shift date to</mat-label><input matInput type="date" [(ngModel)]="toDate" (ngModelChange)="applyPaymentFilter()"></mat-form-field>
+      <div class="filter-actions"><button mat-button type="button" (click)="todayOnly()">Today</button><button mat-button type="button" (click)="clearFilters()">Clear filters</button></div>
+    </div>
+    <p *ngIf="dateRangeInvalid" class="form-error" role="alert">The end date must be on or after the start date.</p>
+    <div class="collection-summary" *ngIf="totals as summary">
+      <article><span><mat-icon>payments</mat-icon>Total collected</span><strong>Rs {{ summary.collected | number:'1.2-2' }}</strong><small>{{ summary.completedCount }} completed payments</small></article>
+      <article><span><mat-icon>local_atm</mat-icon>Cash collected</span><strong>Rs {{ summary.cash | number:'1.2-2' }}</strong><small>Net of change</small></article>
+      <article><span><mat-icon>credit_card</mat-icon>Card collected</span><strong>Rs {{ summary.card | number:'1.2-2' }}</strong><small>Completed card payments</small></article>
+      <article><span><mat-icon>hourglass_empty</mat-icon>Pending amount</span><strong>Rs {{ summary.pending | number:'1.2-2' }}</strong><small>Excluded from collections</small></article>
+    </div>
+    <div class="register-meta"><span>{{ filteredPayments.length }} matching records &middot; Totals include all matching rows.</span><label>Receipt paper <select [(ngModel)]="paperWidth" aria-label="Receipt paper size"><option [ngValue]="58">58 mm</option><option [ngValue]="80">80 mm</option></select></label></div>
+    <p *ngIf="loading" role="status" class="hmc-loading-state loading-note">Loading payment records...</p>
+    <div class="table-scroll-container" appScrollPagination [scrollTotal]="filteredPayments.length" [scrollShown]="displayedPayments.length" [scrollResetKey]="pagination.revision" [scrollDisabled]="loading" (loadMore)="loadMore()" scrollLabel="Payments">
+      <table mat-table [dataSource]="displayedPayments" [trackBy]="trackRecord" class="payment-table">
+        <ng-container matColumnDef="patientName"><th mat-header-cell *matHeaderCellDef>Patient / receipt</th><td mat-cell *matCellDef="let payment"><strong>{{ payment.patientName }}</strong><small>#{{ payment.id }} &middot; {{ payment.patientId || 'No reference' }}</small></td></ng-container>
+        <ng-container matColumnDef="createdAt"><th mat-header-cell *matHeaderCellDef>Receipt time</th><td mat-cell *matCellDef="let payment">{{ payment.createdAt ? (payment.createdAt | date:'dd MMM yyyy') : 'Not recorded' }}<small *ngIf="payment.createdAt">{{ payment.createdAt | date:'h:mm a' }}</small><small *ngIf="payment.updatedByEmail" [title]="'Updated ' + (payment.updatedAt | date:'dd MMM yyyy, h:mm a')">Updated by {{ payment.updatedByEmail }}</small></td></ng-container>
+        <ng-container matColumnDef="staff"><th mat-header-cell *matHeaderCellDef>Counter staff / shift</th><td mat-cell *matCellDef="let payment"><strong>{{ payment.staffName || 'Not recorded' }}</strong><small>{{ payment.shiftName || 'Shift not recorded' }}<ng-container *ngIf="payment.shiftDate"> &middot; {{ payment.shiftDate | date:'dd MMM yyyy' }}</ng-container></small><small *ngIf="payment.counterName">{{ payment.counterName }}</small></td></ng-container>
+        <ng-container matColumnDef="amount"><th mat-header-cell *matHeaderCellDef>Amount</th><td mat-cell *matCellDef="let payment" class="money-cell">Rs {{ payment.amount | number:'1.2-2' }}</td></ng-container>
+        <ng-container matColumnDef="cash"><th mat-header-cell *matHeaderCellDef>Cash / change</th><td mat-cell *matCellDef="let payment"><ng-container *ngIf="payment.paymentMethod === 'cash'; else noCash">Rs {{ (payment.cashGiven || 0) | number:'1.2-2' }}<small>Change: Rs {{ (payment.cashReturn || 0) | number:'1.2-2' }}</small></ng-container><ng-template #noCash>&mdash;</ng-template></td></ng-container>
+        <ng-container matColumnDef="paymentMethod"><th mat-header-cell *matHeaderCellDef>Method</th><td mat-cell *matCellDef="let payment"><span class="method-label"><mat-icon>{{ payment.paymentMethod === 'cash' ? 'payments' : 'credit_card' }}</mat-icon>{{ (payment.paymentMethod || 'Not recorded') | titlecase }}</span></td></ng-container>
+        <ng-container matColumnDef="paymentStatus"><th mat-header-cell *matHeaderCellDef>Status</th><td mat-cell *matCellDef="let payment"><mat-select class="status-select" [class.status-completed]="payment.paymentStatus === 'completed'" [class.status-pending]="payment.paymentStatus === 'pending'" [class.status-failed]="payment.paymentStatus === 'failed'" [disabled]="saving || !!deletingId || !identity" [value]="payment.paymentStatus" [attr.aria-label]="'Payment status for receipt ' + payment.id" (selectionChange)="updatePaymentStatus(payment.id, $event.value, $event.source)"><mat-option value="completed">Completed</mat-option><mat-option value="pending">Pending</mat-option><mat-option value="failed">Failed</mat-option></mat-select></td></ng-container>
+        <ng-container matColumnDef="actions"><th mat-header-cell *matHeaderCellDef>Actions</th><td mat-cell *matCellDef="let payment"><div class="action-buttons"><button mat-icon-button class="table-btn" color="accent" type="button" [appRecordPreview]="payment" [previewTitle]="'Payment #' + payment.id" aria-label="Preview payment" title="Preview"><mat-icon>visibility</mat-icon></button><button mat-icon-button class="table-btn" color="accent" type="button" (click)="showReceipt(payment)" aria-label="Print payment receipt" title="Print"><mat-icon>print</mat-icon></button><button mat-icon-button class="table-btn" color="primary" type="button" (click)="editPayment(payment)" [disabled]="saving || !!deletingId || !identity" aria-label="Edit payment" title="Edit"><mat-icon>edit_note</mat-icon></button><button [appBusy]="deletingId === payment.id" *ngIf="isSuperAdmin" mat-icon-button class="table-btn" color="warn" type="button" (click)="deletePayment(payment)" [disabled]="saving || !!deletingId" aria-label="Delete payment" title="Delete"><mat-icon>delete_outline</mat-icon></button></div></td></ng-container>
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr><tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+      <div class="list-empty" *ngIf="!loading && !filteredPayments.length"><mat-icon>inbox</mat-icon>{{ payments.length ? 'No payments match these filters.' : 'No payments recorded yet.' }}</div>
+    </div>
+    <app-scroll-list-footer [total]="filteredPayments.length" [shown]="displayedPayments.length" (loadMore)="loadMore()"></app-scroll-list-footer>
+  </mat-card>
+</main>

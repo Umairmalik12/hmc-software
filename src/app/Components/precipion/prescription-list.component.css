@@ -1,0 +1,9 @@
+:host{display:block}
+.prescription-records .search-bar mat-form-field{max-width:560px;flex-basis:360px}
+.prescription-record-table{width:100%;min-width:920px;border-collapse:collapse;font-size:12px;color:#4b646f}
+.prescription-record-table th{position:sticky;top:0;z-index:1;padding:15px 16px;text-align:left;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:#647b87;background:#f4f7f9;border-bottom:1px solid #e1e9ed}
+.prescription-record-table td{padding:15px 16px;vertical-align:middle;border-bottom:1px solid #edf1f3}
+.prescription-record-table tr:hover{background:#f3f9f7}.prescription-record-table td:first-child{min-width:180px;max-width:260px;overflow-wrap:anywhere}
+.prescription-record-table strong{color:#213f49;font-weight:600}.prescription-record-table small{display:block;margin-top:4px;font-size:10px;color:#8a9ba4}
+.prescription-record-table td:last-child{width:175px}.prescription-list-loading{padding:16px;color:#71858e;font-size:12px}
+.prescription-list-success{padding:12px;border-radius:8px;color:#18684f;background:#eaf7ef;font-size:12px}

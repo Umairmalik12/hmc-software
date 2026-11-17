@@ -13,7 +13,6 @@ export class MedicineService {
   medicineDetail: Medicine[] = [];
 
   constructor(private indexedDb: SupabaseDataService) {
-    this.loadMedicineData();
   }
 
   private async loadMedicineData(): Promise<void> {
@@ -42,7 +41,7 @@ export class MedicineService {
         this.total = medicines.length;
         observer.next(medicines);
         observer.complete();
-      });
+      }).catch(error => observer.error(error));
     });
   }
 
@@ -58,7 +57,7 @@ export class MedicineService {
         const end = Math.min(start + pageSize, all.length);
         observer.next(all.slice(start, end));
         observer.complete();
-      });
+      }).catch(error => observer.error(error));
     });
   }
 
@@ -68,7 +67,7 @@ export class MedicineService {
         const medicine: any = (data || []).find(p => p.medicineId === id);
         observer.next(medicine);
         observer.complete();
-      });
+      }).catch(error => observer.error(error));
     });
   }
 
@@ -80,10 +79,10 @@ export class MedicineService {
       if (!data.createdAt) {
         data.createdAt = new Date().toISOString();
       }
-    
+
 
       storedMedicines.push(data);
-      await this.indexedDb.setItem(STORAGE_KEY, storedMedicines);
+      await this.indexedDb.upsertRecord(STORAGE_KEY, data.medicineId, data);
       this.medicineDetail = storedMedicines;
       return true;
     } catch (e) {
@@ -100,7 +99,7 @@ export class MedicineService {
         if (!data.createdAt) {
           data.createdAt = new Date().toISOString();
         }
-        await this.indexedDb.setItem(STORAGE_KEY, [...storedMedicines, data]);
+        await this.indexedDb.upsertRecord(STORAGE_KEY, data.medicineId, data);
         storedMedicines.push(data);
       }
       this.medicineDetail = storedMedicines;
@@ -140,7 +139,7 @@ export class MedicineService {
           // If not found, add as new
           data.medicineId = await this.indexedDb.allocateId(STORAGE_KEY);
           if (!data.createdAt) data.createdAt = new Date().toISOString();
-          await this.indexedDb.setItem(STORAGE_KEY, [...storedMedicines, data]);
+          await this.indexedDb.upsertRecord(STORAGE_KEY, data.medicineId, data);
           storedMedicines.push(data);
         }
       }

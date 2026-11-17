@@ -1,5 +1,9 @@
 import { Injectable } from '@angular/core';
-import { FormControl } from '@angular/forms';
+import { FormControl, ValidatorFn } from '@angular/forms';
+
+// Names containing only spaces should behave like an empty required field.
+export const requiredText: ValidatorFn = control =>
+  typeof control.value === 'string' && control.value.trim() ? null : { required: true };
 
 @Injectable({
   providedIn: 'root'

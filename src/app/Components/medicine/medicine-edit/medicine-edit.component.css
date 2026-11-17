@@ -1,13 +1,9 @@
-.outer-input-section { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
-.outer-input-section > mat-form-field { width: 100%; min-width: 0; }
-.medicines-section { grid-column: 1 / -1; margin-top: 8px; padding: 16px; border: 1px solid #e2e9eb; border-radius: 12px; background: #f8fbfb; }
-.medicines-section h3 { margin: 0 0 12px; color: #155e59; font-size: 16px; }
-.medicine-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-.medicine-field { flex: 2; min-width: 0; }
-.quantity-field { flex: 1; min-width: 100px; }
-mat-dialog-actions { justify-content: flex-end; }
-@media (max-width: 520px) {
-  .outer-input-section { grid-template-columns: minmax(0, 1fr); }
-  .medicine-row { flex-wrap: wrap; }
-  .medicine-field { flex: 1 1 100%; }
-}
+:host { display: flex; flex-direction: column; min-height: 0; }
+.medicine-row { display: flex; gap: 12px; align-items: flex-start; }
+.medicine-field { flex: 1; min-width: 0; min-height: 78px; }
+.medicine-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #edf1f3; }
+.medicine-section-heading .form-section-title { margin: 0; padding: 0; border: 0; }
+.medicine-section-heading button { font-size: 11px; }
+.quantity-field { flex: 0 0 110px; }
+.medicine-row > button { margin-top: 7px; }
+@media (max-width: 520px) { .medicine-row { flex-wrap: wrap; gap: 0 10px; } .medicine-field { flex: 1 1 100%; } .quantity-field { flex: 1; } }

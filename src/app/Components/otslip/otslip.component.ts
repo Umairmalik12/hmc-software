@@ -1,399 +1,203 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
-import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
-import { formatTime12 } from 'src/app/Pipes/time-format.pipe';
+import { Subscription } from 'rxjs';
+import { OtMedicineItem, OtMedicineRecord, copyOtRecord, emptyOtRecord } from 'src/app/Models/ot-medicine.model';
+import { OtCatalogMedicine, otMedicineKey } from 'src/app/Models/ot-medicine-catalog.model';
+import { OtMedicineCatalogService } from 'src/app/Services/ot-medicine-catalog.service';
+import { OtMedicineService } from 'src/app/Services/ot-medicine.service';
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
+import { requiredText } from 'src/app/Services/validators.service';
+import { OtMedicineCatalogComponent } from '../ot-medicine-catalog/ot-medicine-catalog.component';
+import { printOtMedicine } from './ot-medicine-document';
+import { OtMedicinePreviewComponent } from './ot-medicine-preview.component';
 
-@Component({
-  selector: 'app-ot-form',
-  templateUrl: './otslip.html',
-  styleUrls: ['./otslip.component.css'],
-})
-export class OtFormComponent implements OnInit {
+interface ProductRow {
+  key: string;
+  snapshot: OtMedicineItem;
+  master?: OtCatalogMedicine;
+  available: boolean;
+  historical: boolean;
+  originalOrder?: number;
+}
+interface VisibleProduct { name: string; index: number; genericName?: string; strength?: string; unit?: string; category?: string; type?: string; note: string; unavailable: boolean; }
+
+@Component({ selector: 'app-ot-form', templateUrl: './otslip.html', styleUrls: ['./otslip.component.css'] })
+export class OtFormComponent implements OnInit, OnDestroy {
+  @Input() canManageMedicines = false;
+  @Output() isCancelForm = new EventEmitter<boolean>();
   isEditMode = false;
   isSaving = false;
+  loading = false;
+  loadFailed = false;
+  catalogueLoading = false;
+  catalogueError = '';
   validationMessage = '';
   productSearch = '';
+  productCategory = '';
   selectedOnly = false;
-  otlist: any[] = [];
-  editingId: string | null = null;
-
-  @Output() isCancelForm = new EventEmitter();
-
-  @Input() set selectedPatientId(selectedPatientId: any) {
-    if (selectedPatientId) {
-      this.indexedDb.getItem<any[]>('otFormData').then(otFormData => {
-        if (otFormData) {
-          const patientData = otFormData.find((ot: any) => String(ot.id) === String(selectedPatientId));
-          if (patientData) {
-            this.editingId = String(patientData.id);
-            this.isEditMode = true;
-            this.otForm.patchValue({
-              patientName: patientData.patientName,
-              operationDate: patientData.operationDate,
-              operationTime: patientData.operationTime,
-              doctorName: patientData.doctorName,
-              roomNumber: patientData.roomNumber,
-              includeMedicineHeader: patientData.includeMedicineHeader || 'withMedicine',
-            });
-
-            const productArray = this.otForm.get('products') as FormArray;
-            patientData.products.forEach((product: any, index: number) => {
-              if (productArray.at(index)) {
-                productArray.at(index).patchValue({
-                  selected: product.selected,
-                  quantity: product.quantity,
-                });
-              }
-            });
-            this.updateVisibleProducts();
-          }
-        }
-      });
-    }
-  }
-
   selectedProductCount = 0;
-  visibleProducts: Array<{ name: string; index: number }> = [];
-
+  activeProductCount = 0;
+  categories: string[] = [];
+  visibleProducts: VisibleProduct[] = [];
+  products: string[] = [];
   otForm: FormGroup;
-
-  products = [
-    'INJ. AVIL', 'INJ. DECADRON', 'INJ. DERMOCUIM', 'INJ. ATROPINE', 'INJ. TRAMADOL',
-    'INJ. TORLAC', 'INJ. KINZ', 'INJ. OXYTOCIN', 'INJ. IBUPROFEN SP', 'INJ. TRANEXAMINE 500MG',
-    'INSULIN CONTAF 250MG', 'INJ. GENTAMICANE 40MG', 'INJ. KETSOL 100MG', 'INJ. SODIUM BICARBA 25ML', 'INJ. FLUGEL 100ML',
-    'INJ. PROVAS INFUSION 100ML', 'INJ. HAMILC 500ML', 'INJ. HAMICL 500ML', 'INJ. 5% D/W 1000ML', 'INJ. RLD 1000ML',
-    '18G IV LINE', '20G IV LINE', '22G IV LINE', '24G IV LINE', 'B.T/SET',
-    'D/SET', 'D/S 5CC', 'D/S 10CC', 'D/S 20CC', 'D/S 50CC',
-    'O.T CAP', 'APREAN', 'S. GLOVES 7 1/2', 'S. GLOVES 6 1/2', 'XYLOCAINE GEL',
-    'LIGNOCAINE GEL', 'NELTON TUBE/10', 'NELTON TUBE/12', 'FEEDING TUBE/6/8', 'FEEDING TUBE/8',
-    'FEEDING TUBE/10', 'STOMACH TUBE/18', 'GAUZE PACKET', 'FOLEY\'S CATHETER/16', 'FOLEY\'S CATHETER/18',
-    'FOLEY\'S CATHETER/20', 'FOLEY\'S CATHETER/22', 'URINE BAG', 'DRAINAGE BAG', 'SPONGES',
-    'SILK NO.1', 'SILK NO.2/0', 'SILK NO.3/0', 'VICRYL NO.1', 'VICRYL NO.2',
-    'VICRYL NO.3/0', 'VICRYL NO.4/0', 'CATGUT NO.1', 'CATGUT NO.2/0', 'CATGUT NO.3/0',
-    'CATGUT NO.4/0', 'PROLINE 2/0', 'PROLINE 3/0', 'PROLINE 6/0', 'PROLINE 8/0',
-    'BILD NO.11', 'BILD NO.15', 'BILD NO.19', 'BILD NO.24', 'LOCAL 100CC',
-  ];
-
-  constructor(private fb: FormBuilder, private router: Router,private indexedDb: SupabaseDataService) {
-    this.otForm = this.fb.group({
-      patientName: ['', Validators.required],
-      doctorName: [''],
-      operationDate: [''],
-      operationTime: [''],
-      roomNumber: [''],
-      includeMedicineHeader: ['withMedicine'],
-      products: this.fb.array(this.products.map(() => this.fb.group({
-        selected: [false],
-        quantity: ['']
-      })))
-    });
-    this.updateVisibleProducts();
+  editingId: string | null = null;
+  private rows: ProductRow[] = [];
+  private currentRecord = emptyOtRecord();
+  private requestedId = '';
+  private ready = false;
+  private version = 0;
+  private catalogueVersion = 0;
+  private pendingRefresh = false;
+  private subscriptions = new Subscription();
+  @Input() set selectedPatientId(value: string | number) {
+    this.requestedId = String(value || '');
+    if (this.ready) void this.load();
   }
-
-  get productControls(): FormArray {
-    return this.otForm.get('products') as FormArray;
+  constructor(private fb: FormBuilder, private router: Router, private records: OtMedicineService,
+    private notify: NotifyUpdateService, private dialog: MatDialog, private catalogue: OtMedicineCatalogService) {
+    const record = this.currentRecord;
+    this.otForm = fb.group({ patientName: ['', [Validators.required, requiredText]], doctorName: [''], roomNumber: [''],
+      procedure: [''], operationDate: [record.operationDate], operationTime: [record.operationTime],
+      includeMedicineHeader: ['withMedicine'], products: fb.array([]) });
   }
-
-  updateVisibleProducts(): void {
-    const query = (this.productSearch || '').trim().toLowerCase();
-    const controls = this.productControls ? this.productControls.controls : [];
-    let count = 0;
-    const list: Array<{ name: string; index: number }> = [];
-
-    this.products.forEach((name, index) => {
-      const isSelected = !!controls[index]?.get('selected')?.value;
-      if (isSelected) {
-        count++;
-      }
-      const matchesFilter = (!this.selectedOnly || isSelected) &&
-        (!query || name.toLowerCase().includes(query));
-      if (matchesFilter) {
-        list.push({ name, index });
-      }
-    });
-
-    this.selectedProductCount = count;
-    this.visibleProducts = list;
-  }
-
-  trackByProductIndex(_index: number, item: { name: string; index: number }): number {
-    return item.index;
-  }
-
-  onFilterChange(): void {
-    this.updateVisibleProducts();
-  }
-
-  onProductSelectionChange(index: number, selected: boolean): void {
-    const quantity = this.productControls.at(index).get('quantity');
-    if (!selected) {
-      quantity?.setValue('');
-      quantity?.markAsPristine();
-    }
-    this.validationMessage = '';
-    this.updateVisibleProducts();
-  }
-
-  async ngOnInit(): Promise<void> {
-   const stored = await this.indexedDb.getItem<any[]>('otFormData');
-  this.otlist = stored ?? [];
-  }
-
-async submitForm(): Promise<void> {
-  this.validationMessage = '';
-  if (this.otForm.invalid) {
-    this.otForm.markAllAsTouched();
-    this.validationMessage = 'Please enter the patient name.';
-    return;
-  }
-
-  const selectedRows = this.productControls.controls
-    .map((control, index) => ({ control, index }))
-    .filter(row => !!row.control.get('selected')?.value);
-  if (!selectedRows.length) {
-    this.validationMessage = 'Select at least one medicine or supply.';
-    return;
-  }
-  const missingQuantity = selectedRows.find(row => {
-    const quantity = Number(row.control.get('quantity')?.value);
-    return !Number.isFinite(quantity) || quantity <= 0;
-  });
-  if (missingQuantity) {
-    this.productControls.at(missingQuantity.index).get('quantity')?.markAsTouched();
-    this.validationMessage = `Enter a quantity for ${this.products[missingQuantity.index]}.`;
-    return;
-  }
-
-  this.isSaving = true;
-  try {
-    const formValue = this.otForm.getRawValue();
-    const selectedProducts = selectedRows.map(row => ({
-      name: this.products[row.index],
-      selected: true,
-      quantity: Number(row.control.get('quantity')?.value),
+  get productControls(): FormArray { return this.otForm.get('products') as FormArray; }
+  ngOnInit(): void {
+    this.ready = true;
+    this.subscriptions.add(this.catalogue.changes.subscribe(() => {
+      if (this.loading || this.isSaving) this.pendingRefresh = true;
+      else void this.refreshCatalogue();
     }));
-    const id = this.isEditMode && this.editingId
-      ? this.editingId
-      : String(await this.indexedDb.allocateId('otFormData'));
-    const createdAt = this.isEditMode
-      ? (this.otlist.find(item => String(item.id) === String(id))?.createdAt || new Date().toISOString())
-      : new Date().toISOString();
-    const record = { ...formValue, products: selectedProducts, id, createdAt };
-    const nextList = [...this.otlist];
-    const existingIndex = nextList.findIndex(item => String(item.id) === String(id));
-    if (existingIndex !== -1) nextList[existingIndex] = record;
-    else nextList.push(record);
-
-    await this.indexedDb.setItem('otFormData', nextList);
-    this.otlist = nextList;
-    this.printPage();
-    this.resetForm();
-    this.router.navigate(['/home']);
-  } catch (error) {
-    console.error('Unable to save OT medicine slip:', error);
-    this.validationMessage = error instanceof Error ? error.message : 'Unable to save the OT medicine slip.';
-  } finally {
-    this.isSaving = false;
+    void this.load();
   }
-}
-
-private resetForm(): void {
-  this.otForm.reset({ includeMedicineHeader: 'withMedicine' });
-  this.productControls.controls.forEach(control => {
-    control.patchValue({ selected: false, quantity: '' });
-    control.markAsPristine();
-    control.markAsUntouched();
-  });
-  this.validationMessage = '';
-  this.productSearch = '';
-  this.selectedOnly = false;
-  this.isEditMode = false;
-  this.editingId = null;
-  this.updateVisibleProducts();
-}
-
-
-  cancelForm(): void {
-    this.resetForm();
-    this.router.navigate(['/home'])
-    this.isCancelForm.emit(true);
-    
-    console.log('Form cancelled.');
+  ngOnDestroy(): void { this.version++; this.catalogueVersion++; this.ready = false; this.subscriptions.unsubscribe(); }
+  private productGroup(): FormGroup {
+    return this.fb.group({ selected: [false], quantity: [{ value: '', disabled: true }, [Validators.required, Validators.min(.000001)]] });
   }
-
-  printPage(): void {
-    const printContent = document.getElementById('ot-form');
-    if (printContent) {
-      const win = window.open('', '', 'width=1000,height=800');
-      if (win) {
-        const styles = `
-          <style>
-            body {
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              padding: 40px;
-              background: #fdfdfd;
-              color: #222;
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 30px;
-            }
-            .header h2 {
-              margin: 0;
-              font-size: 24px;
-              color: #2c3e50;
-            }
-            .header h4 {
-              margin: 5px 0 0;
-              font-size: 18px;
-              color: #16a085;
-            }
-            .section {
-              border: 1px solid #ccc;
-              border-radius: 10px;
-              padding: 20px;
-              margin-bottom: 20px;
-              background-color: #f9f9f9;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            }
-            .section h4 {
-              margin-bottom: 15px;
-              border-bottom: 1px solid #ddd;
-              padding-bottom: 5px;
-              color: #2980b9;
-            }
-            .info-row {
-              margin: 10px 0;
-              font-size: 15px;
-            }
-            .info-row .label {
-              font-weight: bold;
-              display: inline-block;
-              width: 150px;
-              color: #34495e;
-            }
-            ul {
-              padding-left: 20px;
-              margin: 0;
-            }
-            li {
-              margin: 5px 0;
-              font-size: 14px;
-              display: flex;
-              justify-content: space-between;
-              padding: 10px;
-              border-bottom: 1px solid #ddd;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 40px;
-              font-size: 13px;
-              color: #999;
-            }
-            .products-list {
-              display: flex;
-              flex-wrap: wrap;
-              gap: 20px;
-            }
-            .product-item {
-              width: calc(50% - 10px);
-              padding: 10px;
-              border-radius: 8px;
-              background: #fff;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-              margin-bottom: 10px;
-              display: flex;
-              justify-content: space-between;
-              font-size: 14px;
-            }
-            .product-name {
-              font-weight: bold;
-              color: #2980b9;
-            }
-            .product-quantity {
-              font-size: 14px;
-              color: #34495e;
-            }
-          </style>
-        `;
-  
-        const externalStyles = `
-          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/primeng/resources/themes/saga-blue/theme.css">
-          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/primeng/resources/primeng.min.css">
-          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/primeicons/primeicons.css">
-          <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-          <link rel="stylesheet" href="assets/styles.css">
-        `;
-  
-        win.document.write(`
-          <html>
-            <head>
-              <title>OT Slip</title>
-              ${externalStyles}
-              ${styles}
-            </head>
-            <body>
-              <div class="header">
-                <h2>Ahmmad Pharmacy</h2>
-                <h4>OT Medicine List</h4>
-              </div>
-  
-              <div class="section">
-                <h4>Operation Details</h4>
-                <div class="info-row"><span class="label">Patient Name:</span> <strong>${this.otForm.value.patientName || '—'}</strong></div>
-                <div class="info-row"><span class="label">Doctor:</span> ${this.otForm.value.doctorName || '—'}</div>
-                <div class="info-row"><span class="label">Date:</span> ${this.otForm.value.operationDate || '—'}</div>
-                <div class="info-row"><span class="label">Time:</span> ${formatTime12(this.otForm.value.operationTime) || '—'}</div>
-                <div class="info-row"><span class="label">Room:</span> ${this.otForm.value.roomNumber || '—'}</div>
-                <div class="info-row"><span class="label">Medicine Header:</span> ${this.otForm.value.includeMedicineHeader === 'withoutMedicine' ? 'Without Medicine' : 'With Medicine'}</div>
-              </div>
-  
-              <div class="section">
-                <h4>Selected Products</h4>
-                <div class="products-list">
-                  ${this.getSelectedProductsForPrint()}
-                </div>
-              </div>
-  
-              <div class="footer">
-                Printed on: ${new Date().toLocaleString('en-US', { hour12: true })}
-              </div>
-            </body>
-          </html>
-        `);
-  
-        win.document.close();
-        setTimeout(() => {
-          win.print();
-          win.close();
-        }, 500);
-      }
+  private masterSnapshot(item: OtCatalogMedicine): OtMedicineItem {
+    return { name: item.name, catalogueId: item.id, genericName: item.genericName, category: item.category, type: item.type, strength: item.strength, unit: item.unit, quantity: 0 };
+  }
+  private appendRow(row: ProductRow): number {
+    this.rows.push(row); this.products.push(row.snapshot.name); this.productControls.push(this.productGroup()); return this.rows.length - 1;
+  }
+  async load(): Promise<void> {
+    const version = ++this.version;
+    this.catalogueVersion++;
+    this.loading = true; this.catalogueLoading = true; this.loadFailed = false; this.validationMessage = ''; this.catalogueError = '';
+    const [recordResult, catalogResult] = await Promise.allSettled([
+      this.requestedId ? this.records.getById(this.requestedId) : Promise.resolve(emptyOtRecord()), this.catalogue.getAll(),
+    ]);
+    if (version !== this.version) return;
+    try {
+      if (recordResult.status === 'rejected') throw recordResult.reason;
+      const record = recordResult.value;
+      if (!record) throw new Error('This OT record could not be found. Return to the OT medicine list.');
+      this.currentRecord = copyOtRecord(record); this.editingId = record.id || null; this.isEditMode = !!record.id;
+      const { products, ...details } = record;
+      this.otForm.patchValue(details);
+      this.rows = []; this.products = []; this.productControls.clear();
+      const catalog = catalogResult.status === 'fulfilled' ? catalogResult.value : [];
+      catalog.filter(item => item.active).forEach(item => this.appendRow({ key: item.id, snapshot: this.masterSnapshot(item), master: item, available: true, historical: false }));
+      products.forEach((product, order) => {
+        const master = product.catalogueId ? catalog.find(item => item.id === product.catalogueId) : catalog.find(item => otMedicineKey(item.name) === otMedicineKey(product.name));
+        let index = master ? this.rows.findIndex((row, i) => row.key === master.id && !this.productControls.at(i).get('selected')!.value) : -1;
+        if (index < 0) index = this.appendRow({ key: master?.id || product.catalogueId || 'legacy:' + order, snapshot: { ...product }, master, available: !!master?.active, historical: true });
+        this.rows[index] = { ...this.rows[index], snapshot: { ...product, ...(product.catalogueId || !master ? {} : { catalogueId: master.id }) }, master, historical: true, originalOrder: order };
+        const group = this.productControls.at(index);
+        group.get('selected')!.setValue(true); group.get('quantity')!.enable(); group.get('quantity')!.setValue(product.quantity);
+      });
+      if (catalogResult.status === 'rejected') this.catalogueError = 'Unable to load the OT medicine catalogue. Retry before saving.';
+      this.updateVisibleProducts(); this.otForm.markAsPristine(); this.otForm.markAsUntouched();
+    } catch (error) { this.loadFailed = true; this.validationMessage = error instanceof Error ? error.message : 'Unable to load OT record.'; }
+    finally {
+      this.loading = false; this.catalogueLoading = false;
+      if (this.pendingRefresh) { this.pendingRefresh = false; void this.refreshCatalogue(); }
     }
   }
-  
-  
-  
-
-  getSelectedProductsForPrint(): string {
-    const items = this.productControls.controls
-      .map((ctrl, i) => {
-        const { selected, quantity } = ctrl.value;
-        if (selected && quantity) {
-          return `
-            <div class="product-item">
-              <span class="product-name">${this.products[i]}</span>
-              <span class="product-quantity">Quantity: ${quantity}</span>
-            </div>
-          `;
-        }
-        return '';
-      })
-      .filter(item => item)
-      .join('');
-    return items || '<div style="color:#777;padding:10px;">No products selected</div>';
+  async refreshCatalogue(): Promise<void> {
+    if (this.loading || this.isSaving) { this.pendingRefresh = true; return; }
+    const version = ++this.catalogueVersion; const recordVersion = this.version;
+    this.catalogueLoading = true;
+    try {
+      const catalog = await this.catalogue.getAll(false, true);
+      if (version !== this.catalogueVersion || recordVersion !== this.version) return;
+      // Keep FormArray indexes stable: catalogue changes must never move quantities.
+      this.rows.forEach(row => {
+        const master = catalog.find(item => item.id === row.key) || (!row.snapshot.catalogueId && row.historical ? catalog.find(item => otMedicineKey(item.name) === otMedicineKey(row.snapshot.name)) : undefined);
+        row.master = master; row.available = !!master?.active;
+        if (master && row.key.startsWith('legacy:')) row.key = master.id;
+        if (master && !row.historical) row.snapshot = this.masterSnapshot(master);
+      });
+      catalog.filter(item => item.active && !this.rows.some(row => row.key === item.id)).forEach(item => this.appendRow({ key: item.id, snapshot: this.masterSnapshot(item), master: item, available: true, historical: false }));
+      this.catalogueError = ''; this.updateVisibleProducts();
+    } catch (error) { if (version === this.catalogueVersion) this.catalogueError = 'Unable to refresh OT medicines. Retry before saving.'; }
+    finally { if (version === this.catalogueVersion) this.catalogueLoading = false; }
   }
-  
-  
-  
+  updateVisibleProducts(): void {
+    const query = otMedicineKey(this.productSearch);
+    this.selectedProductCount = 0; this.activeProductCount = new Set(this.rows.filter(row => row.available).map(row => row.key)).size;
+    this.categories = Array.from(new Set(this.rows.filter(row => row.available || row.historical).map(row => row.snapshot.category || '').filter(Boolean))).sort();
+    this.products = this.rows.map(row => row.snapshot.name);
+    this.visibleProducts = this.rows.map((row, index) => {
+      const selected = !!this.productControls.at(index).get('selected')!.value;
+      if (selected) this.selectedProductCount++;
+      const item = row.snapshot;
+      const fields: Array<'name' | 'genericName' | 'strength' | 'unit' | 'category' | 'type'> = ['name', 'genericName', 'strength', 'unit', 'category', 'type'];
+      const changed = row.master && fields.some(key => (item[key] || '') !== (row.master![key] || ''));
+      const note = row.historical ? (!row.available ? 'Saved item · inactive or removed' : changed ? 'Saved item · catalogue updated' : '') : !row.available ? 'Unavailable · remove to continue' : '';
+      return { ...item, name: item.name, index, note, unavailable: !row.available, selected };
+    }).filter(item => (this.rows[item.index].available || item.selected) && (!this.selectedOnly || item.selected) && (!this.productCategory || item.category === this.productCategory) && (!query || otMedicineKey([item.name, item.genericName, item.strength, item.type, item.category].join(' ')).includes(query)));
+  }
+  trackByProductIndex(_index: number, product: { index: number }): number { return product.index; }
+  onFilterChange(): void { this.updateVisibleProducts(); }
+  onProductSelectionChange(index: number, selected: boolean): void {
+    const row = this.rows[index]; const group = this.productControls.at(index); const quantity = group.get('quantity')!;
+    if (selected && !row.available && !row.historical) selected = false;
+    group.get('selected')!.setValue(selected);
+    if (selected) { quantity.enable(); if (!quantity.value) quantity.setValue(1); }
+    else {
+      quantity.setValue(''); quantity.disable(); row.historical = false; row.originalOrder = undefined;
+      if (row.master) row.snapshot = this.masterSnapshot(row.master);
+    }
+    this.validationMessage = ''; this.updateVisibleProducts();
+  }
+  private snapshot(): OtMedicineRecord {
+    const value = this.otForm.getRawValue();
+    const products = this.rows.map((row, index) => ({ row, value: value.products[index], index })).filter(item => item.value.selected)
+      .sort((a, b) => (a.row.originalOrder ?? this.rows.length + a.index) - (b.row.originalOrder ?? this.rows.length + b.index))
+      .map(({ row, value }) => ({ ...row.snapshot, quantity: Number(value.quantity), selected: true }));
+    return { ...this.currentRecord, ...value, products };
+  }
+  async submitForm(): Promise<void> {
+    if (this.isSaving || this.loading || this.loadFailed || this.catalogueLoading || this.catalogueError) return;
+    this.validationMessage = '';
+    if (this.otForm.invalid) { this.otForm.markAllAsTouched(); this.validationMessage = 'Enter the patient name and a positive quantity for every selected item.'; return; }
+    if (this.rows.some((row, i) => !row.available && !row.historical && this.productControls.at(i).get('selected')!.value)) { this.validationMessage = 'Remove unavailable medicines from this slip before saving.'; return; }
+    const draft = this.snapshot();
+    if (!draft.products.length) { this.validationMessage = 'Select at least one medicine or supply.'; return; }
+    this.isSaving = true;
+    const printWindow = window.open('', '_blank', 'width=900,height=850');
+    if (printWindow) { printWindow.document.open(); printWindow.document.write('<!doctype html><title>Saving OT slip</title><p>Saving OT medicine slip...</p>'); printWindow.document.close(); }
+    try {
+      Object.assign(this.currentRecord, draft); this.currentRecord = await this.records.save(this.currentRecord);
+      this.editingId = this.currentRecord.id; this.isEditMode = true;
+      this.notify.success(this.requestedId ? 'OT medicine slip updated successfully.' : 'OT medicine slip saved successfully.');
+      const printed = printOtMedicine(this.currentRecord, printWindow);
+      await this.router.navigate(['/ot-records']);
+      if (!printed) this.notify.alertNotify.next({ type: 'error', msg: 'OT slip saved. Allow pop-ups and use Print in the OT medicine list.' });
+    } catch (error) { printWindow?.close(); this.validationMessage = error instanceof Error ? error.message : 'Unable to save the OT medicine slip.'; this.notify.error(this.validationMessage); }
+    finally { this.isSaving = false; if (this.pendingRefresh && this.ready) { this.pendingRefresh = false; void this.refreshCatalogue(); } }
+  }
+  manageMedicines(): void {
+    if (!this.canManageMedicines || this.isSaving) return;
+    const ref = this.dialog.open(OtMedicineCatalogComponent, { data: { embedded: true }, width: '1100px', maxWidth: '96vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
+    this.subscriptions.add(ref.afterClosed().subscribe(() => void this.refreshCatalogue()));
+  }
+  preview(): void {
+    if (this.isSaving || this.loading || this.loadFailed) return;
+    this.dialog.open(OtMedicinePreviewComponent, { data: { record: this.snapshot() }, width: '940px', maxWidth: '96vw', maxHeight: '94dvh', panelClass: 'ot-preview-panel' });
+  }
+  cancelForm(): void { if (!this.isSaving) void this.router.navigate(['/ot-records']); }
 }

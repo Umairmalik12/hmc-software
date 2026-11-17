@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { formatDate } from '@angular/common';
 import { LabPatient } from 'src/app/Models/lab.model';
+import { requiredText } from 'src/app/Services/validators.service';
 
 @Component({
   selector: 'app-lab-edit',
@@ -38,31 +39,30 @@ export class LabEditComponent {
     private dialogRef: MatDialogRef<LabEditComponent>,
     @Inject(MAT_DIALOG_DATA)  labTestDetails: any
   ) {
-    this.labTestDetails = labTestDetails;
+    this.labTestDetails = { ...labTestDetails };
     this.edit = !!labTestDetails?.patientId; // Check if editing
 
     this.labPatientForm = this.fb.group({
-  patientId: [{ value: this.labTestDetails?.patientId || '', disabled: this.edit }],
-
-      name: [this.labTestDetails?.name || '', [Validators.required, Validators.pattern('[a-zA-Z ]+')]],
-      phone: [this.labTestDetails?.phone || '', [Validators.required, Validators.pattern('^[0-9]{10,15}$')]],
-  testName: [this.labTestDetails?.testName || [], Validators.required], // <-- changed to array
-      price: [this.labTestDetails?.price || '', Validators.required],
-      suggestedDr: [this.labTestDetails?.suggestedDr || '', [Validators.required, Validators.pattern('[a-zA-Z ]+')]],
-      dateTime: [this.labTestDetails?.dateTime ? formatDate(this.labTestDetails.dateTime, 'yyyy-MM-dd', 'en') : '', Validators.required]
+      patientId: [{ value: this.labTestDetails?.patientId || null, disabled: this.edit }, Validators.min(1)],
+      name: [this.labTestDetails?.name || '', [Validators.required, requiredText]],
+      phone: [this.labTestDetails?.phone || '', Validators.pattern(/^[+\d\s()-]{7,20}$/)],
+      testName: [Array.isArray(labTestDetails?.testName)
+        ? [...labTestDetails.testName]
+        : (labTestDetails?.testName || '').split(',').map((test: string) => test.trim()).filter(Boolean), Validators.required],
+      price: [this.labTestDetails?.price ?? null, Validators.min(0)],
+      suggestedDr: [this.labTestDetails?.suggestedDr || ''],
+      dateTime: [formatDate(this.labTestDetails?.dateTime || new Date(), "yyyy-MM-dd'T'HH:mm", 'en')]
     });
   }
 
   get c() { return this.labPatientForm.controls; }
 
   onSubmit() {
-    if (this.labPatientForm.valid) {
-      let choice = this.labPatientForm.dirty ? confirm('Submitting Patient Form') : true;
-      if (choice) {
-        this.labPatientForm.enable();
-        this.dialogRef.close(this.getFormattedLabPatientData());
-      }
+    if (this.labPatientForm.invalid) {
+      this.labPatientForm.markAllAsTouched();
+      return;
     }
+    this.dialogRef.close(this.getFormattedLabPatientData());
   }
 
   close() {
@@ -74,12 +74,12 @@ export class LabEditComponent {
     const formValue = this.labPatientForm.getRawValue();
     return {
       patientId: Number(formValue.patientId) || 0,
-      name: formValue.name,
-      phone: formValue.phone,
-      testName: formValue.testName,
+      name: formValue.name.trim(),
+      phone: formValue.phone || '',
+      testName: formValue.testName.join(', '),
       price: Number(formValue.price),
       suggestedDr: formValue.suggestedDr,
-      dateTime: formValue.dateTime
+      dateTime: new Date(formValue.dateTime || Date.now())
     };
   }
 }

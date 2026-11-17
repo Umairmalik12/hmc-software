@@ -1,7 +1,12 @@
-import { AfterViewInit, ChangeDetectorRef, Component, OnInit, ViewChild } from '@angular/core';
-import * as XLSX from 'xlsx';
+import { EventEmitter, Output } from '@angular/core';
+import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
+import { includesText, matchesDateFilter } from 'src/app/Shared/list-filters';
+import { firstValueFrom, Subscription } from 'rxjs';
+import { RecordDetailsComponent } from 'src/app/Components/record-details/record-details.component';
+import { exportRecords } from 'src/app/Shared/export-records';
+import { ChangeDetectorRef, Component, OnInit , OnDestroy } from '@angular/core';
 import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
-import { MatPaginator, MatPaginatorIntl } from '@angular/material/paginator';
+import { MatPaginatorIntl } from '@angular/material/paginator';
 import { InPatient } from 'src/app/Models/inpatient.model';
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { InpatientDataService } from '../../../Services/inpatient-data.service';
@@ -16,15 +21,33 @@ import { UserLoginService } from 'src/app/Services/user-login.service';
   templateUrl: './inpatient-list.component.html',
   styleUrls: ['./inpatient-list.component.css']
 })
-export class InpatientListComponent implements OnInit, AfterViewInit {
+export class InpatientListComponent implements OnInit, OnDestroy {
+  @Output() create = new EventEmitter<void>();
+
+  readonly pagination = new ScrollPagination();
+  readonly trackRecord = trackRecord;
+  private loadVersion = 0;
+  loading = false;
+  loadFailed = false;
+  deletingId: number | null = null;
+  loadMore(): void { this.pagination.loadMore(this.total); this.updateDisplayedInpatients(); }
+
+  private refreshSubscription?: Subscription;
+  ngOnDestroy(): void { this.refreshSubscription?.unsubscribe(); this.loadVersion++; }
+  async viewInpatient(id: number): Promise<void> {
+    try {
+      const record = await firstValueFrom(this.inpatientService.getInpatientDetails(id));
+      if (!record) throw new Error('Record not found.');
+      this.dialog.open(RecordDetailsComponent, { data: { title: 'Inpatient', record } });
+    } catch (error) { this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Unable to load record.' }); }
+  }
+
 
   inpatient: InPatient[] = [];
   filteredInpatients: InPatient[] = [];
   displayedInpatients: InPatient[] = [];
   dataSource: InpatientDataService = new InpatientDataService(this.inpatientService);
   displayedColumns: string[] = ['inpatientId', 'patientName', 'procedure', 'admissionDate', 'dischargeDate', 'surgeonName'];
-  displayLimit: number = 20;
-  readonly pageStep: number = 10;
 
   // Search fields
   searchInpatientId: string = '';
@@ -43,8 +66,6 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
     surgeonName: ''
   };
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-
   total: number = 0;
   isSuperAdmin: boolean = false;
 
@@ -57,199 +78,52 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
     private indexedDbService: SupabaseDataService,
     private userLogin: UserLoginService
   ) {
-    this.notifyUpdate.notify.subscribe(() => {
+    this.refreshSubscription = this.notifyUpdate.notify.subscribe(() => {
       this.dataActions('', 'asc', 0, 5);
     });
   }
 
   ngOnInit(): void {
+    this.loading = true;
     this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
       this.displayedColumns.push('createdAt');
-      if (this.isSuperAdmin) {
-        this.displayedColumns.push('action');
-      }
+      this.displayedColumns.push('action');
       this.dataActions('', 'asc', 0, 5);
 
-    });
+    }).catch(() => { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: 'Account permissions could not be loaded. Please refresh the page.' }); });
   }
-
-  ngAfterViewInit(): void {
-    this.paginator?.page.subscribe(() => {
-      this.dataActions('', 'asc', this.paginator.pageIndex, this.paginator.pageSize);
-    });
-  }
-
-  onTableScroll(event: Event): void {
-    const el = event.target as HTMLElement;
-    if (!el) return;
-    const threshold = 120;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
-      if (this.displayLimit < this.filteredInpatients.length) {
-        this.displayLimit = Math.min(this.displayLimit + this.pageStep, this.filteredInpatients.length);
-        this.updateDisplayedInpatients();
-      }
-    }
-  }
-
   private updateDisplayedInpatients(): void {
-    this.displayedInpatients = this.filteredInpatients.slice(0, this.displayLimit);
+    this.total = this.filteredInpatients.length;
+    this.displayedInpatients = this.pagination.slice(this.filteredInpatients);
     this.dataSource.updateInpatients(this.displayedInpatients);
   }
 
-  dataActions(a: string, b: string, c: number, d: number): void {
-    this.dataSource.loadInpatient(a, b, c, d);
-
-    if (this.paginator) {
-      this.paginator.pageIndex = c;
-      this.paginator.pageSize = d;
-    }
-
-    this.total = this.inpatientService.total;
-
-    this.inpatientService.getAllInpatient().subscribe((inpatients) => {
-      this.inpatient = inpatients;
-      this.filteredInpatients = inpatients;
-      this.displayLimit = 20;
-      this.updateDisplayedInpatients();
+  dataActions(_filter: string, _sort: string, _page: number, _size: number): void {
+    const version = ++this.loadVersion;
+    this.loading = true; this.loadFailed = false;
+    this.inpatientService.getAllInpatient().subscribe({
+      next: records => { if (version !== this.loadVersion) return; this.inpatient = records; this.onDateFilter(false); this.loading = false; },
+      error: error => { if (version === this.loadVersion) { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Unable to load records.' }); } }
     });
   }
 
-  // Search
-  onSearch() {
-    this.filteredInpatients = this.inpatient.filter(i => {
-      const matchesId = this.searchInpatientId ? i.inpatientId.toString().includes(this.searchInpatientId) : true;
-      const matchesName = this.searchPatientName ? i.patientName.toLowerCase().includes(this.searchPatientName.toLowerCase()) : true;
-      const matchesProcedure = this.searchProcedure ? i.procedure.toLowerCase().includes(this.searchProcedure.toLowerCase()) : true;
-      const matchesSurgeon = this.searchSurgeonName ? i.surgeonName.toLowerCase().includes(this.searchSurgeonName.toLowerCase()) : true;
-      return matchesId && matchesName && matchesProcedure && matchesSurgeon;
-    });
-    this.displayLimit = 20;
+  onSearch(): void { this.onDateFilter(); }
+
+  onClearSearch(): void { this.searchInpatientId = ''; this.searchPatientName = ''; this.searchProcedure = ''; this.searchSurgeonName = ''; this.dateFilter = 'all'; this.onDateFilter(); }
+
+  onDateFilter(reset = true): void {
+    this.filteredInpatients = this.inpatient.filter(record => matchesDateFilter(record.createdAt, this.dateFilter) && includesText(record.inpatientId, this.searchInpatientId) && includesText(record.patientName, this.searchPatientName) && includesText(record.procedure, this.searchProcedure) && includesText(record.surgeonName, this.searchSurgeonName));
+    if (reset) this.pagination.reset();
     this.updateDisplayedInpatients();
   }
 
-  onClearSearch() {
-    this.searchInpatientId = '';
-    this.searchPatientName = '';
-    this.searchProcedure = '';
-    this.searchSurgeonName = '';
-    this.dateFilter = 'all';
-    this.filteredInpatients = this.inpatient;
-    this.displayLimit = 20;
-    this.updateDisplayedInpatients();
-  }
+  exportToExcel(): void { exportRecords(this.filteredInpatients, 'inpatients.xlsx'); }
 
-  onDateFilter() {
-    let tempList = [...this.inpatient];
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-  switch (this.dateFilter) {
-      case 'today':
-        const today = new Date(now);
-        tempList = tempList.filter(i => {
-          const createdDate = new Date(i.createdAt);
-          createdDate.setHours(0,0,0,0);
-          return createdDate >= today;
-        });
-        break;
-      case 'yesterday':
-        const yesterday = new Date(now);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const tomorrow = new Date(now);
-        tempList = tempList.filter(i => {
-          const createdDate = new Date(i.createdAt);
-          createdDate.setHours(0,0,0,0);
-          return createdDate >= yesterday && createdDate < tomorrow;
-        });
-        break;
-      case 'week':
-        const sevenDaysAgo = new Date(now);
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        tempList = tempList.filter(i => new Date(i.createdAt) >= sevenDaysAgo);
-        break;
-      case 'month':
-        const thirtyDaysAgo = new Date(now);
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        tempList = tempList.filter(i => new Date(i.createdAt) >= thirtyDaysAgo);
-        break;
-    }
-
-    this.filteredInpatients = tempList;
-    this.dataSource.updateInpatients(this.filteredInpatients);
-  }
-
-
-  // Export
-  exportToExcel() {
-    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(
-      this.filteredInpatients.length ? this.filteredInpatients : this.inpatient
-    );
-    const workbook: XLSX.WorkBook = { Sheets: { 'InnPatients': worksheet }, SheetNames: ['InnPatients'] };
-    XLSX.writeFile(workbook, 'innpatients.xlsx');
-  }
-
-  // Import
-  async importFromExcel(event: any) {
-    const target: DataTransfer = <DataTransfer>(event.target);
-    if (target.files.length !== 1) return;
-
-    const reader: FileReader = new FileReader();
-    reader.onload = async (e: any) => {
-      const bstr: string = e.target.result;
-      const wb: XLSX.WorkBook = XLSX.read(bstr, { type: 'binary' });
-      const wsname: string = wb.SheetNames[0];
-      const ws: XLSX.WorkSheet = wb.Sheets[wsname];
-      const data = XLSX.utils.sheet_to_json(ws);
-
-      const storedInpatients = await this.indexedDbService.getItem<any[]>('inpatientDetails') || [];
-      let added = 0;
-
-      for (const record of data) {
-        const rec: any = record;
-        const inpatientDetail: any = {
-          inpatientId: Number(rec.inpatientId) || await this.indexedDbService.allocateId('inpatientDetails'),
-          patientName: rec.patientName || '',
-          procedure: rec.procedure || '',
-          admissionDate: rec.admissionDate || '',
-          dischargeDate: rec.dischargeDate || '',
-          surgeonName: rec.surgeonName || '',
-          createdAt: rec.createdAt || new Date().toISOString()
-        };
-
-
-        if (!storedInpatients.some(p => p.inpatientId == inpatientDetail.inpatientId)) {
-          storedInpatients.push(inpatientDetail);
-          added++;
-        }
-      }
-
-      if (added > 0) {
-        await this.indexedDbService.setItem('inpatientDetails', storedInpatients);
-        this.notifyUpdate.notify.next(true);
-      }
-
-      storedInpatients.forEach((item: any) => {
-        const briefItem: InPatient = {
-          inpatientId: item.inpatientId,
-          patientName: item.patientName,
-          procedure: item.procedure,
-          admissionDate: item.admissionDate,
-          dischargeDate: item.dischargeDate,
-          surgeonName: item.surgeonName,
-          createdAt: item.createdAt
-        };
-
-        this.inpatient.push(briefItem);
-      });
-      this.filteredInpatients = [...this.inpatient];
-      this.dataSource.updateInpatients(this.filteredInpatients);
-    };
-    reader.readAsBinaryString(target.files[0]);
-  }
 
   // Edit
   editInpatient(id: number) {
-    this.inpatientService.getInpatientDetails(id).subscribe(data => {
+    this.inpatientService.getInpatientDetails(id).subscribe({ next: data => {
       if (data) {
         const dialogConfig = new MatDialogConfig();
         dialogConfig.disableClose = true;
@@ -261,7 +135,7 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
         dialogRef.afterClosed().subscribe(async (resultData: any) => {
           if (resultData) {
             const success = await this.inpatientService.updateInpatient(resultData);
-            const msg = success ? "InnPatient Data Updated Successfully" : "Failed to update InnPatient";
+            const msg = success ? "Inpatient updated successfully." : "Inpatient could not be updated. Please try again.";
             const type = success ? "success" : "error";
 
             if (success) {
@@ -271,26 +145,21 @@ export class InpatientListComponent implements OnInit, AfterViewInit {
           }
         });
       } else {
-        this.notifyUpdate.alertNotify.next({ msg: "InnPatient not found", type: "error" });
+        this.notifyUpdate.alertNotify.next({ msg: "This inpatient is no longer available. Refresh the list.", type: "error" });
       }
-    });
+    }, error: () => this.notifyUpdate.alertNotify.next({ type: 'error', msg: 'Inpatient details could not be loaded. Refresh the list and try again.' }) });
   }
 
   // Delete
-  async deleteInpatient(id: number) {
-    const confirmed = confirm('Are you sure you want to delete this inpatient?');
-    if (!confirmed) return;
-
-    const result = await this.inpatientService.deleteInpatient(id);
-    let msg = 'Failed to delete inpatient.';
-    let type = 'error';
-
-    if (result) {
-      msg = 'InnPatient deleted successfully.';
-      type = 'success';
+  async deleteInpatient(id: number): Promise<void> {
+    if (this.deletingId !== null || !window.confirm('Delete this inpatient? This action cannot be undone.')) return;
+    this.deletingId = id;
+    try {
+      const saved = await this.inpatientService.deleteInpatient(id);
+      if (!saved) throw new Error('Inpatient could not be deleted. Refresh the list and try again.');
       this.notifyUpdate.notify.next(true);
-    }
-
-    this.notifyUpdate.alertNotify.next({ msg, type });
+      this.notifyUpdate.alertNotify.next({ type: 'success', msg: 'Inpatient deleted successfully.' });
+    } catch (error) { this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Inpatient could not be deleted. Please try again.' }); }
+    finally { this.deletingId = null; }
   }
 }

@@ -11,7 +11,6 @@ export class LabService {
   labDetail: LabPatient[] = [];
 
   constructor(private indexedDbService: SupabaseDataService) {
-    this.loadLabData();
   }
 
   private loadLabData(): void {
@@ -83,7 +82,7 @@ export class LabService {
         return false;
       }
 
-      await this.indexedDbService.setItem('labDetails', [...this.labDetail, data]);
+      await this.indexedDbService.upsertRecord('labDetails', data.patientId!, data);
       this.labDetail.push(data);
       return true;
     } catch (err) {

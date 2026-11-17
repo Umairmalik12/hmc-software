@@ -1,94 +1,28 @@
-<h2 mat-dialog-title>{{edit?'Update Operation Patient Data' : 'Add New Operation Patient'}}</h2>
-
+<h2 mat-dialog-title><mat-icon>person_add_alt</mat-icon><span>{{ edit ? 'Edit operation patient' : 'New operation patient' }}<small>Registration &amp; care details</small></span></h2>
 <form [formGroup]="patientForm" (ngSubmit)="onSubmit()" novalidate>
-    <mat-dialog-content>
-<div formGroupName="patientDetail" class="outer-input-section">
-            <mat-form-field appearance="fill">
-                <mat-label>MR No. (leave blank to auto-assign)</mat-label>
-                <input matInput type="number" formControlName="patientId" [readonly]="edit">
-                <mat-error *ngIf="b['patientId'].errors?.min">MR No. must be greater than zero</mat-error>
-            </mat-form-field>
-         
-            <mat-form-field appearance="fill">
-                <mat-label>Created At</mat-label>
-                <input matInput type="text" [value]="(b['createdAt'].value | date:'dd/MM/yy h:mm a') || ''" readonly>
-            </mat-form-field>
-            <div formGroupName="fullName" class="input-section">
-                <mat-form-field appearance="fill">
-                    <mat-label>Name</mat-label>
-                    <input matInput type="text" formControlName="firstName">
-                    <mat-error *ngIf="c.firstName.errors?.required">firstname is required</mat-error>
-                    <mat-error *ngIf="c.firstName.errors?.pattern">only alphabets are allowed</mat-error>
-                </mat-form-field>
-                <mat-form-field appearance="fill">
-                    <mat-label>Father Name</mat-label>
-                    <input matInput type="text" formControlName="lastName">
-                    <mat-error *ngIf="c.lastName.errors?.required">lastname is required</mat-error>
-                    <mat-error *ngIf="c.lastName.errors?.pattern">only alphabets are allowed</mat-error>
-                </mat-form-field>
-                <mat-form-field appearance="fill">
-                    <mat-label>Dr. Name</mat-label>
-                    <input matInput type="text" formControlName="drName">
-                    <mat-error *ngIf="c.drName.errors?.required">Dr. Name is required</mat-error>
-                    <mat-error *ngIf="c.drName.errors?.pattern">only alphabets are allowed</mat-error>
-                </mat-form-field>
-            </div>
-            <div formGroupName="bioDetail" class="input-section">
-                <mat-label>Gender</mat-label>
-                <mat-radio-group formControlName="gender" class="radio-group">
-                    <mat-radio-button value="Male">Male</mat-radio-button>
-                    <mat-radio-button value="Female">Female</mat-radio-button>
-                </mat-radio-group>
-        
-                <mat-form-field appearance="fill">
-                    <mat-label>Age</mat-label>
-                    <input matInput type="number" formControlName="age">
-                    <mat-error *ngIf="d.age.errors?.required">age is required</mat-error>
-                    <mat-error *ngIf="d.age.errors?.min || d.age.errors?.max">age must be between 0 and 120</mat-error>
-                </mat-form-field>
-            </div>
-            <div formGroupName="procedureInfo" class="input-section">
-                <mat-form-field appearance="fill">
-                    <mat-label>Procedure</mat-label>
-                    <input matInput type="text" formControlName="procedure">
-                    <mat-error *ngIf="h['procedure']?.errors?.required">Procedure is required</mat-error>
-                </mat-form-field>
-            </div>
-            <div formGroupName="familyStatus" class="input-section">
-                <mat-form-field appearance="fill">
-                    <mat-label>Marital Status</mat-label>
-                    <mat-select formControlName="maritalStatus">
-                        <mat-option value="Single">Single</mat-option>
-                        <mat-option value="Married">Married</mat-option>
-                    </mat-select>
-                    <mat-error *ngIf="e.maritalStatus.errors?.required">marital status is required</mat-error>
-                </mat-form-field>
-            </div>
-            <div formGroupName="socialDetail" class="input-section">
-                <mat-form-field appearance="fill">
-                    <mat-label>Phone Number</mat-label>
-                    <input matInput type="tel" formControlName="phone">
-                    <mat-error *ngIf="f.phone.errors?.required">phone No. is required</mat-error>
-                    <mat-error *ngIf="f.phone.errors?.pattern">inavlid number</mat-error>
-                </mat-form-field>
-            </div>
-            <div formGroupName="addressDetail" class="input-section">
-                <mat-form-field appearance="fill">
-                    <mat-label>City</mat-label>
-                    <input matInput type="text" formControlName="city">
-                    <mat-error *ngIf="g.city.errors?.required">city is required</mat-error>
-                    <mat-error *ngIf="g.city.errors?.pattern">only alphabets are allowed</mat-error>
-                </mat-form-field>
-                <mat-form-field appearance="fill">
-                    <mat-label>Address</mat-label>
-                    <textarea matInput type="text" formControlName="address"></textarea>
-                    <mat-error *ngIf="g.address.errors?.required">address is required</mat-error>
-                </mat-form-field>
-            </div>
-        </div>
-    </mat-dialog-content>
-    <mat-dialog-actions>
-        <button mat-raised-button color="primary" type="submit">Submit</button>
-        <button mat-raised-button color="warn" type="button" (click)="close()">Cancel</button>
-    </mat-dialog-actions>
+  <mat-dialog-content>
+    <p class="form-note">Only the patient name is required. You can add the other details later.</p>
+    <div formGroupName="patientDetail" class="form-grid">
+      <mat-form-field appearance="outline"><mat-label>MR number</mat-label><input matInput type="number" formControlName="patientId" [readonly]="edit" placeholder="Auto-assigned"><mat-error *ngIf="b.patientId.hasError('min')">Enter a number greater than zero</mat-error></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Registered on</mat-label><input matInput [value]="b.createdAt.value | date:'dd MMM y, h:mm a'" readonly></mat-form-field>
+      <div class="form-section-title"><mat-icon>person_outline</mat-icon>Patient information</div>
+      <div formGroupName="fullName" class="form-grid form-span">
+        <mat-form-field appearance="outline"><mat-label>Patient name</mat-label><input matInput formControlName="firstName" autocomplete="name"><mat-error *ngIf="c.firstName.hasError('required')">Enter the patient name</mat-error></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Father's name</mat-label><input matInput formControlName="lastName"></mat-form-field>
+        <mat-form-field appearance="outline" class="form-span"><mat-label>Doctor name</mat-label><input matInput formControlName="drName"></mat-form-field>
+      </div>
+      <div formGroupName="bioDetail" class="form-grid form-span">
+        <mat-form-field appearance="outline"><mat-label>Gender</mat-label><mat-select formControlName="gender"><mat-option value="">Not specified</mat-option><mat-option value="Male">Male</mat-option><mat-option value="Female">Female</mat-option><mat-option value="Other">Other</mat-option></mat-select></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Age in years</mat-label><input matInput type="number" min="0" max="120" formControlName="age"><mat-error *ngIf="d.age.invalid">Enter an age between 0 and 120</mat-error></mat-form-field>
+      </div>
+      <div class="form-section-title"><mat-icon>medical_services</mat-icon>Care &amp; contact</div>
+      <div formGroupName="procedureInfo" class="form-span"><app-procedure-select formControlName="procedure"></app-procedure-select></div>
+      <div formGroupName="socialDetail" class="form-span"><mat-form-field appearance="outline"><mat-label>Phone number</mat-label><input matInput type="tel" formControlName="phone" autocomplete="tel" placeholder="e.g. 0300 1234567"><mat-error *ngIf="f.phone.hasError('pattern')">Enter a valid phone number</mat-error></mat-form-field></div>
+      <div formGroupName="addressDetail" class="form-grid form-span">
+        <mat-form-field appearance="outline"><mat-label>City</mat-label><input matInput formControlName="city" autocomplete="address-level2"></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Address</mat-label><textarea matInput formControlName="address" rows="2" autocomplete="street-address"></textarea></mat-form-field>
+      </div>
+    </div>
+  </mat-dialog-content>
+  <mat-dialog-actions><button mat-stroked-button type="button" (click)="close()">Cancel</button><button mat-flat-button color="primary" type="submit"><mat-icon>check</mat-icon>{{ edit ? 'Save changes' : 'Save patient' }}</button></mat-dialog-actions>
 </form>

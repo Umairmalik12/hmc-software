@@ -52,6 +52,16 @@ const routes: Routes = [
     canActivate: [AuthGuardService],
     data: { dashboardView: 'tokens' }
   },
+  { path: 'ot-medicines', component: HomeComponent, canActivate: [AuthGuardService], data: { dashboardView: 'ot-medicine-catalog' } },
+  { path: 'ot-records', component: HomeComponent, canActivate: [AuthGuardService], data: { dashboardView: 'ot-list' } },
+  { path: 'ot-slip', component: HomeComponent, canActivate: [AuthGuardService], data: { dashboardView: 'ot-form' } },
+  { path: 'payments', component: HomeComponent, canActivate: [AuthGuardService], data: { dashboardView: 'payment' } },
+  { path: 'procedures', component: HomeComponent, canActivate: [AuthGuardService], data: { dashboardView: 'procedures' } },
+  { path: 'rooms', component: HomeComponent, canActivate: [AuthGuardService], data: { dashboardView: 'rooms' } },
+  { path: 'prescription-medicines', component: HomeComponent, canActivate: [AuthGuardService], data: { dashboardView: 'medicine-catalog' } },
+  { path: 'prescriptions/new', component: HomeComponent, canActivate: [AuthGuardService], data: { dashboardView: 'prescription' } },
+  { path: 'prescriptions/:prescriptionId/edit', component: HomeComponent, canActivate: [AuthGuardService], data: { dashboardView: 'prescription' } },
+  { path: 'prescriptions', component: HomeComponent, canActivate: [AuthGuardService], data: { dashboardView: 'prescription-list' } },
   {
     path:'**',
     redirectTo:''

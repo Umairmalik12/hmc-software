@@ -2,7 +2,7 @@
   <header class="dashboard-header">
     <div>
       <p class="eyebrow">HAQ MEDICAL CENTER</p>
-      <h1>Patient Token Management</h1>
+      <h1>Patient tokens</h1>
       <p class="subheading">Create and reprint daily patient queue slips.</p>
     </div>
     <div class="live-clock" aria-live="polite">
@@ -31,14 +31,14 @@
           [(ngModel)]="customerName"
           placeholder="Enter patient's full name"
         />
-        <button type="submit" [disabled]="generating">
+        <button [appBusy]="generating" type="submit" [disabled]="generating">
           {{ generating ? 'Generating…' : 'Generate Slip' }}
         </button>
       </div>
     </form>
     <p *ngIf="errorMessage" class="message error-message" role="alert">{{ errorMessage }}</p>
     <p *ngIf="successMessage" class="message success-message" role="status">{{ successMessage }}</p>
-    <p class="storage-note">Records are saved in this browser and are not shared with other devices.</p>
+    <p class="storage-note">Records are saved to your hospital workspace.</p>
   </section>
 
   <section class="summary-grid" aria-label="Token statistics">
@@ -60,7 +60,7 @@
     <article class="summary-card">
       <span>Total Historical Slips</span>
       <strong>{{ historicalTotal }}</strong>
-      <small>Saved in this browser</small>
+      <small>Hospital workspace</small>
     </article>
   </section>
 
@@ -79,13 +79,13 @@
           (ngModelChange)="filterByDate($event)"
           [ngModelOptions]="{standalone: true}"
         />
-        <button type="button" class="secondary-button" (click)="showToday()">Today</button>
+        <button type="button" class="secondary-button" (click)="showToday()">Today</button><button type="button" class="secondary-button" (click)="exportToExcel()">Export</button>
       </div>
     </div>
 
-    <div *ngFor="let group of historyGroups" class="date-group">
-      <h3>{{ formatDate(group.date) }} <span>{{ group.slips.length }} patients</span></h3>
-      <div class="table-wrap">
+    <p *ngIf="loading" class="hmc-loading-state" role="status">Loading patient token history...</p><input class="token-name-input" type="search" [(ngModel)]="search" (ngModelChange)="searchHistory()" placeholder="Search token or patient" aria-label="Search token history"><div *ngFor="let group of historyGroups; trackBy: trackGroup" class="date-group">
+      <h3>{{ formatDate(group.date) }} <span>{{ filteredSlips.length }} patients</span></h3>
+      <div class="table-wrap table-scroll-container" appScrollPagination [scrollTotal]="filteredSlips.length" [scrollShown]="group.slips.length" [scrollResetKey]="pagination.revision" (loadMore)="loadMore()" scrollLabel="Patient token history">
         <table>
           <thead>
             <tr>
@@ -97,21 +97,22 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let slip of group.slips">
+            <tr *ngFor="let slip of group.slips; trackBy: trackRecord">
               <td class="table-token">{{ slip.tokenNumber }}</td>
-              <td>{{ slip.customerName }}</td>
+              <td><input *ngIf="editingSlipId === slip.id; else savedPatientName" class="token-name-input" [(ngModel)]="editedPatientName" maxlength="120" [readOnly]="updating" aria-label="Patient name"><ng-template #savedPatientName>{{ slip.customerName }}</ng-template></td>
               <td>{{ formatDate(slip.date) }}</td>
               <td>{{ slip.time | timeFormat }}</td>
               <td class="actions">
-                <button type="button" class="secondary-button" (click)="printSlip(slip)">Print</button>
-                <button type="button" class="delete-button" (click)="deleteSlip(slip)">Delete</button>
+                <ng-container *ngIf="editingSlipId === slip.id; else tokenActions"><button [appBusy]="updating" type="button" (click)="saveSlip(slip)" [disabled]="updating">Save</button><button type="button" class="secondary-button" (click)="cancelEdit()" [disabled]="updating">Cancel</button></ng-container><ng-template #tokenActions><button type="button" class="secondary-button" [appRecordPreview]="slip" [previewTitle]="'Patient token ' + slip.tokenNumber" aria-label="Preview patient token" title="Preview">Preview</button><button type="button" class="secondary-button" (click)="printSlip(slip)">Print</button><button type="button" class="secondary-button" (click)="editSlip(slip)">Edit</button>
+                <button type="button" class="delete-button" (click)="deleteSlip(slip)" [appBusy]="deletingId === slip.id" [disabled]="updating || generating || deletingId !== null">Delete</button></ng-template>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+      <app-scroll-list-footer [total]="filteredSlips.length" [shown]="group.slips.length" (loadMore)="loadMore()"></app-scroll-list-footer>
     </div>
-    <p *ngIf="!historyGroups.length" class="empty-state">No patient tokens were generated for this date.</p>
+    <p *ngIf="!loading && !errorMessage && !historyGroups.length" class="empty-state">No patient tokens were generated for this date.</p>
   </section>
 
   <section

@@ -1,15 +1,13 @@
 <div class="body">
-    <h1>Daily Medicine List</h1>
+    <header class="list-header"><div class="list-intro"><span class="list-icon"><mat-icon>medication</mat-icon></span><div><h1>Daily medicines</h1><p>Patient medicine records, quantities and care details.</p></div></div><a *ngIf="isSuperAdmin" mat-stroked-button routerLink="/rooms"><mat-icon>bed</mat-icon>Rooms &amp; beds</a><span class="record-count"><strong>{{ filteredMedicines.length }}</strong> records</span><button mat-flat-button color="primary" (click)="addNewMedicine()"><mat-icon>add</mat-icon>New medicine record</button></header>
+    <p *ngIf="loading" class="hmc-loading-state" role="status">Loading daily medicine record records...</p><p *ngIf="loadFailed" class="form-error" role="alert">Records could not be loaded. <button mat-stroked-button type="button" (click)="dataActions('', 'asc', 0, 20)" [disabled]="loading">Retry</button></p>
     <div class="search-bar" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
-        <mat-form-field appearance="outline">
-            <mat-label>Room No</mat-label>
-            <input matInput [(ngModel)]="searchRoomNo" placeholder="Search by Room No">
-        </mat-form-field>
+        <app-room-select [(ngModel)]="searchRoomNo" (ngModelChange)="onSearch()" [savedValues]="savedRoomValues" emptyLabel="All rooms / beds"></app-room-select>
         <mat-form-field appearance="outline">
             <mat-label>Patient Name</mat-label>
             <input matInput [(ngModel)]="searchPatientName" placeholder="Search by Patient Name">
         </mat-form-field>
-      
+
         <mat-form-field appearance="outline">
             <mat-label>Doctor Name</mat-label>
             <input matInput [(ngModel)]="searchDoctorName" placeholder="Search by Doctor Name">
@@ -22,15 +20,13 @@
                 <mat-option value="yesterday">Yesterday</mat-option>
             </mat-select>
         </mat-form-field>
-        <button mat-raised-button color="primary" (click)="onSearch()">Search</button>
-        <button mat-raised-button color="accent" (click)="onClearSearch()">Clear</button>
+        <button mat-raised-button color="primary" (click)="onSearch()"><mat-icon>search</mat-icon>Search</button>
+        <button mat-raised-button color="accent" (click)="onClearSearch()"><mat-icon>filter_alt_off</mat-icon>Clear</button>
         <span style="flex: 1 1 auto;"></span>
-        <button mat-raised-button color="primary" (click)="exportToExcel()">Export to Excel</button>
-        <input type="file" accept=".xlsx, .xls" style="display:none" #importInput (change)="importFromExcel($event)">
-        <button mat-raised-button color="accent" (click)="importInput.click()">Import from Excel</button>
+        <button mat-raised-button color="primary" (click)="exportToExcel()"><mat-icon>file_download</mat-icon>Export</button>
     </div>
-    <div class="table-scroll-container" (scroll)="onTableScroll($event)">
-    <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource">
+    <div class="table-scroll-container" appScrollPagination [scrollDisabled]="loading" [scrollTotal]="total" [scrollShown]="displayedMedicines.length" [scrollResetKey]="pagination.revision" (loadMore)="loadMore()" scrollLabel="Medicine records">
+    <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource" [trackBy]="trackRecord">
         <ng-container matColumnDef="medicineId">
             <mat-header-cell *matHeaderCellDef>ID</mat-header-cell>
             <mat-cell *matCellDef="let medicine">{{medicine.medicineId}}</mat-cell>
@@ -57,24 +53,21 @@
             <mat-header-cell *matHeaderCellDef>Created</mat-header-cell>
             <mat-cell *matCellDef="let medicine">{{medicine.createdAt | date:'dd/MM/yy h:mm a'}}</mat-cell>
         </ng-container>
-        <ng-container matColumnDef="action" *ngIf="isSuperAdmin">
+        <ng-container matColumnDef="action">
             <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
             <mat-cell *matCellDef="let medicine">
-                <div class="action-buttons">
-                    <button mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit medicine" (click)="editMedicine(medicine.medicineId)"><mat-icon>edit</mat-icon></button>
-                    <button mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete medicine" (click)="deleteMedicine(medicine.medicineId)"><mat-icon>delete</mat-icon></button>
-                    <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print medicine slip" (click)="printSlip(medicine.medicineId)"><mat-icon>print</mat-icon></button>
+                <div class="action-buttons"><button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Preview medicine record" title="Preview" (click)="viewMedicine(medicine.medicineId)"><mat-icon>visibility</mat-icon></button>
+                    <button *ngIf="isSuperAdmin" mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit medicine" title="Edit medicine" (click)="editMedicine(medicine.medicineId)"><mat-icon>edit_note</mat-icon></button>
+                    <button [appBusy]="deletingId === medicine.medicineId" [disabled]="deletingId !== null" *ngIf="isSuperAdmin" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete medicine" title="Delete medicine" (click)="deleteMedicine(medicine.medicineId)"><mat-icon>delete_outline</mat-icon></button>
+                    <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print medicine slip" title="Print medicine slip" (click)="printSlip(medicine.medicineId)"><mat-icon>print</mat-icon></button>
                 </div>
             </mat-cell>
         </ng-container>
         <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
         <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
     </mat-table>
+<div class="list-empty" *ngIf="!loading && !loadFailed && !filteredMedicines.length"><mat-icon>inbox</mat-icon><span>No records to display.</span></div>
     </div>
 </div>
 
-<mat-paginator class="page"
-                [length]="total"
-                [pageSize]="5"
-                [pageSizeOptions]="[5, 10, 15, 20]">
-</mat-paginator>
+<app-scroll-list-footer [total]="total" [shown]="displayedMedicines.length" (loadMore)="loadMore()"></app-scroll-list-footer>

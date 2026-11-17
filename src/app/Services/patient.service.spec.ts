@@ -1,3 +1,4 @@
+import { FeedbackModule } from 'src/app/Shared/feedback.module';
 import { TestBed } from '@angular/core/testing';
 import { PatientDetail } from '../Models/patientDetail.model';
 import { SupabaseDataService } from './supabase-data.service';
@@ -21,7 +22,7 @@ describe('PatientService', () => {
     supabase.upsertRecord.and.returnValue(Promise.resolve());
     supabase.deleteRecord.and.returnValue(Promise.resolve());
 
-    TestBed.configureTestingModule({
+    TestBed.configureTestingModule({imports: [FeedbackModule],
       providers: [
         PatientService,
         { provide: SupabaseDataService, useValue: supabase },
@@ -50,9 +51,9 @@ describe('PatientService', () => {
 
     expect(saved).toBeTrue();
     expect(patient.patientId).toBe(1);
-    expect(storedPatients).toEqual([patient]);
     expect(supabase.allocateId).toHaveBeenCalledWith('patientDetails');
-    expect(supabase.setItem).toHaveBeenCalledWith('patientDetails', [patient]);
+    expect(supabase.upsertRecord).toHaveBeenCalledWith('patientDetails', 1, patient);
+    expect(supabase.setItem).not.toHaveBeenCalled();
     expect(service.patientDetail).toEqual([patient]);
   });
 

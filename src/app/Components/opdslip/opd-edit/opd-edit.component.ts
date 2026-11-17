@@ -3,6 +3,7 @@ import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { Opd } from 'src/app/Models/opd.model';
+import { requiredText } from 'src/app/Services/validators.service';
 
 @Component({
   selector: 'app-opd-edit',
@@ -21,7 +22,7 @@ export class OpdEditComponent {
     @Inject(MAT_DIALOG_DATA) opdDetails: Opd & {oldPatientId?: number}
   ) {
 
-    this.opdDetails = opdDetails;
+    this.opdDetails = { ...opdDetails };
     this.oldPatientId = opdDetails.oldPatientId || opdDetails.patientId;
 
     this.edit = !!opdDetails.patientId;
@@ -31,33 +32,36 @@ export class OpdEditComponent {
     }
 
     this.opdForm = this.fb.group({
-      patientId: [{ value: this.opdDetails.patientId }],
+      patientId: [this.opdDetails.patientId || null, Validators.min(1)],
       createdAt: [this.opdDetails.createdAt || ''],
-      patientName: [this.opdDetails.patientName || '', Validators.required],
-      age: [this.opdDetails.age || '', Validators.required],
-      sex: [this.opdDetails.sex, Validators.required],
-      bp: [this.opdDetails.bp, Validators.required],
-      temp: [this.opdDetails.temp, Validators.required],
-      patientCategory: [this.opdDetails.patientCategory, Validators.required],
-      amount: [this.opdDetails.amount, [Validators.required, Validators.pattern('^[0-9]+$')]],
-      phone: [this.opdDetails.phone || '', [Validators.required, Validators.pattern('^[0-9]+$')]],
-      address: [this.opdDetails.address || '', Validators.required],
-      history: [this.opdDetails.history, Validators.required],
-      drName: [this.opdDetails.drName || '', Validators.required],
-      followUp: [this.opdDetails.followUp || '', Validators.required]
+      patientName: [this.opdDetails.patientName || '', [Validators.required, requiredText]],
+      age: [this.opdDetails.age ?? null, [Validators.min(0), Validators.max(120)]],
+      sex: [this.opdDetails.sex || ''],
+      bp: [this.opdDetails.bp || ''],
+      temp: [this.opdDetails.temp || ''],
+      patientCategory: [this.opdDetails.patientCategory || ''],
+      amount: [this.opdDetails.amount ?? null, Validators.min(0)],
+      phone: [this.opdDetails.phone || '', Validators.pattern(/^[+\d\s()-]{7,20}$/)],
+      address: [this.opdDetails.address || ''],
+      history: [this.opdDetails.history || ''],
+      drName: [this.opdDetails.drName || ''],
+      followUp: [this.opdDetails.followUp || '']
     });
   }
 
   onSubmit() {
-    if (this.opdForm.valid) {
-      let confirmSubmit = confirm("Submit OPD form?");
-      if (confirmSubmit) {
-        this.opdForm.get('patientId')?.enable();
-        const opdData = { ...this.opdForm.value, oldPatientId: this.oldPatientId };
-        this.opdForm.get('patientId')?.disable();
-        this.dialogRef.close(opdData);
-      }
+    if (this.opdForm.invalid) {
+      this.opdForm.markAllAsTouched();
+      return;
     }
+    const value = this.opdForm.getRawValue();
+    this.dialogRef.close({
+      ...this.opdDetails, ...value,
+      patientId: Number(value.patientId) || 0,
+      patientName: value.patientName.trim(),
+      amount: Number(value.amount) || 0,
+      oldPatientId: this.oldPatientId,
+    });
   }
 
   close() {

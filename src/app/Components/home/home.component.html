@@ -1,131 +1,64 @@
 <ng-template #placeholder></ng-template>
-
-<!-- Sidenav Container -->
 <mat-sidenav-container class="sidenav-container">
-    <mat-sidenav #sidenav [mode]="isMobile ? 'over' : 'side'" [opened]="!isMobile || isMobileNavOpen">
-        <div class="sidebar-brand">
-            <div class="brand-mark">H</div>
-            <div><strong>HAQ MEDICAL CENTER</strong><span>Care management</span></div>
-        </div>
-        <mat-nav-list>
-            <h3 class="sidebar-title">WORKSPACE</h3>
-            <a mat-list-item (click)="addPatient(); closeMobileNav()">
-                <mat-icon>person_add</mat-icon>
-                <span>Add Operate Patient</span>
-            </a>
-            <a mat-list-item (click)="showPatientList(); closeMobileNav()">
-                <mat-icon>local_hospital</mat-icon>
-                <span>Operate Patients</span>
-            </a>
-
-            <a mat-list-item (click)="addOpdSlip(); closeMobileNav()">
-                <mat-icon>note_add</mat-icon>
-                <span>Add OPD Slip</span>
-            </a>
-            <a mat-list-item (click)="showOpdList(); closeMobileNav()">
-                <mat-icon>assignment</mat-icon>
-                <span>OPD Slips</span>
-            </a>
-
-            <a mat-list-item (click)="addInnPatient(); closeMobileNav()">
-                <mat-icon>local_hospital</mat-icon>
-                <span>Add Inn Patient</span>
-            </a>
-            <a mat-list-item (click)="showInnPatientList(); closeMobileNav()">
-                <mat-icon>local_hospital</mat-icon>
-                <span>Inn Patients</span>
-            </a>
-            <a mat-list-item (click)="addLabTestSlip(); closeMobileNav()">
-                <mat-icon>biotech</mat-icon>
-                <span>Add Lab Slip</span>
-            </a>
-            <a mat-list-item (click)="showLabTestSlipList(); closeMobileNav()">
-                <mat-icon>science</mat-icon>
-                <span>Lab Test Slips</span>
-            </a>
-
-            <a mat-list-item (click)="addMedicine(); closeMobileNav()">
-                <mat-icon>local_pharmacy</mat-icon>
-                <span>Add Medicine Record</span>
-            </a>
-            <a mat-list-item (click)="showMedicineList(); closeMobileNav()">
-                <mat-icon>local_pharmacy</mat-icon>
-                <span>Daily Medicine List</span>
-            </a>
-
-            <a mat-list-item (click)="showOtSlip(); closeMobileNav()">
-                <mat-icon>local_pharmacy</mat-icon>
-                <span>OT Medicine Slip</span>
-            </a>
-
-            <a mat-list-item (click)="showOtListSlip(); closeMobileNav()">
-                <mat-icon>local_pharmacy</mat-icon>
-                <span>OT Medicine List</span>
-            </a>
-
-            <a mat-list-item (click)="showPayment(); closeMobileNav()">
-                <mat-icon>local_pharmacy</mat-icon>
-                <span>Payment</span>
-            </a>
-            <a mat-list-item (click)="showPreception(); closeMobileNav()">
-                <mat-icon>local_pharmacy</mat-icon>
-                <span>Preception</span>
-            </a>
-
-            <a mat-list-item routerLink="/patient-tokens" routerLinkActive="active-nav" (click)="closeMobileNav()">
-                <mat-icon>confirmation_number</mat-icon>
-                <span>Patient Token Slips</span>
-            </a>
-            
-            
-            <a mat-list-item (click)="logout()" class="logout-link">
-                <mat-icon>exit_to_app</mat-icon>
-                <span>Logout</span>
-            </a>
-        </mat-nav-list>
-    </mat-sidenav>
-
-    <!-- Main Content -->
-    <mat-sidenav-content>
-        <!-- Toolbar -->
-        <mat-toolbar color="primary" class="nav-toolbar">
-            <button mat-icon-button (click)="isMobile ? (isMobileNavOpen = !isMobileNavOpen) : sidenav.toggle()" class="nav-button" aria-label="Toggle navigation">
-                <mat-icon>menu</mat-icon>
-            </button>
-            <div class="title">Haq Medical Center<span>Hospital Management</span></div>
-
-            <!-- User Info -->
-            <div class="user-info">
-                <mat-icon>person</mat-icon>
-                <span>{{ userName }}</span>
-            </div>
-
-            <!-- Date & Time -->
-            <div class="datetime">
-                <mat-icon>schedule</mat-icon>
-                <span>{{ currentDateTime | date:'MMM d, y, h:mm a' }}</span>
-            </div>
-
-        </mat-toolbar>
-
-        <!-- Page Content -->
-        <div class="content">
-            <app-patient *ngIf="isShowPatients"></app-patient>
-            <app-opd *ngIf="isShowOpdPatients"></app-opd>
-            <app-lab *ngIf="isShowLabSlips"></app-lab>
-            <app-inpatient *ngIf="isShowInnPatients"></app-inpatient>
-            <app-ot-form *ngIf="isShowOtSlips" (isCancelForm)="close()" [selectedPatientId]="otPatientId"></app-ot-form>
-            <app-otlist *ngIf="isShowOtList"></app-otlist>
-            <app-payment *ngIf="isShowPayment"></app-payment>
-            <app-preciption *ngIf="isSuperAdmin && isShowPrecption"></app-preciption>
-            <app-medicine *ngIf="isShowMedicine"></app-medicine>
-            <app-patient-token *ngIf="isShowPatientTokens"></app-patient-token>
-
-            <!-- Welcome Message -->
-            <div *ngIf="!isShowPatients && !isShowOpdPatients && !isShowLabSlips && !isShowMedicine && !isShowPatientTokens && !isShowOtSlips && !isShowInnPatients && !isShowPayment && !isShowPrecption && !isShowOtList" class="welcome">
-                <h1>Welcome to Haq Medical Center</h1>
-                <p>Providing quality healthcare with excellence.</p>
-            </div>
-        </div>
-    </mat-sidenav-content>
+  <mat-sidenav #sidenav [mode]="isMobile ? 'over' : 'side'" [opened]="!isMobile || isMobileNavOpen" (closedStart)="isMobileNavOpen = false">
+    <a class="sidebar-brand" routerLink="/patient" (click)="closeMobileNav()" aria-label="Haq Medical Center home">
+      <span class="brand-mark"><mat-icon>local_hospital</mat-icon></span>
+      <span><strong>HAQ MEDICAL</strong><small>CENTER · CARE WORKSPACE</small></span>
+    </a>
+    <div class="sidebar-create"><button mat-flat-button color="primary" [matMenuTriggerFor]="createMenu"><mat-icon>add</mat-icon> New record <mat-icon>expand_more</mat-icon></button></div>
+    <mat-nav-list aria-label="Main navigation">
+      <h3 class="sidebar-title">PATIENT CARE</h3>
+      <a mat-list-item routerLink="/patient" [class.active-nav]="isShowPatients" [attr.aria-current]="isShowPatients ? 'page' : null" (click)="closeMobileNav()"><mat-icon matListItemIcon>people_outline</mat-icon><span matListItemTitle>Operation patients</span></a>
+      <a mat-list-item routerLink="/opd" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>assignment</mat-icon><span matListItemTitle>OPD visits</span></a>
+      <a mat-list-item routerLink="/inpatient" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>hotel</mat-icon><span matListItemTitle>Inpatients</span></a>
+      <a mat-list-item routerLink="/lab" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>science</mat-icon><span matListItemTitle>Laboratory</span></a>
+      <a mat-list-item routerLink="/patient-tokens" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>confirmation_number</mat-icon><span matListItemTitle>Patient tokens</span></a>
+      <h3 class="sidebar-title">PHARMACY</h3>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/prescription-medicines" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>vaccines</mat-icon><span matListItemTitle>Medicine catalogue</span></a>
+      <a mat-list-item routerLink="/medicine" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>medication</mat-icon><span matListItemTitle>Daily medicines</span></a>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/ot-medicines" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>vaccines</mat-icon><span matListItemTitle>OT medicine catalogue</span></a>
+      <a mat-list-item routerLink="/ot-records" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>inventory_2</mat-icon><span matListItemTitle>OT medicine records</span></a>
+      <a mat-list-item routerLink="/ot-slip" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>post_add</mat-icon><span matListItemTitle>New OT medicine slip</span></a>
+      <h3 class="sidebar-title">ADMINISTRATION</h3>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/rooms" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>bed</mat-icon><span matListItemTitle>Rooms &amp; beds</span></a>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/procedures" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>medical_services</mat-icon><span matListItemTitle>Procedures</span></a>
+      <a mat-list-item routerLink="/payments" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>account_balance_wallet</mat-icon><span matListItemTitle>Payments</span></a>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/prescriptions" routerLinkActive="active-nav" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>description</mat-icon><span matListItemTitle>Prescription records</span></a>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/prescriptions/new" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>note_add</mat-icon><span matListItemTitle>New prescription</span></a>
+    </mat-nav-list>
+    <div class="sidebar-footer"><span class="workspace-dot"></span> Hospital management <button mat-icon-button (click)="logout()" aria-label="Sign out" title="Sign out"><mat-icon>logout</mat-icon></button></div>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <mat-toolbar class="nav-toolbar">
+      <button mat-icon-button (click)="isMobile ? (isMobileNavOpen = !isMobileNavOpen) : sidenav.toggle()" aria-label="Toggle navigation"><mat-icon>menu</mat-icon></button>
+      <div class="toolbar-title">Haq Medical Center<span>Patient care, thoughtfully organized.</span></div>
+      <div class="datetime"><mat-icon>calendar_today</mat-icon><span>{{ currentDateTime | date:'EEE, d MMM y' }}<small>{{ currentDateTime | date:'h:mm a' }}</small></span></div>
+      <div class="user-info"><span class="user-avatar"><mat-icon>person_outline</mat-icon></span><span>{{ userName }}<small>Care team</small></span></div>
+    </mat-toolbar>
+    <main class="content">
+      <app-patient (create)="addPatient()" *ngIf="isShowPatients"></app-patient>
+      <app-opd (create)="addOpdSlip()" *ngIf="isShowOpdPatients"></app-opd>
+      <app-lab (create)="addLabTestSlip()" *ngIf="isShowLabSlips"></app-lab>
+      <app-inpatient (create)="addInnPatient()" *ngIf="isShowInnPatients"></app-inpatient>
+      <app-ot-form *ngIf="isShowOtSlips" (isCancelForm)="close()" [selectedPatientId]="otPatientId" [canManageMedicines]="isSuperAdmin"></app-ot-form>
+      <app-ot-medicine-catalog *ngIf="isSuperAdmin && isShowOtMedicineCatalog"></app-ot-medicine-catalog>
+      <app-otlist *ngIf="isShowOtList"></app-otlist>
+      <app-payment *ngIf="isShowPayment"></app-payment>
+      <app-preciption *ngIf="isSuperAdmin && isShowPrecption"></app-preciption>
+      <app-prescription-list *ngIf="isSuperAdmin && isShowPrescriptionList"></app-prescription-list>
+      <app-procedures *ngIf="isSuperAdmin && isShowProcedures"></app-procedures>
+      <app-rooms *ngIf="isSuperAdmin && isShowRooms"></app-rooms>
+      <app-prescription-medicine-catalog *ngIf="isSuperAdmin && isShowMedicineCatalog"></app-prescription-medicine-catalog>
+      <app-medicine *ngIf="isShowMedicine"></app-medicine>
+      <app-patient-token *ngIf="isShowPatientTokens"></app-patient-token>
+    </main>
+  </mat-sidenav-content>
 </mat-sidenav-container>
+<mat-menu #createMenu="matMenu" class="record-menu">
+  <button mat-menu-item (click)="addPatient(); closeMobileNav()"><mat-icon>person_add_alt</mat-icon><span>Operation patient</span></button>
+  <button mat-menu-item (click)="addOpdSlip(); closeMobileNav()"><mat-icon>assignment</mat-icon><span>OPD visit</span></button>
+  <button mat-menu-item (click)="addInnPatient(); closeMobileNav()"><mat-icon>hotel</mat-icon><span>Inpatient admission</span></button>
+  <button mat-menu-item (click)="addLabTestSlip(); closeMobileNav()"><mat-icon>science</mat-icon><span>Lab test</span></button>
+  <button mat-menu-item (click)="addMedicine(); closeMobileNav()"><mat-icon>medication</mat-icon><span>Daily medicine record</span></button>
+  <a *ngIf="isSuperAdmin" mat-menu-item routerLink="/prescriptions/new" (click)="closeMobileNav()"><mat-icon>note_add</mat-icon><span>Prescription</span></a>
+</mat-menu>

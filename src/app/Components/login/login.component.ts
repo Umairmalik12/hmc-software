@@ -13,6 +13,8 @@ export class LoginComponent implements OnInit {
   title: string = "Haq Medical Center Login Page";
   hide: boolean = true;
   errorMessage = '';
+  signingIn = false;
+  restoring = true;
 
   @ViewChild('f') form!: NgForm;
 
@@ -28,20 +30,22 @@ export class LoginComponent implements OnInit {
       }
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Unable to connect to Supabase.';
-    }
+    } finally { this.restoring = false; }
   }
 
   async onSubmit() {
+    if (this.signingIn || this.restoring) return;
     if (this.form.valid) {
+      this.signingIn = true; this.errorMessage = '';
       const user = this.form.controls['username'].value;
       const pass = this.form.controls['password'].value;
 
       try {
-        await this.logIn.SignIn(user, pass);
-        this.route.navigate(['home']);
+        if (!await this.logIn.SignIn(user, pass)) throw new Error('Sign-in could not be completed. Please try again.');
+        await this.route.navigate(['home']);
       } catch (error) {
         this.errorMessage = error instanceof Error ? error.message : 'Unable to sign in.';
-      }
+      } finally { this.signingIn = false; }
     }
   }
 }

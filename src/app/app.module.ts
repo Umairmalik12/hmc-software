@@ -1,3 +1,4 @@
+import { FeedbackModule } from './Shared/feedback.module';
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 
@@ -10,6 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { MatMenuModule } from '@angular/material/menu';
 import { LoginComponent } from './Components/login/login.component';
 import { HomeComponent } from './Components/home/home.component';
 import { PatientComponent } from './Components/patient/patient.component';
@@ -23,13 +25,16 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MedicineCatalogComponent } from './Components/precipion/medicine-catalog/medicine-catalog.component';
+import { MedicineOptionDialogComponent } from './Components/precipion/medicine-catalog/medicine-option-dialog.component';
+import { PrescriptionMedicineSelectComponent } from './Components/precipion/medicine-catalog/prescription-medicine-select.component';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MAT_DIALOG_DEFAULT_OPTIONS, MatDialogModule } from '@angular/material/dialog';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, MatOptionModule } from '@angular/material/core';
 import { AuthGuardService } from './Services/Guard-Services/auth-guard.service';
-import { AlertboxComponent } from './Components/alertbox/alertbox.component';
 import { AgePipePipe } from './Pipes/age-pipe.pipe';
 import { OpdComponent } from './Components/opdslip/opd.component';
 import { OpdListComponent } from './Components/opdslip/opd-list/opd-list.component';
@@ -37,10 +42,25 @@ import { OpdEditComponent } from './Components/opdslip/opd-edit/opd-edit.compone
 import { LabComponent } from './Components/lab/lab.component';
 import { LabListComponent } from './Components/lab/lab-list/lab-list.component';
 import { LabEditComponent } from './Components/lab/lab-edit/lab-edit.component';
+import { OtMedicineCatalogComponent } from './Components/ot-medicine-catalog/ot-medicine-catalog.component';
+import { OtMedicineEditComponent } from './Components/ot-medicine-catalog/ot-medicine-edit.component';
+import { OtMedicineDeleteComponent } from './Components/ot-medicine-catalog/ot-medicine-delete.component';
 import { OtFormComponent } from './Components/otslip/otslip.component';
 import { OtlistComponent } from './Components/otlist/otlist.component';
 import { PaymentComponent } from './Components/payment/payment.component';
 import { PreciptionComponent } from './Components/precipion/precipion.component';
+import { PrescriptionListComponent } from './Components/precipion/prescription-list.component';
+import { PrescriptionPreviewComponent } from './Components/precipion/prescription-preview.component';
+import { PrescriptionDocumentComponent } from './Components/precipion/prescription-document.component';
+import { ProcedureSelectComponent } from './Components/procedures/procedure-select.component';
+import { ProceduresComponent } from './Components/procedures/procedures.component';
+import { OtMedicinePreviewComponent } from './Components/otslip/ot-medicine-preview.component';
+import { RecordDetailsComponent } from './Components/record-details/record-details.component';
+import { RecordPreviewDirective } from './Components/record-details/record-preview.directive';
+import { RoomSelectComponent } from './Components/rooms/room-select.component';
+import { RoomsComponent } from './Components/rooms/rooms.component';
+import { ScrollPaginationDirective } from './Shared/scroll-pagination.directive';
+import { ScrollListFooterComponent } from './Shared/scroll-list-footer.component';
 import { InpatientComponent } from './Components/inpatient/inpatient.component';
 import { InpatientListComponent } from './Components/inpatient/inpatient-list/inpatient-list.component';
 import { InpatientEditComponent } from './Components/inpatient/inpatient-edit/inpatient-edit.component';
@@ -70,12 +90,29 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
     LabComponent,
     LabListComponent,
     LabEditComponent,
-    AlertboxComponent,
     OtFormComponent,
+    OtMedicineCatalogComponent,
+    OtMedicineEditComponent,
+    OtMedicineDeleteComponent,
     AgePipePipe,
     OtlistComponent,
     PaymentComponent,
-PreciptionComponent,
+    PreciptionComponent,
+    MedicineCatalogComponent,
+    MedicineOptionDialogComponent,
+    PrescriptionMedicineSelectComponent,
+    PrescriptionListComponent,
+    PrescriptionPreviewComponent,
+    PrescriptionDocumentComponent,
+    ProcedureSelectComponent,
+    ProceduresComponent,
+    OtMedicinePreviewComponent,
+    RecordDetailsComponent,
+    RecordPreviewDirective,
+    RoomSelectComponent,
+    RoomsComponent,
+    ScrollPaginationDirective,
+    ScrollListFooterComponent,
     InpatientComponent,
     InpatientListComponent,
     InpatientEditComponent,
@@ -88,6 +125,7 @@ PreciptionComponent,
   ],
   imports: [
     BrowserModule,
+    FeedbackModule,
     AppRoutingModule,
     BrowserAnimationsModule,
     LayoutModule,
@@ -96,6 +134,7 @@ PreciptionComponent,
     MatSidenavModule,
     MatIconModule,
     MatListModule,
+    MatMenuModule,
     MatTableModule,
     MatCardModule,
     MatFormFieldModule,
@@ -105,6 +144,7 @@ PreciptionComponent,
     FormsModule,
     MatInputModule,
     MatSelectModule,
+    MatAutocompleteModule,
     MatRadioModule,
     MatCheckboxModule,
     MatDialogModule,

@@ -1,3 +1,4 @@
+import { FeedbackModule } from 'src/app/Shared/feedback.module';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
@@ -14,7 +15,7 @@ describe('AuthGuardService', () => {
     user = jasmine.createSpyObj<UserLoginService>('UserLoginService', ['isAuthenticated']);
     user.isAuthenticated.and.returnValue(Promise.resolve(false));
     await TestBed.configureTestingModule({
-      imports: [RouterTestingModule],
+      imports: [FeedbackModule, RouterTestingModule],
       providers: [{ provide: UserLoginService, useValue: user }]
     })
     .compileComponents();

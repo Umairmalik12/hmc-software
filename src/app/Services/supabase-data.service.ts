@@ -1,3 +1,4 @@
+import { LoadingService } from './loading.service';
 import { Injectable } from '@angular/core';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Subject } from 'rxjs';
@@ -33,198 +34,242 @@ export class SupabaseDataService {
   readonly changes = new Subject<string>();
   private realtimeStarted = false;
 
-  constructor(private supabase: SupabaseClientService) {}
+  constructor(private supabase: SupabaseClientService, private loading: LoadingService = new LoadingService()) {}
 
   async setItem(key: string, value: any): Promise<void> {
-    if (!Array.isArray(value)) {
-      const { error } = await this.client
-        .from('hmc_records')
-        .upsert({ collection: key, record_id: SINGLETON_ID, data: value, sort_order: 0 });
-      this.throwIfError(error);
-      return;
-    }
-
-    // Always diff against the latest remote records to avoid stale-client overwrites.
-    const remoteValue = await this.getItem<any>(key);
-    const snapshot = (Array.isArray(remoteValue) ? remoteValue : []).filter(item =>
-      !(item && item.id === SINGLETON_ID)
-    );
-    const previous = new Map<string, { item: any; index: number }>();
-    snapshot.forEach((item, index) => previous.set(this.getRecordId(key, item), { item, index }));
-    const current = new Map<string, { item: any; index: number }>();
-    value.forEach((item, index) => {
-      const id = this.getRecordId(key, item);
-      if (current.has(id)) {
-        throw new Error('Duplicate record ID ' + id + ' in ' + key + '.');
+    return this.loading.track('Saving records...', async () => {
+      if (!Array.isArray(value)) {
+        const { error } = await this.client
+          .from('hmc_records')
+          .upsert({ collection: key, record_id: SINGLETON_ID, data: value, sort_order: 0 });
+        this.throwIfError(error);
+        return;
       }
-      current.set(id, { item, index });
-    });
-    const inserts: RecordChange[] = [];
-    const updates: RecordChange[] = [];
 
-    current.forEach(({ item, index }, id) => {
-      const oldRecord = previous.get(id);
-      if (!oldRecord) {
-        inserts.push({ record_id: id, data: item, sort_order: index });
-      } else if (
-        JSON.stringify(oldRecord.item) !== JSON.stringify(item) ||
-        oldRecord.index !== index
-      ) {
-        updates.push({ record_id: id, data: item, sort_order: index });
-      }
-    });
-
-    // Array writes are merge/upsert operations; deletion is explicit via deleteRecord.
-    // This prevents a stale client list from deleting rows added on another workstation.
-    if (inserts.length || updates.length) {
-      const { error } = await this.client.rpc('apply_hmc_record_changes', {
-        p_collection: key,
-        p_inserts: inserts,
-        p_updates: updates,
-        p_delete_ids: [],
+      // Always diff against the latest remote records to avoid stale-client overwrites.
+      const remoteValue = await this.getItem<any>(key);
+      const snapshot = (Array.isArray(remoteValue) ? remoteValue : []).filter(item =>
+        !(item && item.id === SINGLETON_ID)
+      );
+      const previous = new Map<string, { item: any; index: number }>();
+      snapshot.forEach((item, index) => previous.set(this.getRecordId(key, item), { item, index }));
+      const current = new Map<string, { item: any; index: number }>();
+      value.forEach((item, index) => {
+        const id = this.getRecordId(key, item);
+        if (current.has(id)) {
+          throw new Error('Duplicate record ID ' + id + ' in ' + key + '.');
+        }
+        current.set(id, { item, index });
       });
-      this.throwIfError(error);
-    }
+      const inserts: RecordChange[] = [];
+      const updates: RecordChange[] = [];
 
+      current.forEach(({ item, index }, id) => {
+        const oldRecord = previous.get(id);
+        if (!oldRecord) {
+          inserts.push({ record_id: id, data: item, sort_order: index });
+        } else if (
+          JSON.stringify(oldRecord.item) !== JSON.stringify(item) ||
+          oldRecord.index !== index
+        ) {
+          updates.push({ record_id: id, data: item, sort_order: index });
+        }
+      });
+
+      // Array writes are merge/upsert operations; deletion is explicit via deleteRecord.
+      // This prevents a stale client list from deleting rows added on another workstation.
+      if (inserts.length || updates.length) {
+        const { error } = await this.client.rpc('apply_hmc_record_changes', {
+          p_collection: key,
+          p_inserts: inserts,
+          p_updates: updates,
+          p_delete_ids: [],
+        });
+        this.throwIfError(error);
+      }
+
+
+    }, 2);
   }
 
   async deleteRecord(collection: string, id: string | number): Promise<void> {
-    const { error } = await this.client.rpc('apply_hmc_record_changes', {
-      p_collection: collection,
-      p_inserts: [],
-      p_updates: [],
-      p_delete_ids: [String(id)],
-    });
-    this.throwIfError(error);
+    return this.loading.track('Deleting record...', async () => {
+      const { error } = await this.client.rpc('apply_hmc_record_changes', {
+        p_collection: collection,
+        p_inserts: [],
+        p_updates: [],
+        p_delete_ids: [String(id)],
+      });
+      this.throwIfError(error);
+
+    }, 2);
   }
 
   async moveRecord(collection: string, oldId: string | number, newId: string | number, data: any): Promise<void> {
-    const { error } = await this.client.rpc('apply_hmc_record_changes', {
-      p_collection: collection,
-      p_inserts: [{ record_id: String(newId), data, sort_order: 0 }],
-      p_updates: [],
-      p_delete_ids: [String(oldId)],
-    });
-    this.throwIfError(error);
+    return this.loading.track('Updating record...', async () => {
+      const { error } = await this.client.rpc('apply_hmc_record_changes', {
+        p_collection: collection,
+        p_inserts: [{ record_id: String(newId), data, sort_order: 0 }],
+        p_updates: [],
+        p_delete_ids: [String(oldId)],
+      });
+      this.throwIfError(error);
+
+    }, 2);
   }
 
   async upsertRecord(collection: string, id: string | number, data: any, sortOrder = 0): Promise<void> {
-    const { error } = await this.client.rpc('apply_hmc_record_changes', {
-      p_collection: collection,
-      p_inserts: [],
-      p_updates: [{ record_id: String(id), data, sort_order: sortOrder }],
-      p_delete_ids: [],
-    });
-    this.throwIfError(error);
+    return this.loading.track('Saving record...', async () => {
+      const { error } = await this.client.rpc('apply_hmc_record_changes', {
+        p_collection: collection,
+        p_inserts: [],
+        p_updates: [{ record_id: String(id), data, sort_order: sortOrder }],
+        p_delete_ids: [],
+      });
+      this.throwIfError(error);
+
+    }, 2);
   }
 
   async getItem<T>(key: string): Promise<T | undefined> {
-    const records: StoredRecord[] = [];
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await this.client
-        .from('hmc_records')
-        .select('record_id,data')
-        .eq('collection', key)
-        .order('sort_order', { ascending: true })
-        .order('record_id', { ascending: true })
-        .range(offset, offset + 999);
-      this.throwIfError(error);
-      records.push(...(data || []) as StoredRecord[]);
-      if (!data || data.length < 1000) {
-        break;
+    return this.loading.track('Loading records...', async () => {
+      const records: StoredRecord[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await this.client
+          .from('hmc_records')
+          .select('record_id,data')
+          .eq('collection', key)
+          .order('sort_order', { ascending: true })
+          .order('record_id', { ascending: true })
+          .range(offset, offset + 999);
+        this.throwIfError(error);
+        records.push(...(data || []) as StoredRecord[]);
+        if (!data || data.length < 1000) {
+          break;
+        }
       }
-    }
 
-    if (records.length === 1 && records[0].record_id === SINGLETON_ID) {
-      return records[0].data as T;
-    }
+      if (records.length === 1 && records[0].record_id === SINGLETON_ID) {
+        return records[0].data as T;
+      }
 
-    const values = records
-      .filter(record => record.record_id !== SINGLETON_ID)
-      .map(record => record.data);
-    return values as T;
+      const values = records
+        .filter(record => record.record_id !== SINGLETON_ID)
+        .map(record => record.data);
+      return values as T;
+
+    }, 0);
   }
 
   async allocateId(collection: string): Promise<number> {
-    const { data, error } = await this.client.rpc('next_hmc_id', {
-      p_collection: collection,
-    });
-    this.throwIfError(error);
-    const id = Number(data);
-    if (!Number.isSafeInteger(id) || id < 1) {
-      throw new Error('Supabase returned an invalid record ID.');
-    }
-    return id;
+    return this.loading.track('Preparing record...', async () => {
+      const { data, error } = await this.client.rpc('next_hmc_id', {
+        p_collection: collection,
+      });
+      this.throwIfError(error);
+      const id = Number(data);
+      if (!Number.isSafeInteger(id) || id < 1) {
+        throw new Error('Supabase returned an invalid record ID.');
+      }
+      return id;
+
+    }, 1);
   }
 
   async createPatientToken(customerName: string): Promise<PatientTokenSlip> {
-    const name = customerName.trim();
-    if (!name) {
-      throw new Error('Patient name is required.');
-    }
+    return this.loading.track('Generating patient token...', async () => {
+      const name = customerName.trim();
+      if (!name) {
+        throw new Error('Patient name is required.');
+      }
 
-    const { data, error } = await this.client.rpc('create_patient_token', {
-      p_customer_name: name,
-    });
-    this.throwIfError(error);
-    if (!data) {
-      throw new Error('Supabase did not return the generated patient token.');
-    }
+      const { data, error } = await this.client.rpc('create_patient_token', {
+        p_customer_name: name,
+      });
+      this.throwIfError(error);
+      if (!data) {
+        throw new Error('Supabase did not return the generated patient token.');
+      }
 
-    return {
-      id: Number(data.id),
-      tokenNumber: data.token_number,
-      sequence: Number(data.sequence),
-      customerName: data.customer_name,
-      date: data.token_date,
-      time: data.token_time,
-      createdAt: data.created_at,
-    };
+      return {
+        id: Number(data.id),
+        tokenNumber: data.token_number,
+        sequence: Number(data.sequence),
+        customerName: data.customer_name,
+        date: data.token_date,
+        time: data.token_time,
+        createdAt: data.created_at,
+      };
+
+    }, 2);
   }
 
   async getPatientTokensByDate(date: string): Promise<PatientTokenSlip[]> {
-    const slips: PatientTokenSlip[] = [];
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await this.client
-        .from('patient_token_slips')
-        .select('id,token_number,sequence,customer_name,token_date,token_time,created_at')
-        .eq('token_date', date)
-        .order('sequence', { ascending: true })
-        .range(offset, offset + 999);
-      this.throwIfError(error);
-      slips.push(...(data || []).map(row => this.mapToken(row)));
-      if (!data || data.length < 1000) {
-        return slips;
+    return this.loading.track('Loading patient tokens...', async () => {
+      const slips: PatientTokenSlip[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await this.client
+          .from('patient_token_slips')
+          .select('id,token_number,sequence,customer_name,token_date,token_time,created_at')
+          .eq('token_date', date)
+          .order('sequence', { ascending: true })
+          .range(offset, offset + 999);
+        this.throwIfError(error);
+        slips.push(...(data || []).map(row => this.mapToken(row)));
+        if (!data || data.length < 1000) {
+          return slips;
+        }
       }
-    }
+
+    }, 0);
   }
 
   async getAllPatientTokens(): Promise<PatientTokenSlip[]> {
-    const slips: PatientTokenSlip[] = [];
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await this.client
-        .from('patient_token_slips')
-        .select('id,token_number,sequence,customer_name,token_date,token_time,created_at')
-        .order('created_at', { ascending: false })
-        .range(offset, offset + 999);
-      this.throwIfError(error);
-      slips.push(...(data || []).map(row => this.mapToken(row)));
-      if (!data || data.length < 1000) {
-        return slips;
+    return this.loading.track('Loading patient tokens...', async () => {
+      const slips: PatientTokenSlip[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await this.client
+          .from('patient_token_slips')
+          .select('id,token_number,sequence,customer_name,token_date,token_time,created_at')
+          .order('created_at', { ascending: false })
+          .range(offset, offset + 999);
+        this.throwIfError(error);
+        slips.push(...(data || []).map(row => this.mapToken(row)));
+        if (!data || data.length < 1000) {
+          return slips;
+        }
       }
-    }
+
+    }, 0);
   }
 
   async deletePatientToken(id: number): Promise<void> {
-    const { data, error } = await this.client
-      .from('patient_token_slips')
-      .delete()
-      .eq('id', id)
-      .select('id');
-    this.throwIfError(error);
-    if (!data || !data.length) {
-      throw new Error('Patient token was not found or could not be deleted.');
-    }
+    return this.loading.track('Deleting patient token...', async () => {
+      const { data, error } = await this.client
+        .from('patient_token_slips')
+        .delete()
+        .eq('id', id)
+        .select('id');
+      this.throwIfError(error);
+      if (!data || !data.length) {
+        throw new Error('Patient token was not found or could not be deleted.');
+      }
+
+    }, 2);
+  }
+
+  async updatePatientTokenName(id: number, customerName: string): Promise<PatientTokenSlip> {
+    return this.loading.track('Updating patient token...', async () => {
+      const name = customerName.trim();
+      if (!name) throw new Error('Enter the patient name.');
+      const { data, error } = await this.client.from('patient_token_slips')
+        .update({ customer_name: name }).eq('id', id)
+        .select('id,token_number,sequence,customer_name,token_date,token_time,created_at').single();
+      this.throwIfError(error);
+      if (!data) throw new Error('Patient token was not found or could not be updated.');
+      return this.mapToken(data);
+
+    }, 2);
   }
 
   private getRecordId(collection: string, item: any): string {

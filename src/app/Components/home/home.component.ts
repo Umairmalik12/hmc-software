@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild, ViewContainerRef } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, ViewChild, ViewContainerRef } from '@angular/core';
 import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
 import { PatientDetail } from 'src/app/Models/patientDetail.model';
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
@@ -15,7 +15,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
 import { UserLoginService } from 'src/app/Services/user-login.service';
 import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
-import { Subscription } from 'rxjs';
+import { combineLatest, Subscription } from 'rxjs';
 import { InpatientEditComponent } from '../inpatient/inpatient-edit/inpatient-edit.component';
 import { InpatientService } from 'src/app/Services/inpatient.service';
 import { Medicine } from 'src/app/Models/medicine.model';
@@ -32,10 +32,15 @@ export class HomeComponent implements OnInit, OnDestroy {
   userName: string = '';
   currentDateTime: Date = new Date();
 
-  otPatientId: number = 0;
+  otPatientId = '';
+  isShowProcedures = false;
+  isShowRooms = false;
+  isShowMedicineCatalog = false;
+  isShowOtMedicineCatalog = false;
   isShowOtList = false;
   isShowPayment = false;
   isShowPrecption = false;
+  isShowPrescriptionList = false;
   isShowMedicine = false;
   isShowPatientTokens = false;
   isMobile = window.innerWidth <= 760;
@@ -103,6 +108,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   isSuperAdmin: boolean = false;
   private realtimeSubscription?: Subscription;
+  private subscriptions = new Subscription();
   private clockTimer?: ReturnType<typeof setInterval>;
 
   @ViewChild("placeholder", { read: ViewContainerRef }) alertContainer!: ViewContainerRef;
@@ -121,14 +127,12 @@ export class HomeComponent implements OnInit, OnDestroy {
     private dataService: SupabaseDataService,
     private userLogin: UserLoginService
   ) {
-    this.notifyUpdate.alertNotify.subscribe(ob => {
-      this.showAlert.showAlert(ob.msg, ob.type, this.alertContainer);
-    });
   }
 
   async ngOnInit(): Promise<void> {
     this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
+      this.userName = this.isSuperAdmin ? 'Administrator' : 'Staff';
     }).catch(error => {
       console.error('Unable to load current user role:', error);
       this.notifyUpdate.alertNotify.next({ msg: 'Unable to load your account permissions.', type: 'error' });
@@ -140,34 +144,27 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.notifyUpdate.notify.next(true);
     });
 
-    this.route.data.subscribe(data => {
-      this.selectDashboardView(data['dashboardView'] || 'patients');
-      if (this.otPatientId) {
-        this.isShowOtSlips = true;
-      }
-    });
-    this.route.queryParams.subscribe(params => {
-      this.otPatientId = Number(params['patientId']) || 0;
-      if (this.otPatientId) {
-        this.selectDashboardView('ot-form');
-      } else {
-        this.selectDashboardView(this.route.snapshot.data['dashboardView'] || 'patients');
-      }
-    });
+    this.subscriptions.add(combineLatest([this.route.data, this.route.queryParams]).subscribe(([data, params]) => {
+      this.otPatientId = String(params['patientId'] || '');
+      this.selectDashboardView(this.otPatientId ? 'ot-form' : data['dashboardView'] || 'patients');
+    }));
   }
 
   ngOnDestroy(): void {
     this.realtimeSubscription?.unsubscribe();
+    this.subscriptions.unsubscribe();
     if (this.clockTimer) {
       clearInterval(this.clockTimer);
     }
   }
 
-  openDialog(component: any, data: any, serviceMethod: (data: any) => Promise<boolean> | boolean | void) {
+  openDialog(component: any, data: any, serviceMethod: (data: any) => Promise<boolean> | boolean | void, destination: string) {
+    const names: Record<string, string> = { patient: 'Operation patient', opd: 'OPD visit', lab: 'Lab test', inpatient: 'Inpatient', medicine: 'Daily medicine record' };
+    const entity = names[destination] || 'Record';
     const dialogConfig = new MatDialogConfig();
     dialogConfig.disableClose = true;
     dialogConfig.autoFocus = true;
-    dialogConfig.data = data;
+    dialogConfig.data = { ...data };
     dialogConfig.panelClass = 'hmc-dialog-panel';
 
     const dialogRef = this.dialog.open(component, dialogConfig);
@@ -178,18 +175,19 @@ export class HomeComponent implements OnInit, OnDestroy {
           const saved = await serviceMethod(result);
           if (saved === false) {
             this.notifyUpdate.alertNotify.next({
-              msg: 'The record was not saved. Check for a duplicate ID and try again.',
+              msg: entity + ' could not be saved. Check your entries and connection, then try again.',
               type: 'error'
             });
             return;
           }
 
+          await this.router.navigate(['/' + destination]);
           this.notifyUpdate.notify.next(true);
-          this.notifyUpdate.alertNotify.next({ msg: 'Operation successful.', type: 'success' });
+          this.notifyUpdate.alertNotify.next({ msg: entity + ' created successfully.', type: 'success' });
         } catch (error) {
           console.error('Unable to save dialog record:', error);
           this.notifyUpdate.alertNotify.next({
-            msg: 'Unable to save the record. Please try again.',
+            msg: entity + ' could not be saved. Please try again.',
             type: 'error'
           });
         }
@@ -208,48 +206,39 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   showPatientList() {
-    this.resetViews();
-    this.isShowPatients = true;
+    void this.router.navigate(['/patient']);
   }
 
   showOpdList() {
-    this.resetViews();
-    this.isShowOpdPatients = true;
+    void this.router.navigate(['/opd']);
   }
 
   showLabTestSlipList() {
-    this.resetViews();
-    this.isShowLabSlips = true;
+    void this.router.navigate(['/lab']);
   }
 
   showInnPatientList() {
-    this.resetViews();
-    this.isShowInnPatients = true;
+    void this.router.navigate(['/inpatient']);
   }
 
   showOtSlip() {
-    this.resetViews();
-    this.isShowOtSlips = true;
+    void this.router.navigate(['/ot-slip']);
   }
 
   showOtListSlip() {
-    this.resetViews();
-    this.isShowOtList = true;
+    void this.router.navigate(['/ot-records']);
   }
 
   showPayment() {
-    this.resetViews();
-    this.isShowPayment = true;
+    void this.router.navigate(['/payments']);
   }
 
   showPreception() {
-    this.resetViews();
-    this.isShowPrecption = true;
+    void this.router.navigate(['/prescriptions']);
   }
 
   showMedicineList() {
-    this.resetViews();
-    this.isShowMedicine = true;
+    void this.router.navigate(['/medicine']);
   }
 
   private selectDashboardView(view: string): void {
@@ -282,6 +271,21 @@ export class HomeComponent implements OnInit, OnDestroy {
       case 'prescription':
         this.isShowPrecption = true;
         break;
+      case 'prescription-list':
+        this.isShowPrescriptionList = true;
+        break;
+      case 'procedures':
+        this.isShowProcedures = true;
+        break;
+      case 'rooms':
+        this.isShowRooms = true;
+        break;
+      case 'ot-medicine-catalog':
+        this.isShowOtMedicineCatalog = true;
+        break;
+      case 'medicine-catalog':
+        this.isShowMedicineCatalog = true;
+        break;
       default:
         this.isShowPatients = true;
         break;
@@ -294,9 +298,14 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
+  @HostListener('window:resize')
+  onResize(): void {
+    this.isMobile = window.innerWidth <= 760;
+    if (!this.isMobile) this.isMobileNavOpen = false;
+  }
+
   close() {
-    this.resetViews();
-    this.isShowOtList = true;
+    void this.router.navigate(['/ot-records']);
   }
 
   private resetViews() {
@@ -309,36 +318,40 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.isShowOtList = false;
     this.isShowPayment = false;
     this.isShowPrecption = false;
+    this.isShowPrescriptionList = false;
+    this.isShowProcedures = false;
+    this.isShowRooms = false;
+    this.isShowMedicineCatalog = false;
+    this.isShowOtMedicineCatalog = false;
     this.isShowPatientTokens = false;
   }
 
   addPatient() {
     this.openDialog(PatientEditComponent, this.tempPatient, (patientData: any) => {
       return this.patientService.addNewPatient(patientData);
-    });
+    }, 'patient');
   }
 
   addMedicine() {
-    this.openDialog(MedicineEditComponent, this.tempMedicine, (medicineData: Medicine) => {
-      return this.medicineService.addNewMedicine(medicineData);
-    });
+    // This dialog persists its own record; do not save it a second time.
+    this.openDialog(MedicineEditComponent, { medicines: [] }, () => true, 'medicine');
   }
 
   addOpdSlip() {
     this.openDialog(OpdEditComponent, this.tempOpd, (opdPatientData: Opd) => {
       return this.opdService.addNewOpd(opdPatientData);
-    });
+    }, 'opd');
   }
 
   addLabTestSlip() {
-    this.openDialog(LabEditComponent, this.tempLabPatient, (patientData: LabPatient) => {
+    this.openDialog(LabEditComponent, { ...this.tempLabPatient, dateTime: new Date() }, (patientData: LabPatient) => {
       return this.labService.addNewLabPatient(patientData);
-    });
+    }, 'lab');
   }
 
   addInnPatient() {
     this.openDialog(InpatientEditComponent, this.tempInnPatient, (innPatientData: any) => {
       return this.inpatientService.addNewInpatient(innPatientData);
-    });
+    }, 'inpatient');
   }
 }

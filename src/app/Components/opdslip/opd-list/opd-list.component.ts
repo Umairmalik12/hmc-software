@@ -1,6 +1,12 @@
-import { AfterViewInit, ChangeDetectorRef, Component, OnInit, ViewChild } from '@angular/core';
+import { EventEmitter, Output } from '@angular/core';
+import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
+import { includesText, matchesDateFilter } from 'src/app/Shared/list-filters';
+import { firstValueFrom, Subscription } from 'rxjs';
+import { RecordDetailsComponent } from 'src/app/Components/record-details/record-details.component';
+import { exportRecords } from 'src/app/Shared/export-records';
+import { ChangeDetectorRef, Component, OnInit , OnDestroy } from '@angular/core';
 import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
-import { MatPaginator, MatPaginatorIntl } from '@angular/material/paginator';
+import { MatPaginatorIntl } from '@angular/material/paginator';
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { OpdEditComponent } from '../opd-edit/opd-edit.component';
 import { OpdService } from 'src/app/Services/opd.service';
@@ -8,7 +14,6 @@ import { OpdDataService } from 'src/app/Services/opd-data.service';
 import { Opd } from 'src/app/Models/opd.model';
 import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
 import { UserLoginService } from 'src/app/Services/user-login.service';
-import * as XLSX from 'xlsx';
 import { OpdSlipComponent } from '../opd-slip/opd-slip.component';
 
 @Component({
@@ -16,7 +21,27 @@ import { OpdSlipComponent } from '../opd-slip/opd-slip.component';
   templateUrl: './opd-list.component.html',
   styleUrls: ['./opd-list.component.css']
 })
-export class OpdListComponent implements OnInit, AfterViewInit {
+export class OpdListComponent implements OnInit, OnDestroy {
+  @Output() create = new EventEmitter<void>();
+
+  readonly pagination = new ScrollPagination();
+  readonly trackRecord = trackRecord;
+  private loadVersion = 0;
+  loading = false;
+  loadFailed = false;
+  deletingId: number | null = null;
+  loadMore(): void { this.pagination.loadMore(this.total); this.updateDisplayedOpds(); }
+
+  private refreshSubscription?: Subscription;
+  ngOnDestroy(): void { this.refreshSubscription?.unsubscribe(); this.loadVersion++; }
+  async viewOpd(id: number): Promise<void> {
+    try {
+      const record = await firstValueFrom(this.opdService.getOpdDetails(id));
+      if (!record) throw new Error('Record not found.');
+      this.dialog.open(RecordDetailsComponent, { data: { title: 'OPD visit', record } });
+    } catch (error) { this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Unable to load record.' }); }
+  }
+
 
   opd: Opd[] = [];
   filteredOpds: Opd[] = [];
@@ -24,16 +49,12 @@ export class OpdListComponent implements OnInit, AfterViewInit {
   dataSource: OpdDataService = new OpdDataService(this.opdService);
   displayedColumns: string[] = [];
   tempOpd!: Opd;
-  displayLimit: number = 20;
-  readonly pageStep: number = 10;
   // 🔍 Search fields
   searchPatientId: string = '';
   searchName: string = '';
   searchPhone: string = '';
   searchCity: string = '';
   dateFilter: string = 'all';
-
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
   total: number = 0;
   isSuperAdmin: boolean = false;
 
@@ -46,7 +67,7 @@ export class OpdListComponent implements OnInit, AfterViewInit {
     private indexDb: SupabaseDataService,
     private userLogin: UserLoginService
   ) {
-    this.notifyUpdate.notify.subscribe(() => {
+    this.refreshSubscription = this.notifyUpdate.notify.subscribe(() => {
       this.dataActions('', 'asc', 0, 5);
     });
   }
@@ -55,172 +76,41 @@ export class OpdListComponent implements OnInit, AfterViewInit {
     this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
       this.displayedColumns = ['patientId', 'patientName', 'dateTime', 'sex', 'drName', 'followUp', 'createdAt'];
-      if (this.isSuperAdmin) {
-        this.displayedColumns.push('action');
-      }
+      this.displayedColumns.push('action');
       this.dataActions('', 'asc', 0, 5);
-    });
+    }).catch(() => { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: 'Account permissions could not be loaded. Please refresh the page.' }); });
   }
-
-  ngAfterViewInit(): void {
-    this.paginator?.page.subscribe(() => {
-      this.dataActions('', 'asc', this.paginator.pageIndex, this.paginator.pageSize);
-    });
-  }
-
-  onTableScroll(event: Event): void {
-    const el = event.target as HTMLElement;
-    if (!el) return;
-    const threshold = 120;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
-      if (this.displayLimit < this.filteredOpds.length) {
-        this.displayLimit = Math.min(this.displayLimit + this.pageStep, this.filteredOpds.length);
-        this.updateDisplayedOpds();
-      }
-    }
-  }
-
   private updateDisplayedOpds(): void {
-    this.displayedOpds = this.filteredOpds.slice(0, this.displayLimit);
+    this.total = this.filteredOpds.length;
+    this.displayedOpds = this.pagination.slice(this.filteredOpds);
     this.dataSource.updatePatients(this.displayedOpds);
   }
 
-  dataActions(a: string, b: string, c: number, d: number): void {
-    this.dataSource.loadPatient(a, b, c, d);
-    if (this.paginator) {
-      this.paginator.pageIndex = c;
-      this.paginator.pageSize = d;
-    }
-    this.total = this.opdService.total;
-
-    // keep local copy for filtering
-    this.opdService.getAllOpds().subscribe((opds) => {
-      this.opd = opds;
-      this.filteredOpds = opds;
-      this.onDateFilter();
+  dataActions(_filter: string, _sort: string, _page: number, _size: number): void {
+    const version = ++this.loadVersion;
+    this.loading = true; this.loadFailed = false;
+    this.opdService.getAllOpds().subscribe({
+      next: records => { if (version !== this.loadVersion) return; this.opd = records; this.onDateFilter(false); this.loading = false; },
+      error: error => { if (version === this.loadVersion) { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Unable to load records.' }); } }
     });
   }
 
-  // 🔍 Search
-  onDateFilter() {
-    let tempList = this.opd;
-    const now = new Date();
-
-    switch (this.dateFilter) {
-      case 'today':
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        tempList = tempList.filter(o => {
-          const createdDate = new Date(o.createdAt);
-          return createdDate >= today;
-        });
-        break;
-      case 'yesterday':
-        const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-        const yesterdayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        tempList = tempList.filter(o => {
-          const createdDate = new Date(o.createdAt);
-          return createdDate >= yesterdayStart && createdDate < yesterdayEnd;
-        });
-        break;
-      case 'seven':
-        const sevenDaysAgo = new Date(now);
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        tempList = tempList.filter(o => new Date(o.createdAt) >= sevenDaysAgo);
-        break;
-      case 'thirty':
-        const thirtyDaysAgo = new Date(now);
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        tempList = tempList.filter(o => new Date(o.createdAt) >= thirtyDaysAgo);
-        break;
-    }
-
-    // Apply search filters
-    this.filteredOpds = tempList.filter(o => {
-      const matchesId = this.searchPatientId ? o.patientId.toString().includes(this.searchPatientId) : true;
-      const matchesName = this.searchName ? o.patientName.toLowerCase().includes(this.searchName.toLowerCase()) : true;
-      const matchesPhone = this.searchPhone ? (o.phone || '').toString().includes(this.searchPhone) : true;
-      const matchesCity = this.searchCity ? (o.address || '').toLowerCase().includes(this.searchCity.toLowerCase()) : true;
-      return matchesId && matchesName && matchesPhone && matchesCity;
-    });
-
-    this.displayLimit = 20;
+  onDateFilter(reset = true): void {
+    this.filteredOpds = this.opd.filter(record => matchesDateFilter(record.createdAt, this.dateFilter) && includesText(record.patientId, this.searchPatientId) && includesText(record.patientName, this.searchName) && includesText(record.phone, this.searchPhone) && includesText(record.address, this.searchCity));
+    if (reset) this.pagination.reset();
     this.updateDisplayedOpds();
   }
 
-  onSearch() {
-    this.onDateFilter();
-  }
+  onSearch(): void { this.onDateFilter(); }
 
-  onClearSearch() {
-    this.searchPatientId = '';
-    this.searchName = '';
-    this.searchPhone = '';
-    this.searchCity = '';
-    this.dateFilter = 'all';
-    this.filteredOpds = this.opd;
-    this.displayLimit = 20;
-    this.updateDisplayedOpds();
-  }
+  onClearSearch(): void { this.searchPatientId = ''; this.searchName = ''; this.searchPhone = ''; this.searchCity = ''; this.dateFilter = 'all'; this.onDateFilter(); }
 
-  // 📤 Export
-  exportToExcel() {
-    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(this.filteredOpds.length ? this.filteredOpds : this.opd);
-    const workbook: XLSX.WorkBook = { Sheets: { 'OPDs': worksheet }, SheetNames: ['OPDs'] };
-    XLSX.writeFile(workbook, 'opds.xlsx');
-  }
+  exportToExcel(): void { exportRecords(this.filteredOpds, 'opd-visits.xlsx'); }
 
-  // 📥 Import
-  async importFromExcel(event: any) {
-    const target: DataTransfer = <DataTransfer>(event.target);
-    if (target.files.length !== 1) return;
-
-    const reader: FileReader = new FileReader();
-    reader.onload = async (e: any) => {
-      const bstr: string = e.target.result;
-      const wb: XLSX.WorkBook = XLSX.read(bstr, { type: 'binary' });
-      const wsname: string = wb.SheetNames[0];
-      const ws: XLSX.WorkSheet = wb.Sheets[wsname];
-      const data = XLSX.utils.sheet_to_json(ws);
-
-      // get stored OPDs
-      const storedOpds = await this.indexDb.getItem<any[]>('opdDetails') || [];
-      let added = 0;
-
-      for (const record of data) {
-        const rec: any = record;
-        const opdDetail: any = {
-          patientId: Number(rec.patientId) || await this.indexDb.allocateId('opdDetails'),
-          patientName: rec.patientName || rec.name || '',
-          date: rec.date || '',
-          time: rec.time || '',
-          sex: rec.sex || '',
-          phone: rec.phone || '',
-          address: rec.address || '',
-          drName: rec.drName || '',
-          followUp: rec.followUp || ''
-        };
-
-        if (!storedOpds.some(o => o.patientId == opdDetail.patientId)) {
-          storedOpds.push(opdDetail);
-          added++;
-        }
-      }
-
-      if (added > 0) {
-        await this.indexDb.setItem('opdDetails', storedOpds);
-        this.notifyUpdate.notify.next(true);
-      }
-
-      this.opd = storedOpds;
-      this.filteredOpds = this.opd;
-      this.dataSource.updatePatients(this.filteredOpds);
-    };
-    reader.readAsBinaryString(target.files[0]);
-  }
 
   // ✏️ Edit
   editOpd(id: number): void {
-    this.opdService.getOpdDetails(id).subscribe((data: Opd) => {
+    this.opdService.getOpdDetails(id).subscribe({ next: (data: Opd) => {
       if (data) {
         this.tempOpd = data;
         const dialogData = { ...data, oldPatientId: data.patientId } as any;
@@ -233,7 +123,7 @@ export class OpdListComponent implements OnInit, AfterViewInit {
         dialogRef.afterClosed().subscribe(async (updatedOpd: any) => {
           if (updatedOpd) {
             const res = await this.opdService.updateOpd(updatedOpd);
-            const msg = res ? "OPD Updated Successfully" : "Something went wrong";
+            const msg = res ? "OPD visit updated successfully." : 'The record could not be updated. Please try again.';
             const type = res ? "success" : "error";
             this.notifyUpdate.notify.next(true);
             this.notifyUpdate.alertNotify.next({ msg, type });
@@ -242,60 +132,40 @@ export class OpdListComponent implements OnInit, AfterViewInit {
       } else {
         this.notifyUpdate.alertNotify.next({ msg: "OPD not found", type: "error" });
       }
-    });
+    }, error: () => this.notifyUpdate.alertNotify.next({ type: 'error', msg: 'OPD visit details could not be loaded. Refresh the list and try again.' }) });
   }
 
   // 🗑️ Delete
   async deleteOpd(id: number): Promise<void> {
-    const confirmed = confirm('Are you sure you want to delete this OPD record?');
-    if (!confirmed) return;
-
-    const result = await this.opdService.deleteOpd(id);
-    let msg = 'Failed to delete OPD.';
-    let type = 'error';
-
-    if (result) {
-      msg = 'OPD deleted successfully.';
-      type = 'success';
+    if (this.deletingId !== null || !window.confirm('Delete this opd visit? This action cannot be undone.')) return;
+    this.deletingId = id;
+    try {
+      const saved = await this.opdService.deleteOpd(id);
+      if (!saved) throw new Error('OPD visit could not be deleted. Refresh the list and try again.');
       this.notifyUpdate.notify.next(true);
-    }
-
-    this.notifyUpdate.alertNotify.next({ msg, type });
+      this.notifyUpdate.alertNotify.next({ type: 'success', msg: 'OPD visit deleted successfully.' });
+    } catch (error) { this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'OPD visit could not be deleted. Please try again.' }); }
+    finally { this.deletingId = null; }
   }
 
 
-  
-// inside component class
-// openPrintSlips() {
-//   // use filtered list if user has searched, otherwise full current list
-//   const opdsToPrint = this.filteredOpds && this.filteredOpds.length ? this.filteredOpds : this.opd;
+  async printSlip(opd: Opd): Promise<void> {
+    try {
+      const record = await firstValueFrom(this.opdService.getOpdDetails(opd.patientId));
+      if (!record) throw new Error('OPD record not found.');
+      this.openThermalPreview([record]);
+    } catch (error) { this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Unable to load the OPD slip.' }); }
+  }
 
-//   if (!opdsToPrint || opdsToPrint.length === 0) {
-//     this.notifyUpdate.alertNotify.next({ msg: 'No OPD records to print', type: 'error' });
-//     return;
-//   }
+  printAllSlips(): void {
+    if (!this.filteredOpds.length) {
+      this.notifyUpdate.alertNotify.next({ type: 'error', msg: 'No matching OPD records to print.' });
+      return;
+    }
+    this.openThermalPreview(this.filteredOpds);
+  }
 
-//   this.dialog.open(OpdSlipComponent, {
-//     width: '950px',
-//     maxHeight: '95vh',
-//     data: { opds: opdsToPrint, centerName: 'Haq Medical Center' }
-//   });
-// }
-
-
-// Print one slip
-printSlip(opd: Opd) {
-  const dialogConfig = new MatDialogConfig();
-  dialogConfig.width = '800px';
-  dialogConfig.data = { opds: [opd] };
-  this.dialog.open(OpdSlipComponent, dialogConfig);
-}
-
-// Print all slips (filtered or all)
-printAllSlips() {
-  const dialogConfig = new MatDialogConfig();
-  dialogConfig.width = '800px';
-  dialogConfig.data = { opds: this.filteredOpds.length ? this.filteredOpds : this.opd };
-  this.dialog.open(OpdSlipComponent, dialogConfig);
-}
+  private openThermalPreview(opds: readonly Opd[]): void {
+    this.dialog.open(OpdSlipComponent, { data: { opds: opds.map(opd => ({ ...opd })) }, width: '480px', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
+  }
 }
