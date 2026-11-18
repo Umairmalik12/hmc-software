@@ -66,6 +66,15 @@ To get more help on the Angular CLI use `ng help` or go check out the [Angular C
 
 ## Supabase setup (shared database and authentication)
 
+If saving a catalogue entry reports **"Record ID ... was not found in ..."**, run
+[`supabase/migrations/20261119_record_upsert_fix.sql`](./supabase/migrations/20261119_record_upsert_fix.sql)
+in Supabase SQL Editor. Older database functions treat `p_updates` as existing rows
+only. This migration upgrades that shared function to insert missing records as
+well as update existing ones, while preserving row-level security and existing data.
+The application also sends single-record saves through the compatible insert/upsert
+branch, so new rows and edits to unseeded starter options work on older deployments.
+The catalogue-defaults migration seeds data; it does not replace the CRUD function.
+
 To apply **all database updates in one SQL Editor run**, execute the complete
 [`supabase/schema.sql`](./supabase/schema.sql). It includes the shared tables,
 CRUD/ID/token functions, permissions, token-name editing and all four catalogue

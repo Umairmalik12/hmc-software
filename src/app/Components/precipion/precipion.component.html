@@ -33,7 +33,7 @@
           </tbody>
         </table>
         <section class="rx-instructions"><div class="rx-section-title">Instructions</div><p>{{ instructions }}</p></section>
-        <div class="rx-signature"><div><strong>Doctor’s name and signature</strong>Dr. Tanveer ul Haq<small>Senior Consultant Urologist</small></div><div><strong>Date &amp; time</strong>{{ fieldValue(fields[1]) }} · {{ fieldValue(fields[2]) }}</div></div>
+        <div class="rx-signature"><div><strong>Doctor’s name and signature</strong>{{ doctor.name }}<small>{{ doctor.designation }}</small></div><div><strong>Date &amp; time</strong>{{ fieldValue(fields[1]) }} · {{ fieldValue(fields[2]) }}</div></div>
         <div class="rx-footer">Haq Medical Center · Multan Institute of Kidney Diseases</div>
       </article>
       <p class="rx-editor-help">Patient name is required to save. All other patient details are optional.</p>

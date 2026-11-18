@@ -110,6 +110,17 @@ describe('SupabaseDataService', () => {
     });
   });
 
+  it('routes both new and existing single-record saves through the conflict-safe insert branch', async () => {
+    const record = { id: '5', name: 'New medicine', active: true };
+    await service.upsertRecord('prescriptionMedicineCatalog', '5', record, 4);
+    await service.upsertRecord('prescriptionMedicineCatalog', '5', { ...record, name: 'Edited medicine' }, 4);
+    expect(client.rpc.calls.count()).toBe(2);
+    for (const [, args] of client.rpc.calls.allArgs()) {
+      expect(args.p_inserts.length).toBe(1); expect(args.p_inserts[0].record_id).toBe('5');
+      expect(args.p_updates).toEqual([]); expect(args.p_delete_ids).toEqual([]);
+    }
+  });
+
   it('uses the database token generator and maps its saved row', async () => {
     client.rpc.and.returnValue(Promise.resolve({
       data: {

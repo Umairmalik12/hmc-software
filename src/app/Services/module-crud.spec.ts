@@ -1,4 +1,5 @@
 import { firstValueFrom } from 'rxjs';
+import { legacyRpcDb } from '../testing/legacy-rpc-db';
 import { memoryDb } from '../testing/memory-db';
 import { PatientService } from './patient.service';
 import { OpdService } from './opd.service';
@@ -15,8 +16,10 @@ describe('Core module CRUD persistence', () => {
     { service: MedicineService, collection: 'medicineDetails', id: 'medicineId', name: 'patientName', add: 'addNewMedicine', read: 'getMedicineDetails', all: 'getAllMedicine', update: 'updateMedicine', remove: 'deleteMedicine' },
   ];
   for (const module of modules) {
-    it(`creates, reads, updates and deletes ${module.collection} without overwriting another record`, async () => {
-      const { db, collections } = memoryDb();
+    for (const [backend, database] of [['memory', memoryDb], ['legacy RPC', legacyRpcDb]] as const) {
+    it(`creates, reads, updates and deletes ${module.collection} via ${backend} without overwriting another record`, async () => {
+      const { db, collections } = database();
+      if (!jasmine.isSpy(db.setItem)) spyOn(db, 'setItem').and.callThrough();
       const other = { [module.id]: 900, [module.name]: 'Another patient', createdAt: '2020-01-01T00:00:00Z', medicines: [] };
       collections.set(module.collection, new Map([['900', other]]));
       const service: any = new module.service(db);
@@ -37,6 +40,7 @@ describe('Core module CRUD persistence', () => {
       expect(collections.get(module.collection)!.get('900')).toEqual(other);
       expect(db.setItem).not.toHaveBeenCalled();
     });
+    }
 
     it(`reports failed reads for ${module.collection} rather than leaving its observable pending`, async () => {
       const { db } = memoryDb();

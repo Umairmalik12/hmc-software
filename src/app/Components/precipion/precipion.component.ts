@@ -6,7 +6,7 @@ import { Subscription } from 'rxjs';
 import { PrescriptionRecord, copyPrescription, emptyPrescription } from 'src/app/Models/prescription.model';
 import { PrescriptionService } from 'src/app/Services/prescription.service';
 import { MedicineCatalogComponent } from './medicine-catalog/medicine-catalog.component';
-import { PRESCRIPTION_DOCUMENT_CSS, PRESCRIPTION_FIELDS, PRESCRIPTION_INSTRUCTIONS,
+import { PRESCRIPTION_DOCUMENT_CSS, PRESCRIPTION_FIELDS, PRESCRIPTION_INSTRUCTIONS, PRESCRIPTION_DOCTOR,
   PrescriptionField, prescriptionDateTime, prescriptionHeader } from './prescription-document';
 import { PrescriptionPreviewComponent } from './prescription-preview.component';
 import { printPrescription } from './prescription-print';
@@ -22,6 +22,7 @@ export class PreciptionComponent implements OnInit, OnDestroy {
   record = emptyPrescription();
   readonly fields = PRESCRIPTION_FIELDS;
   readonly instructions = PRESCRIPTION_INSTRUCTIONS;
+  readonly doctor = PRESCRIPTION_DOCTOR;
   readonly headerHtml = prescriptionHeader(document.baseURI);
   loading = true;
   saving = false;

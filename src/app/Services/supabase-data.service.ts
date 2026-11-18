@@ -120,10 +120,13 @@ export class SupabaseDataService {
 
   async upsertRecord(collection: string, id: string | number, data: any, sortOrder = 0): Promise<void> {
     return this.loading.track('Saving record...', async () => {
+      // The RPC insert branch already uses INSERT ... ON CONFLICT DO UPDATE.
+      // Use that branch for upserts: older deployed functions reject an update
+      // when a new or built-in catalogue entry has not been stored yet.
       const { error } = await this.client.rpc('apply_hmc_record_changes', {
         p_collection: collection,
-        p_inserts: [],
-        p_updates: [{ record_id: String(id), data, sort_order: sortOrder }],
+        p_inserts: [{ record_id: String(id), data, sort_order: sortOrder }],
+        p_updates: [],
         p_delete_ids: [],
       });
       this.throwIfError(error);

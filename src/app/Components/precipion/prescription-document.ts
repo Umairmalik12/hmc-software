@@ -18,6 +18,18 @@ export const PRESCRIPTION_FIELDS: PrescriptionField[] = [
 
 export const PRESCRIPTION_INSTRUCTIONS = 'Take medicines as prescribed. Complete the full course and return for follow-up in 7 days. Report side effects immediately.';
 
+// Shared by the editor, saved-record preview and printed prescription.
+export const PRESCRIPTION_DOCTOR = {
+  title: 'Associate Professor',
+  name: 'Dr. Tanveer-ul-Haq',
+  qualifications: 'M.B.B.S., F.C.P.S.',
+  designation: 'Senior Consultant',
+  previousRole: 'Ex-Head of Urology Department',
+  institution: 'Multan Institute of Kidney Diseases',
+  phcRegistration: '26970',
+  phone: '0313 6076780',
+} as const;
+
 export const PRESCRIPTION_DOCUMENT_CSS = `
 .rx-sheet{width:190mm;max-width:100%;margin:0 auto;background:#fff;color:#202b43;font:12px/1.5 Arial,sans-serif;box-sizing:border-box}
 .rx-sheet *{box-sizing:border-box}
@@ -69,13 +81,14 @@ export function prescriptionDateTime(issuedAt: string, part: 'date' | 'time'): s
 
 export function prescriptionHeader(baseUrl: string): string {
   const logo = escapeHtml(new URL('assets/images/urocare-logo.svg', baseUrl).href);
+  const doctor = PRESCRIPTION_DOCTOR;
   return `<header class="rx-masthead">
-    <div class="rx-doctor"><strong>Dr. Tanveer ul Haq</strong><span>M.B.B.S, F.C.P.S (Urology)</span><span>Senior Consultant – Urology</span><span>Multan Institute of Kidney Diseases</span></div>
+    <div class="rx-doctor"><span>${escapeHtml(doctor.title)}</span><strong>${escapeHtml(doctor.name)}</strong><span>${escapeHtml(doctor.qualifications)}</span><span>${escapeHtml(doctor.designation)}</span><span>${escapeHtml(doctor.previousRole)}</span><span>${escapeHtml(doctor.institution)}</span></div>
     <img class="rx-logo" src="${logo}" alt="UROCARE kidney emblem" width="82" height="82">
     <div class="rx-clinic"><div class="rx-bismillah" lang="ar">بسم الله الرحمن الرحيم</div><strong>Haq Medical Center</strong><span>Patient care &amp; urology</span></div>
   </header><h1 class="rx-title">Prescription</h1>
   <div class="rx-section-title">Doctor’s information</div>
-  <div class="rx-doctor-details"><div><b>PHC Reg #:</b> 290710</div><div><b>Phone:</b> 0300-1234567</div></div>`;
+  <div class="rx-doctor-details"><div><b>PHC Reg #:</b> ${escapeHtml(doctor.phcRegistration)}</div><div><b>Phone:</b> ${escapeHtml(doctor.phone)}</div></div>`;
 }
 
 /** The preview and print use this same escaped, read-only document. */
@@ -91,7 +104,7 @@ export function buildPrescriptionDocument(record: PrescriptionRecord, baseUrl: s
     <div class="rx-section-title">Patient’s information</div><div class="rx-patient-grid">${fields}</div>
     <div class="rx-section-title">Prescription (Rx)</div><table class="rx-medicines"><thead><tr><th>Medicine / dose</th><th>Morning</th><th>Afternoon</th><th>Evening</th></tr></thead><tbody>${medicines}${blanks}</tbody></table>
     <section class="rx-instructions"><div class="rx-section-title">Instructions</div><p>${PRESCRIPTION_INSTRUCTIONS}</p></section>
-    <div class="rx-signature"><div><strong>Doctor’s name and signature</strong>Dr. Tanveer ul Haq<small>Senior Consultant Urologist</small></div><div><strong>Date &amp; time</strong>${escapeHtml(prescriptionDateTime(record.issuedAt, 'date'))} · ${escapeHtml(prescriptionDateTime(record.issuedAt, 'time'))}</div></div>
+    <div class="rx-signature"><div><strong>Doctor’s name and signature</strong>${escapeHtml(PRESCRIPTION_DOCTOR.name)}<small>${escapeHtml(PRESCRIPTION_DOCTOR.designation)}</small></div><div><strong>Date &amp; time</strong>${escapeHtml(prescriptionDateTime(record.issuedAt, 'date'))} · ${escapeHtml(prescriptionDateTime(record.issuedAt, 'time'))}</div></div>
     <div class="rx-footer">Haq Medical Center · Multan Institute of Kidney Diseases</div>
   </article>`;
 }
