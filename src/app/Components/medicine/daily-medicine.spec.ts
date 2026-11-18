@@ -15,17 +15,21 @@ describe('Daily medicine record, room and thermal receipt', () => {
 
   it('creates, edits and deletes the medicine record with its selected room and original timestamp', async () => {
     const { db } = memoryDb(); const service = new MedicineService(db); const close = jasmine.createSpy('close');
+    const feedback = new NotifyUpdateService(); const messages: Array<{ msg: string; type: string }> = [];
+    feedback.alertNotify.subscribe(message => messages.push(message));
     const dialog = { close } as unknown as MatDialogRef<MedicineEditComponent>;
-    const add = new MedicineEditComponent(new FormBuilder(), service, dialog, null, new NotifyUpdateService(), {} as MatDialog); add.ngOnInit();
+    const add = new MedicineEditComponent(new FormBuilder(), service, dialog, null, feedback, {} as MatDialog); add.ngOnInit();
     add.medicineForm.patchValue({ patientName: 'Ali', roomNo: 'GW Bed 1' }); add.medicines.at(0).patchValue({ medicineName: 'Medicine A', quantity: 2 });
     await add.onSubmit(); const saved: Medicine = close.calls.mostRecent().args[0];
     expect(saved.roomNo).toBe('GW Bed 1');
-    const edit = new MedicineEditComponent(new FormBuilder(), service, dialog, { medicines: [saved] }, new NotifyUpdateService(), {} as MatDialog); edit.ngOnInit();
+    const edit = new MedicineEditComponent(new FormBuilder(), service, dialog, { medicines: [saved] }, feedback, {} as MatDialog); edit.ngOnInit();
     edit.medicineForm.patchValue({ roomNo: 'Room 2' }); edit.medicines.at(0).get('quantity')!.setValue(4); await edit.onSubmit();
     const updated = (await firstValueFrom(service.getMedicineDetails(saved.medicineId)))!;
     expect(updated.roomNo).toBe('Room 2'); expect(updated.createdAt).toBe(saved.createdAt); expect(updated.medicines[0].quantity).toBe(4);
     expect(await service.deleteMedicine(saved.medicineId)).toBeTrue(); expect(await firstValueFrom(service.getMedicineDetails(saved.medicineId))).toBeUndefined();
     expect(db.setItem).not.toHaveBeenCalled();
+    expect(messages.map(message => message.msg)).toEqual(['Daily medicine record saved successfully.', 'Daily medicine record updated successfully.']);
+    expect(messages.every(message => message.type === 'success')).toBeTrue(); feedback.ngOnDestroy();
   });
 
   it('prints only the selected record, without combining other records for the same patient name', async () => {

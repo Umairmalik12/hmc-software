@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterTestingModule } from '@angular/router/testing';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
 import { MatInputModule } from '@angular/material/input';
@@ -12,7 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import { of } from 'rxjs';
+import { EMPTY, of } from 'rxjs';
 import { PatientListComponent } from '../patient/patient-list/patient-list.component';
 import { OpdListComponent } from '../opdslip/opd-list/opd-list.component';
 import { InpatientListComponent } from '../inpatient/inpatient-list/inpatient-list.component';
@@ -70,6 +70,7 @@ describe('Preview actions in every record list', () => {
       getPatientDetails: () => of(fullRecord), getOpdDetails: () => of(fullRecord), getInpatientDetails: () => of(fullRecord), getMedicineDetails: () => of(fullRecord), getLabPatientDetails: () => of(fullRecord),
       getAll: async () => [record] };
     dialog = jasmine.createSpyObj<MatDialog>('dialog', ['open']);
+    dialog.open.and.returnValue({ beforeClosed: () => EMPTY } as unknown as MatDialogRef<unknown>);
     await TestBed.configureTestingModule({
       imports: [FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatDialogModule,
         MatTableModule, MatCardModule, MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, MatPaginatorModule],
