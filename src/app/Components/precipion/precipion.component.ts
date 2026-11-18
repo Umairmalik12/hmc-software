@@ -107,8 +107,10 @@ export class PreciptionComponent implements OnInit, OnDestroy {
     }
     this.saving = true;
     try {
+      const editing = !!this.record.id;
       this.record = await this.prescriptions.save(this.record);
-      this.successMessage = 'Prescription saved successfully.'; if (this.successMessage) this.feedback.alertNotify.next({ msg: this.successMessage, type: 'success' });
+      this.successMessage = editing ? 'Prescription updated successfully.' : 'Prescription saved successfully.';
+      this.feedback.success(this.successMessage, { route: '/prescriptions' });
       await this.router.navigate(['/prescriptions']);
       return true;
     } catch (error) {
@@ -126,6 +128,7 @@ export class PreciptionComponent implements OnInit, OnDestroy {
 
   print(): void {
     if (!printPrescription(this.snapshot())) { this.storageError = 'Allow pop-ups for this site to print the prescription.'; if (this.storageError) this.feedback.alertNotify.next({ msg: this.storageError, type: 'error' }); }
+    else this.feedback.info('Prescription prepared for printing.', { title: 'Print requested', route: '/prescriptions' });
   }
 
   private snapshot(): PrescriptionRecord {

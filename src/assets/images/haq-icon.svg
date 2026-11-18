@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">HAQ Medical Center</title>
+  <rect width="64" height="64" rx="13" fill="#147d73"/>
+  <rect x="17" y="8" width="30" height="29" rx="4" fill="#fff"/>
+  <path d="M29 13h6v7h7v6h-7v7h-6v-7h-7v-6h7z" fill="#147d73"/>
+  <text x="32" y="55" text-anchor="middle" fill="#fff" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="800" letter-spacing="1">HAQ</text>
+</svg>

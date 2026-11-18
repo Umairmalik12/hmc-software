@@ -1,4 +1,5 @@
 import { formatDate } from '@angular/common';
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -19,7 +20,8 @@ export class OpdEditComponent {
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<OpdEditComponent>,
-    @Inject(MAT_DIALOG_DATA) opdDetails: Opd & {oldPatientId?: number}
+    @Inject(MAT_DIALOG_DATA) opdDetails: Opd & {oldPatientId?: number},
+    private feedback: NotifyUpdateService = new NotifyUpdateService()
   ) {
 
     this.opdDetails = { ...opdDetails };
@@ -52,6 +54,7 @@ export class OpdEditComponent {
   onSubmit() {
     if (this.opdForm.invalid) {
       this.opdForm.markAllAsTouched();
+      this.feedback.warning('Complete the highlighted OPD fields before saving.');
       return;
     }
     const value = this.opdForm.getRawValue();

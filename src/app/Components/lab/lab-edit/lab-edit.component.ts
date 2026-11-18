@@ -1,4 +1,5 @@
 import { Component, Inject } from '@angular/core';
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { formatDate } from '@angular/common';
@@ -37,7 +38,8 @@ export class LabEditComponent {
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<LabEditComponent>,
-    @Inject(MAT_DIALOG_DATA)  labTestDetails: any
+    @Inject(MAT_DIALOG_DATA)  labTestDetails: any,
+    private feedback: NotifyUpdateService = new NotifyUpdateService()
   ) {
     this.labTestDetails = { ...labTestDetails };
     this.edit = !!labTestDetails?.patientId; // Check if editing
@@ -60,6 +62,7 @@ export class LabEditComponent {
   onSubmit() {
     if (this.labPatientForm.invalid) {
       this.labPatientForm.markAllAsTouched();
+      this.feedback.warning('Complete the highlighted laboratory fields before saving.');
       return;
     }
     this.dialogRef.close(this.getFormattedLabPatientData());

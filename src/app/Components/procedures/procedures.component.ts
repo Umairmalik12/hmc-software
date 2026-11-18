@@ -53,7 +53,7 @@ export class ProceduresComponent implements OnInit, OnDestroy {
   cancel(): void { this.editingId = ''; this.name.reset(''); }
   async save(): Promise<void> {
     if (this.saving) return;
-    if (this.name.invalid) { this.name.markAsTouched(); return; }
+    if (this.name.invalid) { this.name.markAsTouched(); this.feedback.warning('Enter a procedure name before saving.'); return; }
     this.saving = true;
     try { await this.procedures.save(this.name.value, this.editingId || undefined); this.cancel(); this.feedback.success('Procedure saved successfully.'); await this.load(); }
     catch (error) { this.error = error instanceof Error ? error.message : 'Unable to save procedure.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }
@@ -66,5 +66,5 @@ export class ProceduresComponent implements OnInit, OnDestroy {
     catch (error) { this.error = error instanceof Error ? error.message : 'Unable to delete procedure.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }
     finally { this.saving = false; this.deletingId = ''; }
   }
-  export(): void { exportRecords(this.filtered.map(option => ({ Procedure: option.name })), 'procedures.xlsx', 'Procedures'); }
+  export(): void { exportRecords(this.filtered.map(option => ({ Procedure: option.name })), 'procedures.xlsx', 'Procedures', this.feedback); }
 }

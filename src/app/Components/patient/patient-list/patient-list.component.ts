@@ -124,7 +124,7 @@ export class PatientListComponent implements OnInit, OnDestroy {
 
   onClearSearch(): void { this.searchPatientId = ''; this.searchName = ''; this.searchPhone = ''; this.searchProcedure = ''; this.searchCity = ''; this.dateFilter = 'all'; this.onDateFilter(); }
 
-  exportToExcel(): void { exportRecords(this.filteredPatients, 'operation-patients.xlsx'); }
+  exportToExcel(): void { exportRecords(this.filteredPatients, 'operation-patients.xlsx', 'Records', this.notifyUpdate); }
 
 
   // ✏️ Edit

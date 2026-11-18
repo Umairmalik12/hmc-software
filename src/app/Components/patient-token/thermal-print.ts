@@ -1,9 +1,10 @@
 import { prepareThermalReceipt, setThermalPaperWidth, THERMAL_RECEIPT_CSS } from 'src/app/Shared/thermal-receipt';
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 
 /** Print the same receipt geometry used by thermal previews, with feed after the last line. */
-export function printThermal(html: string, widthMm: 58 | 80, receiptId = 'patient-token-slip-print'): void {
+export function printThermal(html: string, widthMm: 58 | 80, receiptId = 'patient-token-slip-print', feedback?: Pick<NotifyUpdateService, 'error' | 'info'>): boolean {
   const win = window.open('', '_blank', 'width=420,height=640,menubar=no,toolbar=no,location=no,status=no');
-  if (!win) { alert('Please allow pop-ups for this site to print the receipt.'); return; }
+  if (!win) { feedback?.error('Allow pop-ups for this site to print the receipt.'); return false; }
   const baseCss = `@page{margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     html,body{width:${widthMm}mm;margin:0;padding:0;background:#fff;color:#000;overflow:visible}
     #${receiptId}{display:block!important;position:static!important}`;
@@ -33,4 +34,6 @@ export function printThermal(html: string, widthMm: 58 | 80, receiptId = 'patien
   };
   if (win.document.readyState === 'complete') prepare();
   else win.addEventListener('load', prepare, { once: true });
+  feedback?.info('Receipt prepared. Complete printing in the printer dialog.', { title: 'Print requested' });
+  return true;
 }

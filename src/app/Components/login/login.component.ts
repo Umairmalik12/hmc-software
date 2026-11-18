@@ -2,6 +2,7 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserLoginService } from 'src/app/Services/user-login.service';
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 
 @Component({
   selector: 'app-login',
@@ -20,7 +21,8 @@ export class LoginComponent implements OnInit {
 
   constructor(
     private route: Router,
-    private logIn: UserLoginService
+    private logIn: UserLoginService,
+    private feedback: NotifyUpdateService = new NotifyUpdateService()
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -30,6 +32,7 @@ export class LoginComponent implements OnInit {
       }
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Unable to connect to Supabase.';
+      this.feedback.error(this.errorMessage);
     } finally { this.restoring = false; }
   }
 
@@ -43,9 +46,11 @@ export class LoginComponent implements OnInit {
       try {
         if (!await this.logIn.SignIn(user, pass)) throw new Error('Sign-in could not be completed. Please try again.');
         await this.route.navigate(['home']);
+        this.feedback.success('Signed in successfully.', { title: 'Welcome back', route: '/patient' });
       } catch (error) {
         this.errorMessage = error instanceof Error ? error.message : 'Unable to sign in.';
+        this.feedback.error(this.errorMessage);
       } finally { this.signingIn = false; }
-    }
+    } else { this.form.form.markAllAsTouched(); this.feedback.warning('Enter a valid email address and password before signing in.'); }
   }
 }

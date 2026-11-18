@@ -1,5 +1,5 @@
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
-import { ChangeDetectorRef, Component, Inject, OnDestroy, OnInit, Optional } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { SupabaseDataService, PatientTokenSlip } from 'src/app/Services/supabase-data.service';
 import { printThermal } from './thermal-print';
@@ -47,7 +47,7 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
   private clockTimer: ReturnType<typeof setInterval> | undefined;
   private realtimeSubscription?: Subscription;
 
-  constructor(private indexedDb: SupabaseDataService, _changeDetector: ChangeDetectorRef, private feedback: NotifyUpdateService = new NotifyUpdateService(), @Optional() @Inject(MatDialog) private dialog: MatDialog | null = null) {}
+  constructor(private indexedDb: SupabaseDataService, private dialog: MatDialog, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
 
   get todayTotal(): number {
     return this.slips.filter(slip => slip.date === this.today).length;
@@ -177,12 +177,17 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
 
   printSlip(slip: PatientTokenSlip): void {
     this.selectedSlip = slip;
-    this.printSelectedSlip();
+    this.previewSlip(slip);
   }
 
   previewSlip(slip: PatientTokenSlip): void {
-    this.detectPaperWidth();
-    this.dialog?.open(PatientTokenPreviewComponent, { data: { record: { ...slip }, paperWidth: this.paperWidth }, width: '480px', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
+    const preview = this.dialog.open(PatientTokenPreviewComponent, { data: { record: { ...slip }, paperWidth: this.paperWidth }, width: '480px', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
+    preview.beforeClosed().subscribe(() => this.changePaperWidth(preview.componentInstance.paperWidth));
+  }
+
+  changePaperWidth(width: 58 | 80): void {
+    this.paperWidth = width === 80 ? 80 : 58;
+    this.savePaperWidth();
   }
 
   editSlip(slip: PatientTokenSlip): void { this.editingSlipId = slip.id; this.editedPatientName = slip.customerName; }
@@ -205,7 +210,7 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
   }
   searchHistory(): void { this.pagination.reset(); this.updateHistory(); }
   exportToExcel(): void {
-    exportRecords(this.filteredSlips, 'patient-tokens.xlsx', 'Patient tokens');
+    exportRecords(this.filteredSlips, 'patient-tokens.xlsx', 'Patient tokens', this.feedback);
   }
 
   formatDate(date: string): string {
@@ -245,9 +250,8 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
 
   private printSelectedSlip(): void {
     if (!this.selectedSlip) return;
-    this.detectPaperWidth();
     this.savePaperWidth();
-    printThermal(buildPatientTokenReceipt(this.selectedSlip), this.paperWidth);
+    printThermal(buildPatientTokenReceipt(this.selectedSlip), this.paperWidth, 'patient-token-slip-print', this.feedback);
   }
 
   private savePaperWidth(): void {

@@ -105,7 +105,7 @@ export class OpdListComponent implements OnInit, OnDestroy {
 
   onClearSearch(): void { this.searchPatientId = ''; this.searchName = ''; this.searchPhone = ''; this.searchCity = ''; this.dateFilter = 'all'; this.onDateFilter(); }
 
-  exportToExcel(): void { exportRecords(this.filteredOpds, 'opd-visits.xlsx'); }
+  exportToExcel(): void { exportRecords(this.filteredOpds, 'opd-visits.xlsx', 'Records', this.notifyUpdate); }
 
 
   // ✏️ Edit

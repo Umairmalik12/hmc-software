@@ -33,6 +33,7 @@
       <button mat-icon-button (click)="isMobile ? (isMobileNavOpen = !isMobileNavOpen) : sidenav.toggle()" aria-label="Toggle navigation"><mat-icon>menu</mat-icon></button>
       <div class="toolbar-title">Haq Medical Center<span>Patient care, thoughtfully organized.</span></div>
       <div class="datetime"><mat-icon>calendar_today</mat-icon><span>{{ currentDateTime | date:'EEE, d MMM y' }}<small>{{ currentDateTime | date:'h:mm a' }}</small></span></div>
+      <app-notification-center class="toolbar-notifications"></app-notification-center>
       <div class="user-info"><span class="user-avatar"><mat-icon>person_outline</mat-icon></span><span>{{ userName }}<small>Care team</small></span></div>
     </mat-toolbar>
     <main class="content">

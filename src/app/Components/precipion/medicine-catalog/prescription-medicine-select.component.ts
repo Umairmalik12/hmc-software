@@ -1,3 +1,4 @@
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { Component, ElementRef, forwardRef, HostListener, Input, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { MatAutocomplete, MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
@@ -51,7 +52,7 @@ export class PrescriptionMedicineSelectComponent implements ControlValueAccessor
   private subscriptions = new Subscription();
   changed: (value: string) => void = () => {};
   touched: () => void = () => {};
-  constructor(private catalog: PrescriptionMedicineCatalogService, private dialog: MatDialog) {}
+  constructor(private catalog: PrescriptionMedicineCatalogService, private dialog: MatDialog, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
   get filtered(): PrescriptionMedicineOption[] { const query = this.showAll ? '' : this.value; return this.options.filter(option => matchesMedicineSearch(option.name, query)); }
   get canAdd(): boolean { return !this.loading && !this.error && !!this.value.trim() && this.value.trim().length <= 160 && this.filtered.length === 0; }
   trackOption(_index: number, option: PrescriptionMedicineOption): string { return option.id; }
@@ -86,7 +87,7 @@ export class PrescriptionMedicineSelectComponent implements ControlValueAccessor
   async load(): Promise<void> {
     const version = ++this.version; this.loading = true;
     try { const options = await this.catalog.getAll(); if (version === this.version) { this.options = options; this.error = false; } }
-    catch { if (version === this.version) this.error = true; }
+    catch { if (version === this.version) { this.error = true; this.feedback.error('Unable to load the medicine catalogue. Retry to refresh.'); } }
     finally { if (version === this.version) this.loading = false; }
   }
 }

@@ -34,10 +34,10 @@ export class MedicineOptionDialogComponent {
   cancel(): void { if (!this.saving) this.ref.close(); }
   async save(): Promise<void> {
     if (this.saving) return;
-    if (this.name.invalid) { this.name.markAsTouched(); return; }
-    if (this.strength.value === this.customValue && this.customStrength.invalid) { this.customStrength.markAsTouched(); return; }
+    if (this.name.invalid) { this.name.markAsTouched(); this.feedback.warning('Enter a valid medicine name before saving.'); return; }
+    if (this.strength.value === this.customValue && this.customStrength.invalid) { this.customStrength.markAsTouched(); this.feedback.warning('Enter a valid medicine strength before saving.'); return; }
     this.saving = true; this.error = ''; this.ref.disableClose = true;
-    try { const saved = await this.catalog.save(this.name.value, this.data.id, this.strength.value === this.customValue ? this.customStrength.value : this.strength.value); this.feedback.success(this.data.id ? 'Medicine updated successfully.' : 'Medicine added successfully.'); this.ref.close(saved); }
+    try { const saved = await this.catalog.save(this.name.value, this.data.id, this.strength.value === this.customValue ? this.customStrength.value : this.strength.value); this.feedback.success(this.data.id ? 'Medicine updated successfully.' : 'Medicine added successfully.', { title: this.data.id ? 'Medicine updated' : 'Medicine added', route: '/prescription-medicines' }); this.ref.close(saved); }
     catch (error) { this.error = error instanceof Error ? error.message : 'Unable to save this medicine. Please try again.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }
     finally { this.saving = false; this.ref.disableClose = false; }
   }

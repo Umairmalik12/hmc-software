@@ -1,6 +1,7 @@
 import { LoadingService } from './loading.service';
 import { Injectable } from '@angular/core';
 import { SupabaseClientService } from './supabase-client.service';
+import { NotifyUpdateService } from './notify-update.service';
 
 export interface StaffIdentity { id: string; name: string; email: string; }
 
@@ -9,8 +10,9 @@ export interface StaffIdentity { id: string; name: string; email: string; }
 })
 export class UserLoginService {
   private loggedIn = false;
+  private lastRole?: { userId: string; role: string };
 
-  constructor(private supabase: SupabaseClientService, private loading: LoadingService = new LoadingService()) {}
+  constructor(private supabase: SupabaseClientService, private loading: LoadingService = new LoadingService(), private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
 
   async SignIn(username: string, pass: string): Promise<boolean> {
     return this.loading.track('Signing in...', async () => {
@@ -22,6 +24,7 @@ export class UserLoginService {
         throw new Error(error.message);
       }
       this.loggedIn = !!data.session;
+      this.feedback.setUser(data.session?.user?.id || null);
       return this.loggedIn;
 
     }, 2);
@@ -34,6 +37,8 @@ export class UserLoginService {
         throw new Error(error.message);
       }
       this.loggedIn = false;
+      this.lastRole = undefined;
+      this.feedback.setUser(null);
 
     }, 2);
   }
@@ -45,6 +50,7 @@ export class UserLoginService {
         throw new Error(error.message);
       }
       this.loggedIn = !!data.session;
+      this.feedback.setUser(data.session?.user?.id || null);
       return this.loggedIn;
 
     }, 0);
@@ -63,6 +69,7 @@ export class UserLoginService {
       const { data, error } = await this.supabase.client.auth.getUser();
       if (error) throw new Error(error.message);
       if (!data.user) throw new Error('Sign in again to record payments.');
+      this.feedback.setUser(data.user.id);
       const metadata = data.user.user_metadata || {};
       const name = [metadata['full_name'], metadata['name'], metadata['display_name'], data.user.email]
         .find(value => typeof value === 'string' && value.trim());
@@ -78,8 +85,10 @@ export class UserLoginService {
         throw new Error(error.message);
       }
       if (!data.user) {
+        this.feedback.setUser(null);
         return undefined;
       }
+      this.feedback.setUser(data.user.id);
       const { data: role, error: roleError } = await this.supabase.client
         .from('hmc_user_roles')
         .select('role')
@@ -88,7 +97,12 @@ export class UserLoginService {
       if (roleError) {
         throw new Error(roleError.message);
       }
-      return role?.role || 'staff';
+      const currentRole = role?.role || 'staff';
+      if (this.lastRole?.userId === data.user.id && this.lastRole.role !== currentRole) {
+        this.feedback.info('Your account role was updated to ' + currentRole + '.', { title: 'Account permissions updated', route: '/home' });
+      }
+      this.lastRole = { userId: data.user.id, role: currentRole };
+      return currentRole;
 
     }, -1);
   }

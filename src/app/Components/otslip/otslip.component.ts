@@ -108,9 +108,9 @@ export class OtFormComponent implements OnInit, OnDestroy {
         const group = this.productControls.at(index);
         group.get('selected')!.setValue(true); group.get('quantity')!.enable(); group.get('quantity')!.setValue(product.quantity);
       });
-      if (catalogResult.status === 'rejected') this.catalogueError = 'Unable to load the OT medicine catalogue. Retry before saving.';
+      if (catalogResult.status === 'rejected') { this.catalogueError = 'Unable to load the OT medicine catalogue. Retry before saving.'; this.notify.error(this.catalogueError); }
       this.updateVisibleProducts(); this.otForm.markAsPristine(); this.otForm.markAsUntouched();
-    } catch (error) { this.loadFailed = true; this.validationMessage = error instanceof Error ? error.message : 'Unable to load OT record.'; }
+    } catch (error) { this.loadFailed = true; this.validationMessage = error instanceof Error ? error.message : 'Unable to load OT record.'; this.notify.error(this.validationMessage); }
     finally {
       this.loading = false; this.catalogueLoading = false;
       if (this.pendingRefresh) { this.pendingRefresh = false; void this.refreshCatalogue(); }
@@ -132,7 +132,7 @@ export class OtFormComponent implements OnInit, OnDestroy {
       });
       catalog.filter(item => item.active && !this.rows.some(row => row.key === item.id)).forEach(item => this.appendRow({ key: item.id, snapshot: this.masterSnapshot(item), master: item, available: true, historical: false }));
       this.catalogueError = ''; this.updateVisibleProducts();
-    } catch (error) { if (version === this.catalogueVersion) this.catalogueError = 'Unable to refresh OT medicines. Retry before saving.'; }
+    } catch (error) { if (version === this.catalogueVersion) { this.catalogueError = 'Unable to refresh OT medicines. Retry before saving.'; this.notify.error(this.catalogueError); } }
     finally { if (version === this.catalogueVersion) this.catalogueLoading = false; }
   }
   updateVisibleProducts(): void {
@@ -173,10 +173,10 @@ export class OtFormComponent implements OnInit, OnDestroy {
   async submitForm(): Promise<void> {
     if (this.isSaving || this.loading || this.loadFailed || this.catalogueLoading || this.catalogueError) return;
     this.validationMessage = '';
-    if (this.otForm.invalid) { this.otForm.markAllAsTouched(); this.validationMessage = 'Enter the patient name and a positive quantity for every selected item.'; return; }
-    if (this.rows.some((row, i) => !row.available && !row.historical && this.productControls.at(i).get('selected')!.value)) { this.validationMessage = 'Remove unavailable medicines from this slip before saving.'; return; }
+    if (this.otForm.invalid) { this.otForm.markAllAsTouched(); this.validationMessage = 'Enter the patient name and a positive quantity for every selected item.'; this.notify.warning(this.validationMessage); return; }
+    if (this.rows.some((row, i) => !row.available && !row.historical && this.productControls.at(i).get('selected')!.value)) { this.validationMessage = 'Remove unavailable medicines from this slip before saving.'; this.notify.warning(this.validationMessage); return; }
     const draft = this.snapshot();
-    if (!draft.products.length) { this.validationMessage = 'Select at least one medicine or supply.'; return; }
+    if (!draft.products.length) { this.validationMessage = 'Select at least one medicine or supply.'; this.notify.warning(this.validationMessage); return; }
     this.isSaving = true;
     const printWindow = window.open('', '_blank', 'width=900,height=850');
     if (printWindow) { printWindow.document.open(); printWindow.document.write('<!doctype html><title>Saving OT slip</title><p>Saving OT medicine slip...</p>'); printWindow.document.close(); }
@@ -187,6 +187,7 @@ export class OtFormComponent implements OnInit, OnDestroy {
       const printed = printOtMedicine(this.currentRecord, printWindow);
       await this.router.navigate(['/ot-records']);
       if (!printed) this.notify.alertNotify.next({ type: 'error', msg: 'OT slip saved. Allow pop-ups and use Print in the OT medicine list.' });
+      else this.notify.info('OT medicine slip prepared for printing.', { title: 'Print requested', route: '/ot-records' });
     } catch (error) { printWindow?.close(); this.validationMessage = error instanceof Error ? error.message : 'Unable to save the OT medicine slip.'; this.notify.error(this.validationMessage); }
     finally { this.isSaving = false; if (this.pendingRefresh && this.ready) { this.pendingRefresh = false; void this.refreshCatalogue(); } }
   }

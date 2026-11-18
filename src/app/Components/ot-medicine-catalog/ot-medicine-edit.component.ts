@@ -52,9 +52,9 @@ export class OtMedicineEditComponent implements OnInit {
   cancel(): void { if (!this.saving) this.ref.close(); }
   async save(): Promise<void> {
     if (this.saving || this.loading || this.loadFailed) return;
-    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
+    if (this.form.invalid) { this.form.markAllAsTouched(); this.feedback.warning('Enter a valid medicine name and check the highlighted fields.'); return; }
     this.saving = true; this.error = ''; this.ref.disableClose = true;
-    try { const saved = await this.catalog.save({ ...emptyOtCatalogMedicine(), ...this.form.getRawValue(), id: this.data.id || '' }); this.feedback.success(this.data.id ? 'OT medicine updated successfully.' : 'OT medicine added successfully.'); this.ref.close(saved); }
+    try { const saved = await this.catalog.save({ ...emptyOtCatalogMedicine(), ...this.form.getRawValue(), id: this.data.id || '' }); this.feedback.success(this.data.id ? 'OT medicine updated successfully.' : 'OT medicine added successfully.', { title: this.data.id ? 'OT medicine updated' : 'OT medicine added', route: '/ot-medicines' }); this.ref.close(saved); }
     catch (error) { this.error = error instanceof Error ? error.message : 'Unable to save this medicine. Please try again.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }
     finally { this.saving = false; this.ref.disableClose = false; }
   }

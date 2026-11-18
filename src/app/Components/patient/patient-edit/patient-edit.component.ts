@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -20,7 +21,7 @@ export class PatientEditComponent {
 
   constructor(private fb: FormBuilder, private fv: ValidatorsService,
     private dialogRef: MatDialogRef<PatientEditComponent>,
-    @Inject(MAT_DIALOG_DATA) patientDetails: PatientDetail) {
+    @Inject(MAT_DIALOG_DATA) patientDetails: PatientDetail, private feedback: NotifyUpdateService = new NotifyUpdateService()) {
 
     this.patientDetails = { ...patientDetails };
 
@@ -75,6 +76,7 @@ export class PatientEditComponent {
   onSubmit() {
     if (this.patientForm.invalid) {
       this.patientForm.markAllAsTouched();
+      this.feedback.warning('Complete the highlighted patient fields before saving.');
       return;
     }
 

@@ -118,7 +118,7 @@ export class InpatientListComponent implements OnInit, OnDestroy {
     this.updateDisplayedInpatients();
   }
 
-  exportToExcel(): void { exportRecords(this.filteredInpatients, 'inpatients.xlsx'); }
+  exportToExcel(): void { exportRecords(this.filteredInpatients, 'inpatients.xlsx', 'Records', this.notifyUpdate); }
 
 
   // Edit

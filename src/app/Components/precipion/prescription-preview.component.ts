@@ -1,4 +1,5 @@
 import { Component, Inject, ViewEncapsulation } from '@angular/core';
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { PrescriptionRecord, copyPrescription } from 'src/app/Models/prescription.model';
 import { printPrescription } from './prescription-print';
@@ -27,10 +28,12 @@ import { printPrescription } from './prescription-print';
 export class PrescriptionPreviewComponent {
   record: PrescriptionRecord;
   errorMessage = '';
-  constructor(@Inject(MAT_DIALOG_DATA) data: { record: PrescriptionRecord }) {
+  constructor(@Inject(MAT_DIALOG_DATA) data: { record: PrescriptionRecord }, private feedback: NotifyUpdateService = new NotifyUpdateService()) {
     this.record = copyPrescription(data.record);
   }
   print(): void {
     this.errorMessage = printPrescription(this.record) ? '' : 'Allow pop-ups for this site to print the prescription.';
+    if (this.errorMessage) this.feedback.error(this.errorMessage);
+    else this.feedback.info('Prescription prepared for printing.', { title: 'Print requested', route: '/prescriptions' });
   }
 }

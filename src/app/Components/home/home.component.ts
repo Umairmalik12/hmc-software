@@ -183,7 +183,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
           await this.router.navigate(['/' + destination]);
           this.notifyUpdate.notify.next(true);
-          this.notifyUpdate.alertNotify.next({ msg: entity + ' created successfully.', type: 'success' });
+          if (destination !== 'medicine') this.notifyUpdate.success(entity + ' created successfully.', { route: '/' + destination });
         } catch (error) {
           console.error('Unable to save dialog record:', error);
           this.notifyUpdate.alertNotify.next({
@@ -199,6 +199,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     try {
       await this.userLogin.SignOut();
       await this.router.navigate(['']);
+      this.notifyUpdate.success('Signed out successfully.', { title: 'Signed out', route: '/' });
     } catch (error) {
       console.error('Unable to sign out:', error);
       this.notifyUpdate.alertNotify.next({ msg: 'Unable to sign out. Please try again.', type: 'error' });

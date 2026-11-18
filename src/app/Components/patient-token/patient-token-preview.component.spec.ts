@@ -6,12 +6,17 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { PatientTokenSlip } from 'src/app/Services/supabase-data.service';
+import { Subject } from 'rxjs';
+import { PatientTokenSlip, SupabaseDataService } from 'src/app/Services/supabase-data.service';
 import { Opd } from 'src/app/Models/opd.model';
 import { FeedbackModule } from 'src/app/Shared/feedback.module';
 import { ThermalReceiptPreviewComponent } from 'src/app/Shared/thermal-receipt-preview.component';
 import { PatientTokenPreviewComponent } from './patient-token-preview.component';
 import { OpdSlipComponent } from '../opdslip/opd-slip/opd-slip.component';
+import { PatientTokenComponent } from './patient-token.component';
+import { TimeFormatPipe } from 'src/app/Pipes/time-format.pipe';
+import { ScrollPaginationDirective } from 'src/app/Shared/scroll-pagination.directive';
+import { ScrollListFooterComponent } from 'src/app/Shared/scroll-list-footer.component';
 
 describe('Thermal previews matching the printed receipt', () => {
   const token: PatientTokenSlip = { id: 5, tokenNumber: 'A12345678901234567890', sequence: 5, customerName: 'LongPatientName'.repeat(14) + ' <b>Ali</b>', date: '2026-11-19', time: '13:35', createdAt: '2026-11-19T08:35:00Z' };
@@ -20,7 +25,11 @@ describe('Thermal previews matching the printed receipt', () => {
   const settle = async () => { TestBed.inject(ApplicationRef).tick(); await new Promise(resolve => setTimeout(resolve, 60)); TestBed.inject(ApplicationRef).tick(); };
   beforeEach(async () => {
     previousPaper = localStorage.getItem('hmc.tokenPaperWidth'); previousOpdPaper = localStorage.getItem('hmc.opdPaperWidth');
-    await TestBed.configureTestingModule({ imports: [CommonModule, FormsModule, NoopAnimationsModule, FeedbackModule, MatDialogModule, MatButtonModule, MatIconModule], declarations: [PatientTokenPreviewComponent, OpdSlipComponent, ThermalReceiptPreviewComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [CommonModule, FormsModule, NoopAnimationsModule, FeedbackModule, MatDialogModule, MatButtonModule, MatIconModule],
+      declarations: [PatientTokenPreviewComponent, OpdSlipComponent, ThermalReceiptPreviewComponent, PatientTokenComponent, TimeFormatPipe, ScrollPaginationDirective, ScrollListFooterComponent],
+      providers: [{ provide: SupabaseDataService, useValue: { getAllPatientTokens: async () => [token], changes: new Subject<string>() } }],
+    }).compileComponents();
   });
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
@@ -47,6 +56,30 @@ describe('Thermal previews matching the printed receipt', () => {
     expect(thanks[thanks.length - 1].textContent).toBe('THANK YOU!');
     expect(preview.getBoundingClientRect().bottom - thanks[thanks.length - 1].getBoundingClientRect().bottom).toBeGreaterThan(10.9 * 96 / 25.4);
   }
+
+  it('offers paper sizes on the token page and opens Print in the same size-selectable preview as OPD', async () => {
+    localStorage.setItem('hmc.tokenPaperWidth', '58');
+    const fixture = TestBed.createComponent(PatientTokenComponent);
+    try {
+      fixture.detectChanges(); await settle(); fixture.detectChanges();
+      const root = fixture.nativeElement as HTMLElement;
+      const select = root.querySelector<HTMLSelectElement>('#token-paper-width')!;
+      expect(Array.from(select.options).map(option => option.textContent?.trim())).toEqual(['58 mm', '80 mm']);
+      select.selectedIndex = 1; select.dispatchEvent(new Event('change', { bubbles: true })); fixture.detectChanges();
+      expect(fixture.componentInstance.paperWidth).toBe(80); expect(localStorage.getItem('hmc.tokenPaperWidth')).toBe('80');
+      const popup = spyOn(window, 'open');
+      Array.from(root.querySelectorAll<HTMLButtonElement>('td.actions button')).find(button => button.textContent?.trim() === 'Print')!.click();
+      await settle();
+      expect(popup).not.toHaveBeenCalled();
+      const panel = document.querySelector<HTMLElement>('.hmc-dialog-panel')!;
+      const previewPaper = panel.querySelector<HTMLSelectElement>('select[aria-label="Patient token paper size"]')!;
+      expect(previewPaper.selectedIndex).toBe(1);
+      previewPaper.selectedIndex = 0; previewPaper.dispatchEvent(new Event('change', { bubbles: true })); await settle();
+      Array.from(panel.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent?.trim() === 'Close')!.click();
+      await settle(); fixture.detectChanges(); await Promise.resolve();
+      expect(fixture.componentInstance.paperWidth).toBe(58); expect(select.selectedIndex).toBe(0);
+    } finally { TestBed.inject(MatDialog).closeAll(); fixture.destroy(); }
+  });
   for (const width of [58, 80] as const) {
     it(`uses identical ${width} mm token preview and print geometry, including the fitted token and complete footer`, async () => {
       const source = { ...token };

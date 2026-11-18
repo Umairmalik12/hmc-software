@@ -70,10 +70,10 @@ export class PaymentComponent implements OnInit, OnDestroy {
       this.paymentForm.get('cashGiven')!.updateValueAndValidity({ emitEvent: false });
     }));
     this.subscriptions.add(this.indexedDbService.changes.subscribe(collection => {
-      if (collection === 'payments') void this.loadPayments().catch(error => this.errorMessage = this.message(error, 'Unable to refresh payments.'));
+      if (collection === 'payments') void this.loadPayments().catch(error => { this.errorMessage = this.message(error, 'Unable to refresh payments.'); this.feedback.error(this.errorMessage); });
     }));
     this.clock = setInterval(() => this.currentTime = new Date(), 1000);
-    await Promise.all([this.loadAccount(), this.loadPayments().catch(error => this.errorMessage = this.message(error, 'Unable to load payments.'))]);
+    await Promise.all([this.loadAccount(), this.loadPayments().catch(error => { this.errorMessage = this.message(error, 'Unable to load payments.'); this.feedback.error(this.errorMessage); })]);
   }
 
   private async loadAccount(): Promise<void> {
@@ -187,7 +187,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
   }
   showReceipt(payment: PaymentRecord): void {
     try { localStorage.setItem('hmc.paymentPaperWidth', String(this.paperWidth)); } catch { /* Keep this print selection in memory. */ }
-    printThermal(buildPaymentReceipt(payment), this.paperWidth, 'payment-receipt');
+    printThermal(buildPaymentReceipt(payment), this.paperWidth, 'payment-receipt', this.feedback);
   }
 
   async updatePaymentStatus(paymentId: string, newStatus: string, select?: { value: string }): Promise<void> {
@@ -234,7 +234,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
       'Date / time': payment.createdAt ? new Date(payment.createdAt).toLocaleString('en-PK', { hour12: true }) : 'Not recorded', 'Counter staff': payment.staffName || 'Not recorded',
       'Shift': payment.shiftName || 'Not recorded', 'Shift date': payment.shiftDate || 'Not recorded', 'Counter': payment.counterName || '',
       'Amount (Rs)': payment.amount, 'Cash tendered (Rs)': payment.cashGiven ?? '', 'Change (Rs)': payment.cashReturn ?? '', 'Method': payment.paymentMethod || '', 'Status': payment.paymentStatus || '',
-      'Recorded by account': payment.recordedByEmail || 'Not recorded', 'Updated by account': payment.updatedByEmail || 'Not recorded', 'Updated at': payment.updatedAt || '' })), 'payments.xlsx', 'Payments');
+      'Recorded by account': payment.recordedByEmail || 'Not recorded', 'Updated by account': payment.updatedByEmail || 'Not recorded', 'Updated at': payment.updatedAt || '' })), 'payments.xlsx', 'Payments', this.feedback);
   }
   editPayment(payment: PaymentRecord): void {
     if (this.saving || this.deletingId) return;

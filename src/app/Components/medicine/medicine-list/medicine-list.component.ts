@@ -125,7 +125,7 @@ export class MedicineListComponent implements OnInit, OnDestroy {
     this.updateDisplayedMedicines();
   }
 
-  exportToExcel(): void { exportRecords(this.filteredMedicines, 'daily-medicines.xlsx'); }
+  exportToExcel(): void { exportRecords(this.filteredMedicines, 'daily-medicines.xlsx', 'Records', this.notifyUpdate); }
 
 
   // Edit
@@ -145,11 +145,7 @@ export class MedicineListComponent implements OnInit, OnDestroy {
 
         dialogRef.afterClosed().subscribe((resultData: Medicine[] | null) => {
           if (resultData) {
-            const msg = "Daily medicine record updated successfully.";
-            const type = "success";
-
             this.notifyUpdate.notify.next(true);
-            this.notifyUpdate.alertNotify.next({ msg, type });
           }
         });
       } else {

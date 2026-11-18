@@ -16,7 +16,7 @@ import { exportRecords } from 'src/app/Shared/export-records';
   styleUrls: ['./prescription-list.component.css'],
 })
 export class PrescriptionListComponent implements OnInit, OnDestroy {
-  exportToExcel(): void { exportRecords(this.filteredRecords, 'prescriptions.xlsx', 'Prescriptions'); }
+  exportToExcel(): void { exportRecords(this.filteredRecords, 'prescriptions.xlsx', 'Prescriptions', this.feedback); }
   records: PrescriptionRecord[] = [];
   query = '';
   readonly pagination = new ScrollPagination();
@@ -75,6 +75,7 @@ export class PrescriptionListComponent implements OnInit, OnDestroy {
 
   print(record: PrescriptionRecord): void {
     this.errorMessage = printPrescription(copyPrescription(record)) ? '' : 'Allow pop-ups for this site to print the prescription.'; if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' });
+    else this.feedback.info('Prescription prepared for printing.', { title: 'Print requested', route: '/prescriptions' });
   }
 
   async delete(record: PrescriptionRecord): Promise<void> {

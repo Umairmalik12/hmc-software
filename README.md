@@ -175,6 +175,9 @@ Patient tokens also open a thermal receipt preview with Print, Close and saved
 width, printable width, fonts, spacing and trailing feed. The token preview fits
 long token numbers using the same routine as printing. New-token printing and
 reprints render the saved record directly, so they cannot clone stale screen text.
+The token page's **Print paper** selector sets the roll size for automatically
+printed new tokens. A history row's **Print** action opens the same paper-size
+preview as OPD, and closing the preview updates the page's selected roll size.
 OPD batch previews show the same continuous job and inter-slip gaps as printing.
 
 The administrator's **OT medicine catalogue** is available in the Pharmacy sidebar,
@@ -196,6 +199,14 @@ above dialogs. Success, error, warning and information messages have distinct ic
 and restrained status colors. Each notification has its own timer and dismiss button;
 hovering or focusing it pauses dismissal, and repeated visible messages are combined.
 CRUD messages identify the affected module and report success only after saving.
+The header bell retains the latest 100 messages with timestamps, an instant unread
+badge, individual and bulk read controls, and confirmed clearing. Notifications
+link to the relevant list where available. History and read state are saved per
+authenticated staff account in this browser; signing out clears the visible feed.
+Validation, medicine saves, account changes, report exports and print requests use
+the same notification service. A print notification reports preparation, rather
+than claiming the printer has physically completed a job. No database migration is
+required for notification history. The HAQ browser icon matches the teal branding.
 Database and account requests share a concurrent-request loading indicator, while
 lists and pending action buttons show local loading states. Failed requests release
 their loading state, and delete actions prevent repeated submissions while pending.

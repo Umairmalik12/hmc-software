@@ -53,7 +53,7 @@ export class LabListComponent implements OnInit, OnDestroy {
     } catch (error) { this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Unable to load record.' }); }
   }
 
-  exportToExcel(): void { exportRecords(this.filteredPatients, 'lab-tests.xlsx', 'Lab tests'); }
+  exportToExcel(): void { exportRecords(this.filteredPatients, 'lab-tests.xlsx', 'Lab tests', this.notifyUpdate); }
 
   patient: LabPatient[] = [];
   displayedPatients: LabPatient[] = [];
@@ -164,6 +164,6 @@ printLabSlip(patientId: string): void {
   }
 
   // Keep the existing 80 mm lab roll and use the measured, centered renderer.
-  printThermal(buildLabReceipt(lab), 80, 'lab-slip-print');
+  printThermal(buildLabReceipt(lab), 80, 'lab-slip-print', this.notifyUpdate);
 }
 }

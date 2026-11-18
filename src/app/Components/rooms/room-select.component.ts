@@ -1,3 +1,4 @@
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { Component, forwardRef, Input, OnDestroy, OnInit } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -31,7 +32,7 @@ export class RoomSelectComponent implements ControlValueAccessor, OnInit, OnDest
   touched: () => void = () => {};
   private changes?: Subscription;
   private version = 0;
-  constructor(private rooms: RoomService, private db: SupabaseDataService) {}
+  constructor(private rooms: RoomService, private db: SupabaseDataService, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
   get retainedValues(): string[] {
     return [...new Set([this.value, ...this.savedValues].filter(Boolean))].filter(value => !this.options.some(option => option.name === value));
   }
@@ -46,7 +47,7 @@ export class RoomSelectComponent implements ControlValueAccessor, OnInit, OnDest
     const version = ++this.version;
     this.loading = true;
     try { const options = await this.rooms.getAll(); if (version === this.version) { this.options = options; this.error = ''; } }
-    catch { if (version === this.version) this.error = 'Unable to load rooms and beds. Retry to refresh.'; }
+    catch { if (version === this.version) { this.error = 'Unable to load rooms and beds. Retry to refresh.'; this.feedback.error(this.error); } }
     finally { if (version === this.version) this.loading = false; }
   }
 }

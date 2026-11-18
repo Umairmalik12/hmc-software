@@ -3,6 +3,7 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { PatientTokenSlip } from 'src/app/Services/supabase-data.service';
 import { buildPatientTokenReceipt } from './patient-token-receipt';
 import { printThermal } from './thermal-print';
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 
 @Component({
   selector: 'app-patient-token-preview',
@@ -16,7 +17,7 @@ export class PatientTokenPreviewComponent {
   readonly record: PatientTokenSlip;
   readonly html: string;
   paperWidth: 58 | 80 = 58;
-  constructor(private ref: MatDialogRef<PatientTokenPreviewComponent>, @Inject(MAT_DIALOG_DATA) data: { record: PatientTokenSlip; paperWidth?: 58 | 80 }) {
+  constructor(private ref: MatDialogRef<PatientTokenPreviewComponent>, @Inject(MAT_DIALOG_DATA) data: { record: PatientTokenSlip; paperWidth?: 58 | 80 }, private feedback: NotifyUpdateService = new NotifyUpdateService()) {
     this.record = { ...data.record }; this.html = buildPatientTokenReceipt(this.record);
     try { this.paperWidth = localStorage.getItem('hmc.tokenPaperWidth') === '80' ? 80 : 58; } catch { /* Keep the existing 58 mm default. */ }
     if (data.paperWidth === 58 || data.paperWidth === 80) this.paperWidth = data.paperWidth;
@@ -25,6 +26,6 @@ export class PatientTokenPreviewComponent {
     this.paperWidth = width === 80 ? 80 : 58;
     try { localStorage.setItem('hmc.tokenPaperWidth', String(this.paperWidth)); } catch { /* Keep the selection for this preview. */ }
   }
-  print(): void { this.changePaperWidth(this.paperWidth); printThermal(this.html, this.paperWidth); }
+  print(): void { this.changePaperWidth(this.paperWidth); printThermal(this.html, this.paperWidth, 'patient-token-slip-print', this.feedback); }
   close(): void { this.ref.close(); }
 }

@@ -12,7 +12,9 @@ h2 { margin-bottom: 5px; font-size: 19px; }
 .generate-form { margin-top: 18px; }
 .generate-form label, .date-controls label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 7px; }
 .form-controls, .date-controls, .actions { display: flex; align-items: center; gap: 10px; }
-.form-controls input, .date-controls input, .paper-control select { min-height: 40px; border: 1px solid #d0d5dd; border-radius: 7px; padding: 8px 11px; font: inherit; }
+.form-controls input, .date-controls input, .token-paper-control select { min-height: 40px; border: 1px solid #d0d5dd; border-radius: 7px; padding: 8px 11px; font: inherit; }
+.generate-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+.token-paper-control { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; white-space: nowrap; }
 .form-controls input { flex: 1; min-width: 100px; }
 button { cursor: pointer; border: 0; border-radius: 7px; background: #167a70; color: #fff; padding: 10px 16px; font: inherit; font-weight: 700; }
 button:disabled { opacity: .6; cursor: wait; }

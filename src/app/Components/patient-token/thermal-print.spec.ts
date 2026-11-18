@@ -24,6 +24,13 @@ describe('printThermal layout', () => {
 
   afterEach(() => frame.remove());
 
+  it('uses the notification system when pop-ups are blocked without opening a native alert', () => {
+    (window.open as jasmine.Spy).and.returnValue(null);
+    const feedback = jasmine.createSpyObj('feedback', ['error', 'info']); const alert = spyOn(window, 'alert');
+    expect(printThermal('<section></section>', 58, 'patient-token-slip-print', feedback)).toBeFalse();
+    expect(feedback.error).toHaveBeenCalledWith('Allow pop-ups for this site to print the receipt.'); expect(feedback.info).not.toHaveBeenCalled(); expect(alert).not.toHaveBeenCalled();
+  });
+
   const receipt = (name: string, token: string): string => `
     <section id="patient-token-slip-print">
       <div class="slip-brand">HAQ MEDICAL CENTER</div>

@@ -1,3 +1,4 @@
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { Component, forwardRef, OnDestroy, OnInit } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -28,7 +29,7 @@ export class ProcedureSelectComponent implements ControlValueAccessor, OnInit, O
   touched: () => void = () => {};
   private changes?: Subscription;
   private version = 0;
-  constructor(private procedures: ProcedureService, private db: SupabaseDataService) {}
+  constructor(private procedures: ProcedureService, private db: SupabaseDataService, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
   get hasSavedValue(): boolean { return !!this.value && !this.options.some(option => option.name === this.value); }
   ngOnInit(): void {
     void this.load();
@@ -44,7 +45,7 @@ export class ProcedureSelectComponent implements ControlValueAccessor, OnInit, O
     const version = ++this.version;
     this.loading = true;
     try { const options = await this.procedures.getAll(); if (version === this.version) { this.options = options; this.error = ''; } }
-    catch { if (version === this.version) this.error = 'Unable to load procedures. Retry to refresh.'; }
+    catch { if (version === this.version) { this.error = 'Unable to load procedures. Retry to refresh.'; this.feedback.error(this.error); } }
     finally { if (version === this.version) this.loading = false; }
   }
 }

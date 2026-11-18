@@ -83,6 +83,7 @@ export class MedicineEditComponent implements OnInit {
     if (this.saving) return;
     if (this.medicineForm.invalid) {
       this.medicineForm.markAllAsTouched();
+      this.notifyUpdate.warning('Complete the highlighted patient and medicine fields before saving.');
       return;
     }
     this.saving = true;
@@ -110,12 +111,14 @@ export class MedicineEditComponent implements OnInit {
       }
 
       if (success) {
+        this.notifyUpdate.success(this.edit ? 'Daily medicine record updated successfully.' : 'Daily medicine record saved successfully.', { route: '/medicine' });
         this.dialogRef.close(medicineData);
       } else {
         this.saveError = 'Daily medicine record could not be saved. Your entries are kept; please try again.'; this.notifyUpdate.error(this.saveError);
       }
     } catch (error) {
-      this.saveError = 'Unable to save this medicine record. Please try again.';
+      this.saveError = 'Unable to save this medicine record. ' + (error instanceof Error ? error.message : 'Please try again.');
+      this.notifyUpdate.error(this.saveError);
     } finally {
       this.saving = false;
     }

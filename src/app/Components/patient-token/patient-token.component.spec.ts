@@ -1,11 +1,14 @@
-import { ChangeDetectorRef } from '@angular/core';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { Subject } from 'rxjs';
 import { SupabaseDataService, PatientTokenSlip } from 'src/app/Services/supabase-data.service';
 import { PatientTokenComponent } from './patient-token.component';
+import { PatientTokenPreviewComponent } from './patient-token-preview.component';
 
 describe('PatientTokenComponent', () => {
   let component: PatientTokenComponent;
   let supabase: jasmine.SpyObj<SupabaseDataService>;
-  let changeDetector: jasmine.SpyObj<ChangeDetectorRef>;
+  let dialog: jasmine.SpyObj<MatDialog>;
+  let previousPaper: string | null;
 
   const slip: PatientTokenSlip = {
     id: 1,
@@ -18,12 +21,18 @@ describe('PatientTokenComponent', () => {
   };
 
   beforeEach(() => {
+    previousPaper = localStorage.getItem('hmc.tokenPaperWidth');
     supabase = jasmine.createSpyObj<SupabaseDataService>(
       'SupabaseDataService',
       ['createPatientToken', 'getAllPatientTokens', 'deletePatientToken', 'updatePatientTokenName']
     );
-    changeDetector = jasmine.createSpyObj<ChangeDetectorRef>('ChangeDetectorRef', ['detectChanges']);
-    component = new PatientTokenComponent(supabase, changeDetector);
+    dialog = jasmine.createSpyObj<MatDialog>('MatDialog', ['open']);
+    component = new PatientTokenComponent(supabase, dialog);
+  });
+
+  afterEach(() => {
+    if (previousPaper === null) localStorage.removeItem('hmc.tokenPaperWidth');
+    else localStorage.setItem('hmc.tokenPaperWidth', previousPaper);
   });
 
   it('filters history to the selected date and formats it for display', () => {
@@ -87,9 +96,6 @@ describe('PatientTokenComponent', () => {
     source.id = 'patient-token-slip-print';
     source.textContent = 'Previous token';
     document.body.appendChild(source);
-    changeDetector.detectChanges.and.callFake(() => {
-      source.textContent = component.selectedSlip!.tokenNumber;
-    });
     const write = jasmine.createSpy('write');
     const popup = {
       document: { open: () => {}, write, close: () => {}, readyState: 'loading' },
@@ -98,13 +104,42 @@ describe('PatientTokenComponent', () => {
     spyOn(window, 'open').and.returnValue(popup);
 
     try {
-      component.printSlip(slip);
+      component.selectedSlip = slip;
+      (component as any).printSelectedSlip();
 
       expect(write.calls.mostRecent().args[0]).toContain('A001');
       expect(write.calls.mostRecent().args[0]).not.toContain('Previous token');
     } finally {
       source.remove();
     }
+  });
+
+  it('opens Print in the paper-size preview and synchronizes its selection back to the page', () => {
+    const closing = new Subject<void>();
+    const preview = { componentInstance: { paperWidth: 80 }, beforeClosed: () => closing.asObservable() } as MatDialogRef<PatientTokenPreviewComponent>;
+    dialog.open.and.returnValue(preview);
+    component.changePaperWidth(80);
+    const popup = spyOn(window, 'open');
+    component.printSlip(slip);
+    expect(popup).not.toHaveBeenCalled();
+    expect(dialog.open).toHaveBeenCalledWith(PatientTokenPreviewComponent, jasmine.objectContaining({ data: { record: slip, paperWidth: 80 } }));
+    expect((dialog.open.calls.mostRecent().args[1]!.data as { record: PatientTokenSlip }).record).not.toBe(slip);
+    preview.componentInstance.paperWidth = 58;
+    closing.next(); closing.complete();
+    expect(component.paperWidth).toBe(58); expect(localStorage.getItem('hmc.tokenPaperWidth')).toBe('58');
+  });
+
+  it('prints using the selected paper size even when the saved preference cannot be updated', () => {
+    localStorage.setItem('hmc.tokenPaperWidth', '58');
+    const storage = spyOn(Storage.prototype, 'setItem').and.throwError('Storage unavailable');
+    const write = jasmine.createSpy('write');
+    spyOn(window, 'open').and.returnValue({ document: { open: () => {}, write, close: () => {}, readyState: 'loading' }, addEventListener: () => {} } as unknown as Window);
+    try {
+      component.changePaperWidth(80); component.selectedSlip = slip;
+      (component as any).printSelectedSlip();
+      expect(component.paperWidth).toBe(80);
+      expect(write.calls.mostRecent().args[0]).toContain('width:80mm');
+    } finally { storage.and.callThrough(); }
   });
   it('shows all dates by default, searches across dates and paginates the complete result', () => {
     component.today = '2026-11-11';

@@ -1,0 +1,20 @@
+<ng-container *ngIf="{ count: feedback.unreadCount$ | async, items: feedback.notifications$ | async } as activity">
+  <button #bell cdkOverlayOrigin #origin="cdkOverlayOrigin" mat-icon-button type="button" class="notification-bell" (click)="open = !open" [attr.aria-label]="'Notifications, ' + (activity.count || 0) + ' unread'" [attr.aria-expanded]="open" aria-haspopup="dialog" aria-controls="hmc-notifications" title="Notifications">
+    <mat-icon>{{ activity.count ? 'notifications_active' : 'notifications_none' }}</mat-icon>
+    <span *ngIf="activity.count" class="notification-badge" aria-hidden="true">{{ activity.count > 99 ? '99+' : activity.count }}</span>
+  </button>
+  <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="origin" [cdkConnectedOverlayOpen]="open" [cdkConnectedOverlayPositions]="positions" [cdkConnectedOverlayHasBackdrop]="true" cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop" [cdkConnectedOverlayPush]="true" [cdkConnectedOverlayViewportMargin]="12" (backdropClick)="close()" (overlayKeydown)="keydown($event)" (detach)="open = false">
+    <section id="hmc-notifications" class="notification-panel" role="dialog" aria-label="Notifications" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+      <header><div><h2>Notifications</h2><p>{{ activity.count || 0 }} unread &middot; Recent activity</p></div><button type="button" class="icon-action" (click)="close()" aria-label="Close notifications"><mat-icon>close</mat-icon></button></header>
+      <div class="notification-tools"><button type="button" (click)="feedback.markAllAsRead()" [disabled]="!activity.count">Mark all as read</button><button type="button" (click)="clear()" [disabled]="!activity.items?.length">Clear all</button></div>
+      <div class="notification-list">
+        <article *ngFor="let item of activity.items; trackBy: trackNotification" class="notification-item" [class.unread]="!item.read">
+          <mat-icon class="activity-icon" [class.error]="item.type === 'error'" [class.warning]="item.type === 'warning'" aria-hidden="true">{{ item.type === 'success' ? 'check_circle_outline' : item.type === 'error' ? 'error_outline' : item.type === 'warning' ? 'warning_amber' : 'info_outline' }}</mat-icon>
+          <div class="notification-copy"><button #link type="button" class="notification-link" (click)="activate(item)"><strong>{{ item.title }}</strong><span>{{ item.description }}</span><span *ngIf="item.route" class="notification-destination">View records <mat-icon aria-hidden="true">arrow_forward</mat-icon></span></button><time [attr.datetime]="item.createdAt">{{ item.createdAt | date:'dd MMM yyyy, h:mm a' }}</time><button *ngIf="!item.read" type="button" class="mark-read" (click)="markRead(item, link)">Mark as read</button></div>
+          <span *ngIf="!item.read" class="unread-dot" aria-label="Unread"></span>
+        </article>
+        <div *ngIf="!activity.items?.length" class="notification-empty"><mat-icon>notifications_none</mat-icon><strong>No notifications yet</strong><p>Saved changes and important updates will appear here.</p></div>
+      </div>
+    </section>
+  </ng-template>
+</ng-container>

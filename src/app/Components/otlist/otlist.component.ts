@@ -27,7 +27,7 @@ export class OtlistComponent implements OnInit, OnDestroy {
   private version = 0;
   constructor(private records: OtMedicineService, private db: SupabaseDataService, private user: UserLoginService, private dialog: MatDialog, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
   ngOnInit(): void {
-    this.user.getLoginUser().then(role => this.isSuperAdmin = role === 'admin').catch(() => this.errorMessage = 'Unable to load account permissions.');
+    this.user.getLoginUser().then(role => this.isSuperAdmin = role === 'admin').catch(() => { this.errorMessage = 'Unable to load account permissions.'; this.feedback.error(this.errorMessage); });
     this.changes = this.db.changes.subscribe(collection => { if (collection === 'otFormData') void this.load(); });
     void this.load();
   }
@@ -47,7 +47,7 @@ export class OtlistComponent implements OnInit, OnDestroy {
     finally { if (version === this.version) this.loading = false; }
   }
   preview(record: OtMedicineRecord): void { this.dialog.open(OtMedicinePreviewComponent, { data: { record }, width: '940px', maxWidth: '96vw', maxHeight: '94dvh', panelClass: 'ot-preview-panel' }); }
-  print(record: OtMedicineRecord): void { this.errorMessage = printOtMedicine(record) ? '' : 'Allow pop-ups to print the OT medicine list.'; if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' }); }
+  print(record: OtMedicineRecord): void { this.errorMessage = printOtMedicine(record) ? '' : 'Allow pop-ups to print the OT medicine list.'; if (this.errorMessage) this.feedback.error(this.errorMessage); else this.feedback.info('OT medicine record prepared for printing.', { title: 'Print requested', route: '/ot-records' }); }
   async deleteOt(record: OtMedicineRecord): Promise<void> {
     if (this.deletingId || !window.confirm('Delete the OT medicine record for ' + record.patientName + '?')) return;
     this.deletingId = record.id;
@@ -55,5 +55,5 @@ export class OtlistComponent implements OnInit, OnDestroy {
     catch (error) { this.errorMessage = error instanceof Error ? error.message : 'Unable to delete the OT record.'; if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' }); }
     finally { this.deletingId = ''; }
   }
-  exportToExcel(): void { exportRecords(this.filteredRecords, 'ot-medicines.xlsx', 'OT medicines'); }
+  exportToExcel(): void { exportRecords(this.filteredRecords, 'ot-medicines.xlsx', 'OT medicines', this.feedback); }
 }

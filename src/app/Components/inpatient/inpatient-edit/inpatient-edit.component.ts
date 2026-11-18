@@ -1,4 +1,5 @@
 import { Component, Inject } from '@angular/core';
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { InpatientService } from '../../../Services/inpatient.service';
@@ -17,7 +18,8 @@ export class InpatientEditComponent {
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<InpatientEditComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: any
+    @Inject(MAT_DIALOG_DATA) public data: any,
+    private feedback: NotifyUpdateService = new NotifyUpdateService()
   ) {
     const defaultData = { inpatientId: 0, patientName: '', procedure: '', admissionDate: '', dischargeDate: '', surgeonName: '', createdAt: '', ...data };
 
@@ -59,6 +61,7 @@ export class InpatientEditComponent {
   onSubmit() {
     if (this.inpatientForm.invalid) {
       this.inpatientForm.markAllAsTouched();
+      this.feedback.warning('Complete the highlighted inpatient fields before saving.');
       return;
     }
     this.dialogRef.close(this.ResultRefactoring());

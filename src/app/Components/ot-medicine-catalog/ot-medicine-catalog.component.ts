@@ -53,10 +53,10 @@ export class OtMedicineCatalogComponent implements OnInit, OnDestroy {
     try {
       const confirmed = await firstValueFrom(this.dialog.open(OtMedicineDeleteComponent, { data: { name: medicine.name }, role: 'alertdialog', width: '520px', maxWidth: '94vw', panelClass: 'hmc-dialog-panel', autoFocus: '[cdkFocusInitial]' }).afterClosed());
       if (confirmed !== true) return;
-      await this.catalog.delete(medicine.id); this.feedback.success('OT medicine removed from future selections. Saved records are preserved.');
+      await this.catalog.delete(medicine.id); this.feedback.success('OT medicine deleted successfully. Saved records are preserved.', { title: 'OT medicine deleted', route: '/ot-medicines' });
       this.success = 'OT medicine removed. Saved patient records are preserved.'; await this.load();
     } catch (error) { this.error = error instanceof Error ? error.message : 'Unable to remove this medicine.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }
     finally { this.deletingId = ''; }
   }
-  export(): void { exportRecords(this.filtered.map(item => ({ Medicine: item.name, Generic: item.genericName, Category: item.category, Type: item.type, Strength: item.strength, Unit: item.unit, Description: item.description, Status: item.active ? 'Active' : 'Inactive' })), 'ot-medicines.xlsx', 'OT medicines'); }
+  export(): void { exportRecords(this.filtered.map(item => ({ Medicine: item.name, Generic: item.genericName, Category: item.category, Type: item.type, Strength: item.strength, Unit: item.unit, Description: item.description, Status: item.active ? 'Active' : 'Inactive' })), 'ot-medicines.xlsx', 'OT medicines', this.feedback); }
 }

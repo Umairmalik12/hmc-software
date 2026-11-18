@@ -14,9 +14,17 @@
   </header>
 
   <section class="panel generate-panel" aria-labelledby="generate-heading">
-    <div>
-      <h2 id="generate-heading">Generate a patient token</h2>
-      <p>Enter the patient's name. The next daily token is assigned automatically.</p>
+    <div class="generate-heading">
+      <div>
+        <h2 id="generate-heading">Generate a patient token</h2>
+        <p>Enter the patient's name. The next daily token is assigned automatically.</p>
+      </div>
+      <label class="token-paper-control" for="token-paper-width">Print paper
+        <select id="token-paper-width" [ngModel]="paperWidth" (ngModelChange)="changePaperWidth($event)" aria-label="Token print paper size">
+          <option [ngValue]="58">58 mm</option>
+          <option [ngValue]="80">80 mm</option>
+        </select>
+      </label>
     </div>
     <form class="generate-form" (ngSubmit)="generateSlip()">
       <label for="patient-name">Patient name</label>

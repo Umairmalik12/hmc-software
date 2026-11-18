@@ -55,9 +55,9 @@ export class MedicineCatalogComponent implements OnInit, OnDestroy {
   async delete(option: PrescriptionMedicineOption): Promise<void> {
     if (this.deletingId || !window.confirm('Remove ' + option.name + ' from future medicine selections? Saved records will keep their medicine text.')) return;
     this.deletingId = option.id; this.error = ''; this.success = '';
-    try { await this.catalog.delete(option); this.feedback.success('Medicine removed from future selections. Saved records are preserved.'); this.success = 'Medicine removed from the catalogue.'; await this.load(); }
+    try { await this.catalog.delete(option); this.feedback.success('Medicine deleted successfully. Saved records are preserved.', { title: 'Medicine deleted', route: '/prescription-medicines' }); this.success = 'Medicine removed from the catalogue.'; await this.load(); }
     catch (error) { this.error = error instanceof Error ? error.message : 'Unable to remove this medicine.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }
     finally { this.deletingId = ''; }
   }
-  export(): void { exportRecords(this.filtered.map(option => ({ Medicine: medicineNameParts(option.name, option.strength).name, Strength: medicineNameParts(option.name, option.strength).strength })), 'prescription-medicines.xlsx', 'Medicines'); }
+  export(): void { exportRecords(this.filtered.map(option => ({ Medicine: medicineNameParts(option.name, option.strength).name, Strength: medicineNameParts(option.name, option.strength).strength })), 'prescription-medicines.xlsx', 'Medicines', this.feedback); }
 }

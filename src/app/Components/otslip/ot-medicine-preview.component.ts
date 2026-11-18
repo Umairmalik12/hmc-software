@@ -1,4 +1,5 @@
 import { Component, Inject, ViewEncapsulation } from '@angular/core';
+import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { OtMedicineRecord, copyOtRecord } from 'src/app/Models/ot-medicine.model';
 import { buildOtMedicineDocument, OT_DOCUMENT_CSS, printOtMedicine } from './ot-medicine-document';
@@ -13,6 +14,10 @@ export class OtMedicinePreviewComponent {
   record: OtMedicineRecord;
   html: string;
   error = '';
-  constructor(@Inject(MAT_DIALOG_DATA) data: { record: OtMedicineRecord }) { this.record = copyOtRecord(data.record); this.html = buildOtMedicineDocument(this.record); }
-  print(): void { this.error = printOtMedicine(this.record) ? '' : 'Allow pop-ups to print this OT record.'; }
+  constructor(@Inject(MAT_DIALOG_DATA) data: { record: OtMedicineRecord }, private feedback: NotifyUpdateService = new NotifyUpdateService()) { this.record = copyOtRecord(data.record); this.html = buildOtMedicineDocument(this.record); }
+  print(): void {
+    this.error = printOtMedicine(this.record) ? '' : 'Allow pop-ups to print this OT record.';
+    if (this.error) this.feedback.error(this.error);
+    else this.feedback.info('OT medicine record prepared for printing.', { title: 'Print requested', route: '/ot-records' });
+  }
 }

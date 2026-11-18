@@ -53,7 +53,7 @@ export class RoomsComponent implements OnInit, OnDestroy {
   cancel(): void { this.editingId = ''; this.name.reset(''); }
   async save(): Promise<void> {
     if (this.saving) return;
-    if (this.name.invalid) { this.name.markAsTouched(); return; }
+    if (this.name.invalid) { this.name.markAsTouched(); this.feedback.warning('Enter a room or bed name before saving.'); return; }
     this.saving = true; this.error = ''; this.success = '';
     try { await this.rooms.save(this.name.value, this.editingId || undefined); this.cancel(); this.success = 'Room / bed saved.'; if (this.success) this.feedback.alertNotify.next({ msg: this.success, type: 'success' }); await this.load(); }
     catch (error) { this.error = error instanceof Error ? error.message : 'Unable to save room or bed.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }
@@ -66,5 +66,5 @@ export class RoomsComponent implements OnInit, OnDestroy {
     catch (error) { this.error = error instanceof Error ? error.message : 'Unable to remove room or bed.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }
     finally { this.saving = false; this.deletingId = ''; }
   }
-  export(): void { exportRecords(this.filtered.map(option => ({ 'Room / bed': option.name })), 'rooms-and-beds.xlsx', 'Rooms and beds'); }
+  export(): void { exportRecords(this.filtered.map(option => ({ 'Room / bed': option.name })), 'rooms-and-beds.xlsx', 'Rooms and beds', this.feedback); }
 }
