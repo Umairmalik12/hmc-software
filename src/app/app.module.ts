@@ -1,3 +1,5 @@
+import { ThermalReceiptPreviewComponent } from './Shared/thermal-receipt-preview.component';
+import { PatientTokenPreviewComponent } from './Components/patient-token/patient-token-preview.component';
 import { FeedbackModule } from './Shared/feedback.module';
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
@@ -121,6 +123,8 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
     MedicineEditComponent,
     MedicineSlipComponent,
     PatientTokenComponent,
+    PatientTokenPreviewComponent,
+    ThermalReceiptPreviewComponent,
     TimeFormatPipe,
   ],
   imports: [

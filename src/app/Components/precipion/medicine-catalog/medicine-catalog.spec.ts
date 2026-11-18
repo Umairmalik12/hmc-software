@@ -11,6 +11,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
 import { PrescriptionMedicineSelectComponent } from './prescription-medicine-select.component';
 import { MedicineCatalogComponent } from './medicine-catalog.component';
 import { MedicineOptionDialogComponent } from './medicine-option-dialog.component';
@@ -32,7 +33,7 @@ describe('Searchable prescription medicine selector and catalogue', () => {
   beforeEach(async () => {
     store = memoryDb();
     await TestBed.configureTestingModule({
-      imports: [FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatAutocompleteModule, MatDialogModule, MatInputModule, MatButtonModule, MatIconModule],
+      imports: [FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatAutocompleteModule, MatDialogModule, MatInputModule, MatButtonModule, MatIconModule, MatSelectModule],
       declarations: [CatalogHost, PreciptionComponent, PrescriptionMedicineSelectComponent, MedicineCatalogComponent, MedicineOptionDialogComponent, ScrollPaginationDirective, ScrollListFooterComponent, RecordPreviewDirective],
       providers: [{ provide: SupabaseDataService, useValue: store.db }, { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({})) } }],
     }).compileComponents();
@@ -49,6 +50,55 @@ describe('Searchable prescription medicine selector and catalogue', () => {
     const add = Array.from(document.querySelectorAll<HTMLElement>('.rx-medicine-options mat-option')).find(option => option.textContent?.includes('to catalogue'))!;
     expect(add).toBeDefined(); add.click(); await settle();
   }
+
+  async function chooseStrength(value: string): Promise<void> {
+    document.querySelector<HTMLElement>('mat-select[aria-label="Medicine strength"] .mat-mdc-select-trigger')!.click(); await settle();
+    const option = Array.from(document.querySelectorAll<HTMLElement>('.mat-mdc-select-panel mat-option')).find(item => item.textContent?.trim() === value)!;
+    expect(option).withContext(value).toBeDefined(); option.click(); await settle();
+  }
+
+  it('adds a strength in the inner medicine dialog, selects the full label and restores it when editing', async () => {
+    const fixture = TestBed.createComponent(CatalogHost);
+    try {
+      fixture.detectChanges(); await settle(); fixture.detectChanges(); await openAdd(fixture, 'Strength example');
+      await chooseStrength('500 mg');
+      const save = () => Array.from(document.querySelectorAll<HTMLButtonElement>('app-medicine-option-dialog mat-dialog-actions button')).find(button => button.textContent?.includes('Save medicine'))!;
+      save().click(); await settle(); fixture.detectChanges();
+      expect(fixture.componentInstance.value).toBe('Strength example 500 mg');
+      const catalog = fixture.debugElement.query(By.directive(MedicineCatalogComponent)).componentInstance as MedicineCatalogComponent;
+      catalog.query = 'Strength example'; catalog.pagination.reset(); fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('tbody').textContent).toContain('500 mg');
+      fixture.nativeElement.querySelector('button[aria-label="Edit catalogue medicine"]').click(); await settle();
+      const editor = TestBed.inject(MatDialog).openDialogs[0].componentInstance as MedicineOptionDialogComponent;
+      expect(editor.name.value).toBe('Strength example'); expect(editor.strength.value).toBe('500 mg');
+      await chooseStrength('1 g'); save().click(); await settle(); fixture.detectChanges();
+      const saved = Array.from(store.collections.get('prescriptionMedicineCatalog')!.values())[0];
+      expect(saved.name).toBe('Strength example 1 g'); expect(saved.strength).toBe('1 g');
+      expect(fixture.componentInstance.value).toBe('Strength example 500 mg');
+      const selector = fixture.debugElement.query(By.directive(PrescriptionMedicineSelectComponent)).componentInstance as PrescriptionMedicineSelectComponent;
+      expect(selector.options.some(item => item.name === 'Strength example 1 g')).toBeTrue();
+      expect(store.db.setItem).not.toHaveBeenCalled();
+    } finally { fixture.destroy(); }
+  });
+
+  it('allows custom strengths and loads legacy medicine labels without duplicating their strength', async () => {
+    const fixture = TestBed.createComponent(CatalogHost);
+    try {
+      await TestBed.inject(PrescriptionMedicineCatalogService).save('Legacy medicine 1g');
+      fixture.detectChanges(); await settle(); fixture.detectChanges();
+      const catalog = fixture.debugElement.query(By.directive(MedicineCatalogComponent)).componentInstance as MedicineCatalogComponent;
+      catalog.query = 'Legacy medicine'; fixture.detectChanges();
+      fixture.nativeElement.querySelector('button[aria-label="Edit catalogue medicine"]').click(); await settle();
+      const editor = TestBed.inject(MatDialog).openDialogs[0].componentInstance as MedicineOptionDialogComponent;
+      expect(editor.name.value).toBe('Legacy medicine'); expect(editor.strength.value).toBe('1 g');
+      await chooseStrength('Other strength...'); await editor.save();
+      expect(editor.customStrength.touched).toBeTrue(); expect(TestBed.inject(MatDialog).openDialogs.length).toBe(1);
+      const input = document.querySelector<HTMLInputElement>('app-medicine-option-dialog input[placeholder="e.g. 50 mcg or 0.5%"]')!;
+      type(input, '50mcg'); await settle(); await editor.save(); await settle(); fixture.detectChanges();
+      expect(catalog.filtered[0].name).toBe('Legacy medicine 50 mcg'); expect(catalog.filtered[0].strength).toBe('50 mcg');
+      const writes = (store.db.upsertRecord as jasmine.Spy).calls.allArgs(); expect(writes.length).toBe(2);
+    } finally { fixture.destroy(); }
+  });
 
   it('searches case-insensitively, selects with the keyboard and keeps the themed panel inside the viewport', async () => {
     const fixture = TestBed.createComponent(CatalogHost);

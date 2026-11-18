@@ -1,6 +1,6 @@
 <h2 mat-dialog-title><mat-icon>receipt_long</mat-icon><span>OPD thermal slip<small>{{ opds.length }} selected {{ opds.length === 1 ? 'record' : 'records' }}</small></span></h2>
 <mat-dialog-content class="opd-slip-content">
-  <div class="opd-preview-stack"><div *ngFor="let html of previews" class="opd-preview-paper" [class.opd-paper-58]="paperWidth === 58" [innerHTML]="html"></div></div>
+  <app-thermal-receipt-preview *ngIf="opds.length" [html]="html" [paperWidth]="paperWidth"></app-thermal-receipt-preview>
   <p *ngIf="!opds.length" class="list-empty">No OPD records selected.</p>
 </mat-dialog-content>
 <mat-dialog-actions class="opd-slip-actions"><label>Paper <select [(ngModel)]="paperWidth" aria-label="OPD thermal paper size"><option [ngValue]="80">80 mm</option><option [ngValue]="58">58 mm</option></select></label><button mat-stroked-button type="button" (click)="close()">Close</button><button mat-flat-button color="primary" type="button" (click)="print()" [disabled]="!opds.length"><mat-icon>print</mat-icon>{{ opds.length > 1 ? 'Print all slips' : 'Print slip' }}</button></mat-dialog-actions>

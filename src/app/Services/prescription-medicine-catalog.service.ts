@@ -2,8 +2,9 @@ import { Injectable, OnDestroy } from '@angular/core';
 import { Subject, Subscription } from 'rxjs';
 import { COMMON_MEDICINES_ARRAY } from '../Components/precipion/prescription-medicines';
 import { SupabaseDataService } from './supabase-data.service';
+import { medicineNameWithStrength, medicineVariantKey, normalizeMedicineStrength } from '../Models/medicine-strength';
 
-export interface PrescriptionMedicineOption { id: string; name: string; active: boolean; }
+export interface PrescriptionMedicineOption { id: string; name: string; active: boolean; strength?: string; }
 export const PRESCRIPTION_MEDICINE_CATALOG = 'prescriptionMedicineCatalog';
 export const medicineKey = (name: string): string => name.trim().replace(/\s+/g, ' ').toLowerCase();
 export const DEFAULT_PRESCRIPTION_MEDICINES: readonly PrescriptionMedicineOption[] = Array.from(new Map(COMMON_MEDICINES_ARRAY.map(name => {
@@ -42,20 +43,26 @@ export class PrescriptionMedicineCatalogService implements OnDestroy {
       if (!names.has(key)) { options.set('legacy:' + encodeURIComponent(key), { id: 'legacy:' + encodeURIComponent(key), name: name.trim().replace(/\s+/g, ' '), active: true }); names.add(key); }
     });
     if (Array.isArray(stored)) stored.forEach(option => {
-      if (option && typeof option.name === 'string' && option.name.trim() && option.id) options.set(String(option.id), { id: String(option.id), name: option.name, active: option.active !== false });
+      if (option && typeof option.name === 'string' && option.name.trim() && option.id) options.set(String(option.id), { ...option, id: String(option.id), name: option.name, active: option.active !== false, ...(typeof option.strength === 'string' ? { strength: normalizeMedicineStrength(option.strength) } : {}) });
     });
     return Array.from(options.values()).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
   }
 
-  async save(name: string, id?: string): Promise<PrescriptionMedicineOption> {
+  async save(name: string, id?: string, strength?: string): Promise<PrescriptionMedicineOption> {
     const trimmed = name.trim().replace(/\s+/g, ' ');
     if (!trimmed) throw new Error('Enter a medicine name.');
     if (trimmed.length > 160) throw new Error('Use 160 characters or fewer for the medicine name.');
+    if (strength !== undefined && (typeof strength !== 'string' || strength.trim().length > 60)) throw new Error('Use 60 characters or fewer for the medicine strength.');
     const all = await this.read();
     if (id && !all.some(option => option.id === id)) throw new Error('This medicine no longer exists. Refresh the list.');
-    const duplicate = all.find(option => option.id !== id && medicineKey(option.name) === medicineKey(trimmed));
+    const existing = id ? all.find(option => option.id === id) : undefined;
+    const selectedStrength = strength === undefined ? existing?.strength : normalizeMedicineStrength(strength);
+    const displayName = medicineNameWithStrength(trimmed, selectedStrength || '');
+    if (displayName.length > 160) throw new Error('Use 160 characters or fewer for the medicine name and strength together.');
+    const matches = all.filter(option => option.id !== id && medicineVariantKey(option.name) === medicineVariantKey(displayName));
+    const duplicate = matches.find(option => option.active) || matches[0];
     if (duplicate?.active) throw new Error('This medicine already exists.');
-    const option = { id: id || duplicate?.id || String(await this.db.allocateId(PRESCRIPTION_MEDICINE_CATALOG)), name: trimmed, active: true };
+    const option: PrescriptionMedicineOption = { ...(existing || duplicate), id: id || duplicate?.id || String(await this.db.allocateId(PRESCRIPTION_MEDICINE_CATALOG)), name: displayName, active: true, ...(selectedStrength !== undefined ? { strength: selectedStrength } : {}) };
     await this.db.upsertRecord(PRESCRIPTION_MEDICINE_CATALOG, option.id, option);
     this.invalidate();
     return option;

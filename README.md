@@ -157,6 +157,12 @@ and quantity validation. Their **Manage catalogue** button opens the shared list
 without discarding patient, room or quantity entries. Selecting a suggestion saves
 the selected name and quantity in the daily record; it does not duplicate catalogue
 entries. Historical names remain editable even if a catalogue option is removed.
+The catalogue's Add/Edit medicine dialog includes an optional strength dropdown
+with values such as 500 mg and 1 g, plus an Other strength option. Strength is saved
+in the existing JSON record and included in medicine suggestions, selections,
+previews and exports. Different strengths of the same medicine can be registered
+separately. Editing catalogue strength preserves medicine text already saved in
+prescriptions and daily medicine records. No SQL migration is required.
 
 OPD slips use a dedicated thermal preview and print window with a saved 80 mm or
 58 mm roll setting. Patient, doctor and follow-up text wrap within the printable
@@ -164,6 +170,12 @@ width; the footer has bottom padding and a paper feed. A single-slip action relo
 the selected saved visit. **Print matching slips** includes the full filtered list,
 including rows beyond the visible scroll batch, and prints a continuous roll job
 with gaps between receipts. An empty filter result does not print unrelated visits.
+Patient tokens also open a thermal receipt preview with Print, Close and saved
+58/80 mm paper controls. Token and OPD previews share the printer's physical paper
+width, printable width, fonts, spacing and trailing feed. The token preview fits
+long token numbers using the same routine as printing. New-token printing and
+reprints render the saved record directly, so they cannot clone stale screen text.
+OPD batch previews show the same continuous job and inter-slip gaps as printing.
 
 The administrator's **OT medicine catalogue** is available in the Pharmacy sidebar,
 from **OT medicine records → Manage medicines**, or inside an OT slip. It supports

@@ -2,6 +2,29 @@ import { memoryDb } from '../testing/memory-db';
 import { DEFAULT_PRESCRIPTION_MEDICINES, medicineKey, PRESCRIPTION_MEDICINE_CATALOG, PrescriptionMedicineCatalogService } from './prescription-medicine-catalog.service';
 
 describe('Prescription medicine catalogue persistence', () => {
+  it('persists separate strength variants, edits their strength and preserves medicine text in historical records', async () => {
+    const { db, collections } = memoryDb(); const service = new PrescriptionMedicineCatalogService(db);
+    try {
+      const mg = await service.save('Example medicine', undefined, '500mg');
+      const gram = await service.save('Example medicine', undefined, '1g');
+      expect(mg.name).toBe('Example medicine 500 mg'); expect(mg.strength).toBe('500 mg');
+      expect(gram.name).toBe('Example medicine 1 g'); expect(gram.id).not.toBe(mg.id);
+      const historical = { id: '21', medicines: [{ name: mg.name, morning: true }] };
+      collections.set('prescriptions', new Map([['21', historical]]));
+      await expectAsync(service.save('Example medicine 500mg')).toBeRejectedWithError('This medicine already exists.');
+      const edited = await service.save('Example medicine', mg.id, '250 mg');
+      expect(edited.id).toBe(mg.id); expect(edited.name).toBe('Example medicine 250 mg');
+      const reloaded = new PrescriptionMedicineCatalogService(db);
+      try {
+        expect((await reloaded.getAll()).find(item => item.id === mg.id)!.strength).toBe('250 mg');
+        expect((await reloaded.getAll()).find(item => item.id === gram.id)!.name).toBe('Example medicine 1 g');
+        await reloaded.delete(edited);
+        expect(collections.get(PRESCRIPTION_MEDICINE_CATALOG)!.get(mg.id).strength).toBe('250 mg');
+        expect(collections.get('prescriptions')!.get('21')).toEqual(historical);
+      } finally { reloaded.ngOnDestroy(); }
+    } finally { service.ngOnDestroy(); }
+  });
+
   it('retains built-ins and legacy custom suggestions without duplicates or writes on read', async () => {
     const { db, collections } = memoryDb();
     collections.set('customMedicines', new Map([['mixel', '  mixel '], ['custom', 'Custom Medicine'], ['custom-again', ' custom   medicine ']]));

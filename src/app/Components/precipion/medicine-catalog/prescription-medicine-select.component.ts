@@ -3,8 +3,9 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { MatAutocomplete, MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatDialog } from '@angular/material/dialog';
 import { Subscription } from 'rxjs';
-import { medicineKey, PrescriptionMedicineCatalogService, PrescriptionMedicineOption } from 'src/app/Services/prescription-medicine-catalog.service';
+import { PrescriptionMedicineCatalogService, PrescriptionMedicineOption } from 'src/app/Services/prescription-medicine-catalog.service';
 import { MedicineOptionDialogComponent } from './medicine-option-dialog.component';
+import { matchesMedicineSearch } from 'src/app/Models/medicine-strength';
 
 let nextMedicinePickerId = 0;
 
@@ -51,7 +52,7 @@ export class PrescriptionMedicineSelectComponent implements ControlValueAccessor
   changed: (value: string) => void = () => {};
   touched: () => void = () => {};
   constructor(private catalog: PrescriptionMedicineCatalogService, private dialog: MatDialog) {}
-  get filtered(): PrescriptionMedicineOption[] { const query = this.showAll ? '' : medicineKey(this.value); return this.options.filter(option => medicineKey(option.name).includes(query)); }
+  get filtered(): PrescriptionMedicineOption[] { const query = this.showAll ? '' : this.value; return this.options.filter(option => matchesMedicineSearch(option.name, query)); }
   get canAdd(): boolean { return !this.loading && !this.error && !!this.value.trim() && this.value.trim().length <= 160 && this.filtered.length === 0; }
   trackOption(_index: number, option: PrescriptionMedicineOption): string { return option.id; }
   ngOnInit(): void { void this.load(); this.subscriptions.add(this.catalog.changes.subscribe(() => void this.load())); }

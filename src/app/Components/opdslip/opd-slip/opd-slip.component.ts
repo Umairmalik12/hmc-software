@@ -2,7 +2,7 @@ import { Component, Inject, ViewEncapsulation } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Opd } from 'src/app/Models/opd.model';
 import { printThermal } from '../../patient-token/thermal-print';
-import { buildOpdThermalPrint, buildOpdThermalReceipt, OPD_THERMAL_CSS } from './opd-thermal-receipt';
+import { buildOpdThermalPrint, OPD_THERMAL_CSS } from './opd-thermal-receipt';
 
 @Component({
   selector: 'app-opd-slip',
@@ -13,11 +13,11 @@ import { buildOpdThermalPrint, buildOpdThermalReceipt, OPD_THERMAL_CSS } from '.
 })
 export class OpdSlipComponent {
   readonly opds: Opd[];
-  readonly previews: string[];
+  readonly html: string;
   paperWidth: 58 | 80 = 80;
   constructor(public dialogRef: MatDialogRef<OpdSlipComponent>, @Inject(MAT_DIALOG_DATA) data: { opds: Opd[] }) {
     this.opds = (data?.opds || []).map(opd => ({ ...opd }));
-    this.previews = this.opds.map(buildOpdThermalReceipt);
+    this.html = buildOpdThermalPrint(this.opds);
     try { this.paperWidth = localStorage.getItem('hmc.opdPaperWidth') === '58' ? 58 : 80; } catch { /* Use the default roll width. */ }
   }
   print(): void {

@@ -35,22 +35,6 @@ th, td { padding: 11px 12px; border-bottom: 1px solid #eaecf0; white-space: nowr
 th { background: #f9fafb; color: #475467; font-size: 12px; }
 .table-token { font-weight: 800; color: #12675f; }
 .empty-state { padding: 24px 0; text-align: center; color: #667085; }
-#patient-token-slip-print { box-sizing: border-box; display: none; width: 72mm; max-width: 100%; margin: 0 auto; padding: .8mm 1.5mm 3mm; color: #000; background: #fff; text-align: center; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-size: 9pt; line-height: 1.25; overflow-wrap: break-word; }
-#patient-token-slip-print.paper-58 { width: 48mm; font-size: 8.5pt; }
-.slip-brand, .slip-hospital, .slip-title, .slip-number, .slip-footer, .slip-thanks { width: 100%; text-align: center; }
-.slip-brand { font-size: 12.5pt; font-weight: 900; letter-spacing: .2pt; line-height: 1.12; text-transform: uppercase; overflow-wrap: anywhere; }
-#patient-token-slip-print.paper-58 .slip-brand { font-size: 11.8pt; }
-.slip-hospital { font-size: 8pt; font-weight: 700; letter-spacing: .5pt; line-height: 1.2; text-transform: uppercase; opacity: .75; }
-.slip-rule { border-top: 1px dashed #000; margin: 1.1mm 0; opacity: .85; }
-.slip-title { font-size: 8pt; font-weight: 700; letter-spacing: 1.2pt; line-height: 1.2; text-transform: uppercase; opacity: .85; }
-.slip-number { display: block; margin: .8mm 0 1.2mm; padding: .8mm 0; font-size: 28pt; font-weight: 900; line-height: 1.05; letter-spacing: .6pt; white-space: nowrap; border-top: 1.6px solid #000; border-bottom: 1.6px solid #000; }
-#patient-token-slip-print.paper-58 .slip-number { font-size: 26.5pt; }
-.slip-row { display: grid; grid-template-columns: 16mm minmax(0, 1fr); align-items: baseline; gap: 1.5mm; margin: .45mm 0; text-align: left; font-size: 8.5pt; line-height: 1.22; }
-.slip-row .slip-label { font-weight: 700; letter-spacing: .2pt; text-transform: uppercase; opacity: .7; }
-.slip-row .slip-value { min-width: 0; text-align: right; font-weight: 700; white-space: normal; overflow-wrap: anywhere; }
-.slip-footer { margin-top: .7mm; font-size: 7.5pt; font-weight: 700; letter-spacing: .3pt; text-transform: uppercase; line-height: 1.25; }
-.slip-thanks { margin-top: .5mm; font-size: 8.5pt; font-weight: 900; letter-spacing: .6pt; text-transform: uppercase; line-height: 1.25; }
-.paper-control { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 16px; font-size: 12px; }
 @media (max-width: 760px) {
   .token-dashboard { padding: 4px; }
   .dashboard-header, .history-heading { align-items: stretch; flex-direction: column; }
@@ -58,7 +42,5 @@ th { background: #f9fafb; color: #475467; font-size: 12px; }
   .date-controls { flex-wrap: wrap; }
 }
 @media (max-width: 440px) { .summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; } .panel { padding: 15px; } .form-controls { align-items: stretch; flex-direction: column; } }
-@media print {
-  #patient-token-slip-print { display: block !important; position: static; margin: 0 auto; padding: .8mm 1.5mm 3mm; }
-  #patient-token-slip-print .paper-control { display: none !important; }
-}
+
+.summary-link{justify-self:start;padding:0;background:transparent;color:#12675f;font-size:12px;text-decoration:underline;text-underline-offset:3px}.filter-active{background:#167a70;color:#fff}.date-controls{flex-wrap:wrap}.history-heading>div:first-child{min-width:0}

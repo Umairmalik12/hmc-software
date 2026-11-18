@@ -53,22 +53,23 @@
       <small>Pakistan local date</small>
     </article>
     <article class="summary-card">
-      <span>Selected Date Total</span>
-      <strong>{{ selectedDateTotal }}</strong>
-      <small>{{ formatDate(selectedDate) }}</small>
+      <span>Matching tokens</span>
+      <strong>{{ filteredSlips.length }}</strong>
+      <small>{{ selectedDate ? formatDate(selectedDate) : 'All dates' }}</small>
     </article>
     <article class="summary-card">
       <span>Total Historical Slips</span>
       <strong>{{ historicalTotal }}</strong>
       <small>Hospital workspace</small>
+      <button type="button" class="summary-link" (click)="showAllTokens(); tokenHistory.scrollIntoView({behavior: 'smooth', block: 'start'})">View all tokens</button>
     </article>
   </section>
 
-  <section class="panel history-panel">
+  <section #tokenHistory class="panel history-panel" id="patient-token-history">
     <div class="history-heading">
       <div>
-        <h2>Date-wise patient history</h2>
-        <p>Review and reprint slips saved for any date.</p>
+        <h2>Patient token list</h2>
+        <p>Preview, print, edit or delete saved tokens across all dates.</p>
       </div>
       <div class="date-controls">
         <label for="history-date">Filter date</label>
@@ -79,13 +80,13 @@
           (ngModelChange)="filterByDate($event)"
           [ngModelOptions]="{standalone: true}"
         />
-        <button type="button" class="secondary-button" (click)="showToday()">Today</button><button type="button" class="secondary-button" (click)="exportToExcel()">Export</button>
+        <button type="button" class="secondary-button" [class.filter-active]="!selectedDate" [attr.aria-pressed]="!selectedDate" (click)="showAllTokens()">All tokens</button><button type="button" class="secondary-button" [class.filter-active]="selectedDate === today" [attr.aria-pressed]="selectedDate === today" (click)="showToday()">Today</button><button type="button" class="secondary-button" (click)="exportToExcel()">Export</button>
       </div>
     </div>
 
     <p *ngIf="loading" class="hmc-loading-state" role="status">Loading patient token history...</p><input class="token-name-input" type="search" [(ngModel)]="search" (ngModelChange)="searchHistory()" placeholder="Search token or patient" aria-label="Search token history"><div *ngFor="let group of historyGroups; trackBy: trackGroup" class="date-group">
-      <h3>{{ formatDate(group.date) }} <span>{{ filteredSlips.length }} patients</span></h3>
-      <div class="table-wrap table-scroll-container" appScrollPagination [scrollTotal]="filteredSlips.length" [scrollShown]="group.slips.length" [scrollResetKey]="pagination.revision" (loadMore)="loadMore()" scrollLabel="Patient token history">
+      <h3>{{ group.date ? formatDate(group.date) : 'All dates' }} <span>{{ filteredSlips.length }} tokens</span></h3>
+      <div class="table-wrap table-scroll-container" appScrollPagination [scrollTotal]="filteredSlips.length" [scrollShown]="group.slips.length" [scrollResetKey]="pagination.revision" [scrollDisabled]="loading" (loadMore)="loadMore()" scrollLabel="Patient token history">
         <table>
           <thead>
             <tr>
@@ -103,7 +104,7 @@
               <td>{{ formatDate(slip.date) }}</td>
               <td>{{ slip.time | timeFormat }}</td>
               <td class="actions">
-                <ng-container *ngIf="editingSlipId === slip.id; else tokenActions"><button [appBusy]="updating" type="button" (click)="saveSlip(slip)" [disabled]="updating">Save</button><button type="button" class="secondary-button" (click)="cancelEdit()" [disabled]="updating">Cancel</button></ng-container><ng-template #tokenActions><button type="button" class="secondary-button" [appRecordPreview]="slip" [previewTitle]="'Patient token ' + slip.tokenNumber" aria-label="Preview patient token" title="Preview">Preview</button><button type="button" class="secondary-button" (click)="printSlip(slip)">Print</button><button type="button" class="secondary-button" (click)="editSlip(slip)">Edit</button>
+                <ng-container *ngIf="editingSlipId === slip.id; else tokenActions"><button [appBusy]="updating" type="button" (click)="saveSlip(slip)" [disabled]="updating">Save</button><button type="button" class="secondary-button" (click)="cancelEdit()" [disabled]="updating">Cancel</button></ng-container><ng-template #tokenActions><button type="button" class="secondary-button" (click)="previewSlip(slip)" aria-label="Preview patient token" title="Preview">Preview</button><button type="button" class="secondary-button" (click)="printSlip(slip)">Print</button><button type="button" class="secondary-button" (click)="editSlip(slip)">Edit</button>
                 <button type="button" class="delete-button" (click)="deleteSlip(slip)" [appBusy]="deletingId === slip.id" [disabled]="updating || generating || deletingId !== null">Delete</button></ng-template>
               </td>
             </tr>
@@ -112,33 +113,7 @@
       </div>
       <app-scroll-list-footer [total]="filteredSlips.length" [shown]="group.slips.length" (loadMore)="loadMore()"></app-scroll-list-footer>
     </div>
-    <p *ngIf="!loading && !errorMessage && !historyGroups.length" class="empty-state">No patient tokens were generated for this date.</p>
+    <p *ngIf="!loading && !errorMessage && !historyGroups.length" class="empty-state">{{ search.trim() ? 'No tokens match this search.' : (selectedDate ? 'No patient tokens were generated for this date.' : 'No patient tokens have been saved yet.') }}</p>
   </section>
 
-  <section
-    *ngIf="selectedSlip as slip"
-    id="patient-token-slip-print"
-    [class.paper-80]="paperWidth === 80"
-    [class.paper-58]="paperWidth === 58"
-    aria-label="Printable patient token slip"
-  >
-    <div class="slip-brand">HAQ MEDICAL CENTER</div>
-    <div class="slip-hospital">Hospital</div>
-    <div class="slip-rule"></div>
-    <div class="slip-title">PATIENT TOKEN</div>
-    <div class="slip-number">{{ slip.tokenNumber }}</div>
-    <div class="slip-rule"></div>
-    <div class="slip-row"><span class="slip-label">Patient</span><span class="slip-value">{{ slip.customerName }}</span></div>
-    <div class="slip-row"><span class="slip-label">Date</span><span class="slip-value">{{ slip.date.split('-').reverse().join('-') }}</span></div>
-    <div class="slip-row"><span class="slip-label">Time</span><span class="slip-value">{{ slip.time | timeFormat }}</span></div>
-    <div class="slip-rule"></div>
-    <div class="slip-footer">PLEASE WAIT FOR YOUR TURN</div>
-    <div class="slip-thanks">THANK YOU!</div>
-    <label class="paper-control">Paper width
-      <select [(ngModel)]="paperWidth" [ngModelOptions]="{standalone: true}">
-        <option [ngValue]="58">58 mm</option>
-        <option [ngValue]="80">80 mm</option>
-      </select>
-    </label>
-  </section>
 </main>

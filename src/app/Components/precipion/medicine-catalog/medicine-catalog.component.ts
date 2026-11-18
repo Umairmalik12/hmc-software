@@ -2,10 +2,11 @@ import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { Component, Inject, OnDestroy, OnInit, Optional } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
 import { Subscription } from 'rxjs';
-import { medicineKey, PrescriptionMedicineCatalogService, PrescriptionMedicineOption } from 'src/app/Services/prescription-medicine-catalog.service';
+import { PrescriptionMedicineCatalogService, PrescriptionMedicineOption } from 'src/app/Services/prescription-medicine-catalog.service';
 import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
 import { exportRecords } from 'src/app/Shared/export-records';
 import { MedicineOptionDialogComponent } from './medicine-option-dialog.component';
+import { matchesMedicineSearch, medicineNameParts } from 'src/app/Models/medicine-strength';
 
 @Component({
   selector: 'app-prescription-medicine-catalog',
@@ -15,7 +16,7 @@ import { MedicineOptionDialogComponent } from './medicine-option-dialog.componen
       <p *ngIf="error" class="form-error" role="alert">{{ error }}</p><p *ngIf="success" class="rx-catalog-success" role="status">{{ success }}</p>
       <div class="search-bar"><mat-form-field appearance="outline"><mat-label>Search medicines</mat-label><mat-icon matPrefix>search</mat-icon><input matInput type="search" [(ngModel)]="query" (ngModelChange)="pagination.reset()" placeholder="Medicine name"></mat-form-field><button mat-flat-button color="primary" type="button" (click)="edit()" [disabled]="!!deletingId"><mat-icon>add</mat-icon>Add medicine</button><button [appBusy]="loading" mat-stroked-button type="button" (click)="load(true)" [disabled]="loading"><mat-icon>refresh</mat-icon>Refresh</button><button mat-stroked-button type="button" (click)="export()"><mat-icon>file_download</mat-icon>Export</button></div>
       <p *ngIf="loading" role="status" class="hmc-loading-state">Loading medicines...</p>
-      <div class="table-scroll-container" appScrollPagination [scrollTotal]="filtered.length" [scrollShown]="visible.length" [scrollResetKey]="pagination.revision" [scrollDisabled]="loading" (loadMore)="loadMore()" scrollLabel="Medicine catalogue"><table class="rx-catalog-table"><thead><tr><th>Medicine name</th><th>Actions</th></tr></thead><tbody><tr *ngFor="let option of visible; trackBy: trackRecord"><td>{{ option.name }}</td><td><div class="action-buttons"><button mat-icon-button class="table-btn" color="accent" type="button" [appRecordPreview]="option" previewTitle="Medicine preview" aria-label="Preview catalogue medicine" title="Preview"><mat-icon>visibility</mat-icon></button><button mat-icon-button class="table-btn" color="primary" type="button" (click)="edit(option)" [disabled]="!!deletingId" aria-label="Edit catalogue medicine" title="Edit"><mat-icon>edit_note</mat-icon></button><button [appBusy]="deletingId === option.id" mat-icon-button class="table-btn" color="warn" type="button" (click)="delete(option)" [disabled]="!!deletingId" aria-label="Delete catalogue medicine" title="Delete"><mat-icon>delete_outline</mat-icon></button></div></td></tr></tbody></table><div *ngIf="!loading && !filtered.length" class="list-empty">No medicines match your search.</div></div>
+      <div class="table-scroll-container" appScrollPagination [scrollTotal]="filtered.length" [scrollShown]="visible.length" [scrollResetKey]="pagination.revision" [scrollDisabled]="loading" (loadMore)="loadMore()" scrollLabel="Medicine catalogue"><table class="rx-catalog-table"><thead><tr><th>Medicine name</th><th>Strength</th><th>Actions</th></tr></thead><tbody><tr *ngFor="let option of visible; trackBy: trackRecord"><td>{{ medicineParts(option.name, option.strength).name }}</td><td>{{ medicineParts(option.name, option.strength).strength || '—' }}</td><td><div class="action-buttons"><button mat-icon-button class="table-btn" color="accent" type="button" [appRecordPreview]="option" previewTitle="Medicine preview" aria-label="Preview catalogue medicine" title="Preview"><mat-icon>visibility</mat-icon></button><button mat-icon-button class="table-btn" color="primary" type="button" (click)="edit(option)" [disabled]="!!deletingId" aria-label="Edit catalogue medicine" title="Edit"><mat-icon>edit_note</mat-icon></button><button [appBusy]="deletingId === option.id" mat-icon-button class="table-btn" color="warn" type="button" (click)="delete(option)" [disabled]="!!deletingId" aria-label="Delete catalogue medicine" title="Delete"><mat-icon>delete_outline</mat-icon></button></div></td></tr></tbody></table><div *ngIf="!loading && !filtered.length" class="list-empty">No medicines match your search.</div></div>
       <app-scroll-list-footer [total]="filtered.length" [shown]="visible.length" (loadMore)="loadMore()"></app-scroll-list-footer>
     </div>
   </section>`,
@@ -24,6 +25,7 @@ import { MedicineOptionDialogComponent } from './medicine-option-dialog.componen
 export class MedicineCatalogComponent implements OnInit, OnDestroy {
   readonly pagination = new ScrollPagination();
   readonly trackRecord = trackRecord;
+  readonly medicineParts = medicineNameParts;
   readonly embedded: boolean;
   options: PrescriptionMedicineOption[] = [];
   query = '';
@@ -34,7 +36,7 @@ export class MedicineCatalogComponent implements OnInit, OnDestroy {
   private version = 0;
   private subscriptions = new Subscription();
   constructor(private catalog: PrescriptionMedicineCatalogService, private dialog: MatDialog, @Optional() @Inject(MAT_DIALOG_DATA) data: { embedded?: boolean } | null, private feedback: NotifyUpdateService = new NotifyUpdateService()) { this.embedded = data?.embedded === true; }
-  get filtered(): PrescriptionMedicineOption[] { return this.options.filter(option => medicineKey(option.name).includes(medicineKey(this.query))); }
+  get filtered(): PrescriptionMedicineOption[] { return this.options.filter(option => matchesMedicineSearch(option.name, this.query)); }
   get visible(): PrescriptionMedicineOption[] { return this.pagination.slice(this.filtered); }
   loadMore(): void { this.pagination.loadMore(this.filtered.length); }
   ngOnInit(): void { void this.load(); this.subscriptions.add(this.catalog.changes.subscribe(() => void this.load())); }
@@ -47,7 +49,7 @@ export class MedicineCatalogComponent implements OnInit, OnDestroy {
   }
   edit(option?: PrescriptionMedicineOption): void {
     this.error = ''; this.success = '';
-    const ref = this.dialog.open(MedicineOptionDialogComponent, { data: option ? { id: option.id, name: option.name } : {}, width: '560px', maxWidth: '94vw', panelClass: 'hmc-dialog-panel' });
+    const ref = this.dialog.open(MedicineOptionDialogComponent, { data: option ? { id: option.id, name: option.name, strength: option.strength } : {}, width: '560px', maxWidth: '94vw', panelClass: 'hmc-dialog-panel' });
     this.subscriptions.add(ref.afterClosed().subscribe(saved => { if (saved) { this.success = 'Medicine saved.'; void this.load(); } }));
   }
   async delete(option: PrescriptionMedicineOption): Promise<void> {
@@ -57,5 +59,5 @@ export class MedicineCatalogComponent implements OnInit, OnDestroy {
     catch (error) { this.error = error instanceof Error ? error.message : 'Unable to remove this medicine.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }
     finally { this.deletingId = ''; }
   }
-  export(): void { exportRecords(this.filtered.map(option => ({ Medicine: option.name })), 'prescription-medicines.xlsx', 'Medicines'); }
+  export(): void { exportRecords(this.filtered.map(option => ({ Medicine: medicineNameParts(option.name, option.strength).name, Strength: medicineNameParts(option.name, option.strength).strength })), 'prescription-medicines.xlsx', 'Medicines'); }
 }

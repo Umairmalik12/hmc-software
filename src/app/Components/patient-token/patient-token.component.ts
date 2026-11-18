@@ -1,10 +1,13 @@
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, Inject, OnDestroy, OnInit, Optional } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { SupabaseDataService, PatientTokenSlip } from 'src/app/Services/supabase-data.service';
 import { printThermal } from './thermal-print';
 import { Subscription } from 'rxjs';
 import { exportRecords } from 'src/app/Shared/export-records';
 import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
+import { buildPatientTokenReceipt } from './patient-token-receipt';
+import { PatientTokenPreviewComponent } from './patient-token-preview.component';
 
 interface TokenDateGroup {
   date: string;
@@ -44,14 +47,14 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
   private clockTimer: ReturnType<typeof setInterval> | undefined;
   private realtimeSubscription?: Subscription;
 
-  constructor(private indexedDb: SupabaseDataService, private changeDetector: ChangeDetectorRef, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
+  constructor(private indexedDb: SupabaseDataService, _changeDetector: ChangeDetectorRef, private feedback: NotifyUpdateService = new NotifyUpdateService(), @Optional() @Inject(MatDialog) private dialog: MatDialog | null = null) {}
 
   get todayTotal(): number {
     return this.slips.filter(slip => slip.date === this.today).length;
   }
 
   get selectedDateTotal(): number {
-    return this.slips.filter(slip => slip.date === this.selectedDate).length;
+    return this.slips.filter(slip => !this.selectedDate || slip.date === this.selectedDate).length;
   }
 
   get historicalTotal(): number {
@@ -110,7 +113,8 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
     try {
       const slip = await this.indexedDb.createPatientToken(name);
       this.customerName = '';
-      this.selectedDate = slip.date;
+      if (this.selectedDate) this.selectedDate = slip.date;
+      this.search = '';
       this.selectedSlip = slip;
       this.successMessage = 'Token ' + slip.tokenNumber + ' generated successfully.'; if (this.successMessage) this.feedback.alertNotify.next({ msg: this.successMessage, type: 'success' });
       this.slips = this.slips.filter(savedSlip => savedSlip.id !== slip.id);
@@ -163,22 +167,22 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
   }
 
   filterByDate(date: string): void {
-    if (date) {
-      this.selectedDate = date;
-      this.pagination.reset();
-      this.updateHistory();
-    }
-  }
-
-  showToday(): void {
-    this.selectedDate = this.today;
+    this.selectedDate = date || '';
     this.pagination.reset();
     this.updateHistory();
   }
 
+  showAllTokens(): void { this.search = ''; this.filterByDate(''); }
+  showToday(): void { this.filterByDate(this.today); }
+
   printSlip(slip: PatientTokenSlip): void {
     this.selectedSlip = slip;
     this.printSelectedSlip();
+  }
+
+  previewSlip(slip: PatientTokenSlip): void {
+    this.detectPaperWidth();
+    this.dialog?.open(PatientTokenPreviewComponent, { data: { record: { ...slip }, paperWidth: this.paperWidth }, width: '480px', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
   }
 
   editSlip(slip: PatientTokenSlip): void { this.editingSlipId = slip.id; this.editedPatientName = slip.customerName; }
@@ -227,9 +231,9 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
 
   get filteredSlips(): PatientTokenSlip[] {
     return this.slips
-      .filter(slip => slip.date === this.selectedDate)
+      .filter(slip => !this.selectedDate || slip.date === this.selectedDate)
       .filter(slip => !this.search.trim() || (slip.tokenNumber + ' ' + slip.customerName).toLocaleLowerCase().includes(this.search.trim().toLocaleLowerCase()))
-      .sort((a, b) => a.sequence - b.sequence);
+      .sort((a, b) => b.date.localeCompare(a.date) || a.sequence - b.sequence || a.id - b.id);
   }
 
   private updateHistory(): void {
@@ -240,18 +244,10 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
   }
 
   private printSelectedSlip(): void {
-    // Generation/reprints select the slip synchronously, before Angular's next
-    // render. Update the template before cloning so the correct token prints.
-    this.changeDetector.detectChanges();
-    const el = document.getElementById('patient-token-slip-print');
-    if (!el) return;
-    const clone = el.cloneNode(true) as HTMLElement;
-    clone.style.display = 'block';
-    clone.style.position = 'static';
-    // remove the on-screen paper-size selector from the printout
-    clone.querySelectorAll('.paper-control').forEach(n => n.remove());
+    if (!this.selectedSlip) return;
+    this.detectPaperWidth();
     this.savePaperWidth();
-    printThermal(clone.outerHTML, this.paperWidth);
+    printThermal(buildPatientTokenReceipt(this.selectedSlip), this.paperWidth);
   }
 
   private savePaperWidth(): void {
@@ -297,21 +293,19 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
     }).format(now);
 
     if (date !== this.today) {
-      const wasShowingToday = this.selectedDate === this.today;
+      const refreshing = !!this.today;
+      const wasShowingToday = refreshing && this.selectedDate === this.today;
       this.today = date;
-      if (wasShowingToday || !this.selectedDate) {
+      if (wasShowingToday) {
         this.selectedDate = date;
         this.pagination.reset();
       }
       this.updateHistory();
-      this.loadSlips().catch(error => {
+      if (refreshing) this.loadSlips().catch(error => {
         this.errorMessage = error instanceof Error
           ? error.message
           : 'Unable to refresh patient token history.'; if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' });
       });
-    } else if (!this.selectedDate) {
-      this.selectedDate = date;
-      this.updateHistory();
     }
   }
 }

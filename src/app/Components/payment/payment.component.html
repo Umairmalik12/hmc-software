@@ -26,7 +26,6 @@
           <mat-form-field appearance="outline"><mat-label>Patient reference</mat-label><input matInput formControlName="patientId"><mat-hint>Automatically generated payment reference</mat-hint></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Amount</mat-label><span matTextPrefix>Rs&nbsp;</span><input matInput type="number" min="0" step="0.01" formControlName="amount"><mat-error>Enter a non-negative amount with up to 2 decimals</mat-error></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Payment method</mat-label><mat-select formControlName="paymentMethod"><mat-option value="cash">Cash</mat-option><mat-option value="card">Card</mat-option></mat-select></mat-form-field>
-          <mat-form-field appearance="outline" *ngIf="paymentForm.get('paymentMethod')?.value === 'cash'"><mat-label>Cash tendered (optional)</mat-label><span matTextPrefix>Rs&nbsp;</span><input matInput type="number" min="0" step="0.01" formControlName="cashGiven"><mat-hint>Leave blank for exact cash on completed payments.</mat-hint><mat-error>Enter valid cash with up to 2 decimals</mat-error></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Payment status</mat-label><mat-select formControlName="paymentStatus"><mat-option value="completed">Completed</mat-option><mat-option value="pending">Pending</mat-option><mat-option value="failed">Failed</mat-option></mat-select></mat-form-field>
         </div>
 

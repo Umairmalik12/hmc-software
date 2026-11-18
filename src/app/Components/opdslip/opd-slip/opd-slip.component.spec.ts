@@ -1,3 +1,4 @@
+import { ThermalReceiptPreviewComponent } from 'src/app/Shared/thermal-receipt-preview.component';
 import { FeedbackModule } from 'src/app/Shared/feedback.module';
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -65,7 +66,7 @@ describe('OPD thermal receipt content and selection', () => {
 
 describe('OPD thermal preview layout', () => {
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [FeedbackModule, CommonModule, FormsModule, NoopAnimationsModule, MatDialogModule, MatButtonModule, MatIconModule], declarations: [OpdSlipComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [FeedbackModule, CommonModule, FormsModule, NoopAnimationsModule, MatDialogModule, MatButtonModule, MatIconModule], declarations: [OpdSlipComponent, ThermalReceiptPreviewComponent] }).compileComponents();
   });
   afterEach(() => TestBed.inject(MatDialog).closeAll());
   it('wraps long visit details in a single scrolling column and keeps the print controls visible', async () => {

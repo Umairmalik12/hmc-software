@@ -26,6 +26,11 @@ describe('Catalogue saves against older deployed CRUD functions', () => {
         await remove(added.id, 'Updated catalogue entry');
         expect((await service.getAll()).some(row => row.id === added.id && row.active)).toBeFalse();
         expect(collections.get(collection)!.get(added.id).active).toBeFalse();
+        if (catalog === 'prescription') {
+          const strength = await prescription.save('Strength variant', undefined, '500mg');
+          await prescription.save('Strength variant', strength.id, '1g');
+          expect(collections.get(collection)!.get(strength.id)).toEqual(jasmine.objectContaining({ name: 'Strength variant 1 g', strength: '1 g' }));
+        }
         expect(rpc.calls.allArgs().filter(([name]) => name === 'apply_hmc_record_changes').every(([, args]) => args.p_updates.length === 0 && args.p_inserts.length === 1)).toBeTrue();
       } finally { prescription.ngOnDestroy(); ot.ngOnDestroy(); }
     });
