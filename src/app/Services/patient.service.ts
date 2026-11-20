@@ -72,21 +72,17 @@ export class PatientService {
 
   async addNewPatient(data: PatientDetail): Promise<boolean> {
     try {
+      if (!this.validRegistration(data)) return false;
       if (!data.createdAt) {
         data.createdAt = new Date().toISOString();
       }
       const storedPatients = await this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY) || [];
-      if (data.patientId > 0) {
-        // Check for duplicate MR No
-        if (storedPatients.some(p => p.patientId === data.patientId)) {
-          console.error('Duplicate MR No (patientId) exists');
-          return false;
-        }
-      } else {
-        data.patientId = await this.indexedDb.allocateId(STORAGE_KEY);
+      if (storedPatients.some(p => p.patientId === data.patientId)) {
+        console.error('Duplicate MR number exists');
+        return false;
       }
 
-      await this.indexedDb.upsertRecord(STORAGE_KEY, data.patientId, data);
+      await this.indexedDb.insertRecord(STORAGE_KEY, data.patientId, data);
       storedPatients.push(data);
       this.patientDetail = storedPatients;
       this.total = storedPatients.length;
@@ -99,6 +95,7 @@ export class PatientService {
 
   async updatePatient(data: PatientDetail): Promise<boolean> {
     try {
+      if (!this.validRegistration(data)) return false;
       const storedPatients = await this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY) || [];
       const oldId = data.oldId;
       const index = oldId ? storedPatients.findIndex(p => p.patientId === oldId) : -1;
@@ -126,6 +123,12 @@ export class PatientService {
       console.error('Error updating patient:', e);
       return false;
     }
+  }
+
+  private validRegistration(data: PatientDetail): boolean {
+    return Number.isSafeInteger(data.patientId) && data.patientId > 0
+      && (data.gender == null || data.gender === '' || ['Male', 'Female'].includes(data.gender))
+      && (data.age == null || (Number.isFinite(data.age) && data.age >= 0 && data.age <= 120));
   }
 
   private getPatientBrief(patients: PatientDetail[]): Patient[] {

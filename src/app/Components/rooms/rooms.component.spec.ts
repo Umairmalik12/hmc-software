@@ -41,12 +41,14 @@ describe('Room management and form dropdown integration', () => {
       const manager = fixture.debugElement.query(By.directive(RoomsComponent)).componentInstance as RoomsComponent;
       manager.name.setValue('GW Bed 3'); await manager.save(); await Promise.resolve(); fixture.detectChanges();
       const added = selector.options.find(option => option.name === 'GW Bed 3')!; expect(added).toBeDefined();
+      expect(manager.success).toBe('Room / bed saved successfully.');
       const select = fixture.debugElement.query(By.directive(MatSelect)).componentInstance as MatSelect;
       select.open(); fixture.detectChanges();
       const option = Array.from(document.querySelectorAll<HTMLElement>('mat-option')).find(element => element.textContent?.trim() === 'GW Bed 3')!;
       option.click(); fixture.detectChanges(); expect(fixture.componentInstance.room.value).toBe('GW Bed 3');
       manager.edit(added); manager.name.setValue('GW Bed 3A'); await manager.save(); await Promise.resolve(); fixture.detectChanges();
       expect(selector.options.some(value => value.name === 'GW Bed 3A')).toBeTrue();
+      expect(manager.success).toBe('Room / bed updated successfully.');
       expect(selector.value).toBe('GW Bed 3'); expect(selector.retainedValues).toContain('GW Bed 3');
       spyOn(window, 'confirm').and.returnValue(true); await manager.delete(manager.options.find(value => value.id === added.id)!); await Promise.resolve(); fixture.detectChanges();
       expect(selector.options.some(value => value.id === added.id)).toBeFalse(); expect(selector.value).toBe('GW Bed 3');

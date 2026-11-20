@@ -5,8 +5,8 @@
   <!-- Search and export -->
   <div class="search-bar" style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
     <mat-form-field appearance="outline">
-      <mat-label>Patient ID</mat-label>
-      <input matInput [(ngModel)]="searchPatientId" placeholder="Search by ID">
+      <mat-label>MR Number</mat-label>
+      <input matInput type="search" inputmode="numeric" aria-label="MR Number" [(ngModel)]="searchPatientId" (ngModelChange)="onSearch()" placeholder="MR Number">
     </mat-form-field>
 
     <mat-form-field appearance="outline">
@@ -14,6 +14,8 @@
       <input matInput [(ngModel)]="searchName" placeholder="Search by Name">
     </mat-form-field>
 
+    <app-clinical-select class="catalog-filter" kind="doctors" label="Doctor name" emptyLabel="All doctors" [savedValues]="savedDoctorValues" [(ngModel)]="searchDrName" (ngModelChange)="onSearch()"></app-clinical-select>
+    <app-searchable-select class="catalog-filter" label="Procedure" ariaLabel="Filter by procedure" emptyLabel="All Procedures" [options]="procedureFilterOptions" [value]="searchProcedure" (valueChange)="searchProcedure = $event; onSearch()" [loading]="proceduresLoading" [error]="proceduresFailed ? 'Procedures could not be loaded. Retry to refresh.' : ''" (retry)="loadProcedures()"></app-searchable-select>
     <mat-form-field appearance="outline">
       <mat-label>Date Filter</mat-label>
       <mat-select [(ngModel)]="dateFilter" (selectionChange)="onDateFilter()">
@@ -25,14 +27,13 @@
       </mat-select>
     </mat-form-field>
 
-    <button mat-raised-button color="primary" (click)="onSearch()"><mat-icon>search</mat-icon>Search</button>
+    <div class="search-actions"><button mat-raised-button color="primary" (click)="onSearch()"><mat-icon>search</mat-icon>Search</button>
     <button mat-raised-button color="accent" (click)="onClearSearch()"><mat-icon>filter_alt_off</mat-icon>Clear</button>
 
-    <span style="flex:1 1 auto;"></span>
 
-    <button mat-raised-button color="primary" (click)="exportToExcel()"><mat-icon>file_download</mat-icon>Export</button>
+    <button class="search-export" mat-raised-button color="primary" (click)="exportToExcel()"><mat-icon>file_download</mat-icon>Export</button>
 
-   <button mat-stroked-button type="button" (click)="printAllSlips()" [disabled]="!filteredOpds.length"><mat-icon>print</mat-icon>Print matching slips ({{ filteredOpds.length }})</button>
+   <button mat-stroked-button type="button" (click)="printAllSlips()" [disabled]="!filteredOpds.length"><mat-icon>print</mat-icon>Print matching slips ({{ filteredOpds.length }})</button></div>
 
   </div>
 
@@ -41,7 +42,7 @@
   <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource" [trackBy]="trackRecord">
 
     <ng-container matColumnDef="patientId">
-      <mat-header-cell *matHeaderCellDef>Patient ID</mat-header-cell>
+      <mat-header-cell *matHeaderCellDef>MR Number</mat-header-cell>
       <mat-cell *matCellDef="let opd">{{ opd.patientId }}</mat-cell>
     </ng-container>
 
@@ -65,6 +66,11 @@
     <ng-container matColumnDef="drName">
       <mat-header-cell *matHeaderCellDef>Doctor Name</mat-header-cell>
       <mat-cell *matCellDef="let opd">{{ opd.drName }}</mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="procedure">
+      <mat-header-cell *matHeaderCellDef>Procedure</mat-header-cell>
+      <mat-cell *matCellDef="let opd">{{ opd.procedure }}</mat-cell>
     </ng-container>
 
     <ng-container matColumnDef="followUp">

@@ -2,7 +2,9 @@ import { Component, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 
 const LABELS: Record<string, string> = {
-  patientId: 'MR number', inpatientId: 'Inpatient ID', medicineId: 'Medicine record', firstName: 'Patient name',
+  staffId: 'Staff ID',
+  expenseId: 'Expense ID',
+  patientId: 'MR number', inpatientId: 'Patient ID', medicineId: 'Medicine record', firstName: 'Patient name',
   lastName: "Father's name", drName: 'Doctor', suggestedDr: 'Referred by', roomNo: 'Room', createdAt: 'Registered on',
   dateTime: 'Test date / time', bp: 'Blood pressure', temp: 'Temperature', sex: 'Gender', followUp: 'Follow-up',
   staffName: 'Counter staff', counterName: 'Counter / desk', shiftName: 'Shift', shiftDate: 'Shift date',
@@ -15,16 +17,20 @@ const MONEY_FIELDS = new Set(['amount', 'price', 'cashGiven', 'cashReturn']);
 
 @Component({
   selector: 'app-record-details',
-  template: `<h2 mat-dialog-title><mat-icon>visibility</mat-icon><span>{{ title }}<small>Read-only record preview</small></span></h2><mat-dialog-content><dl class="record-details-grid"><div *ngFor="let field of fields"><dt>{{ field.label }}</dt><dd>{{ field.value }}</dd></div></dl></mat-dialog-content><mat-dialog-actions><button mat-stroked-button type="button" mat-dialog-close>Close</button></mat-dialog-actions>`,
-  styles: [':host{display:flex;flex-direction:column;min-height:0}.record-details-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:0;padding:0 0 16px}.record-details-grid>div{min-width:0}.record-details-grid dt{font-size:11px;color:#71858e;margin-bottom:5px}.record-details-grid dd{margin:0;font-size:13px;color:#213f49;white-space:pre-wrap;overflow-wrap:anywhere}@media(max-width:520px){.record-details-grid{grid-template-columns:1fr}}'],
+  templateUrl: './record-details.component.html',
+  styleUrls: ['./record-details.component.css'],
 })
 export class RecordDetailsComponent {
   title: string;
-  fields: Array<{ label: string; value: string }>;
+  fields: Array<{ label: string; value: string; wide: boolean; empty: boolean; money: boolean }>;
   constructor(@Inject(MAT_DIALOG_DATA) data: { title: string; record: object }) {
     this.title = data.title;
     this.fields = Object.entries(data.record).filter(([key]) => !HIDDEN_FIELDS.has(key))
-      .map(([key, value]) => ({ label: this.label(key), value: this.format(value, key) }));
+      .map(([key, value]) => {
+        const formatted = this.format(value, key);
+        return { label: this.label(key), value: formatted, money: MONEY_FIELDS.has(key), empty: value == null || value === '',
+          wide: formatted.length > 100 || formatted.includes('\n') || /address|description|remarks|instructions|findings|diagnosis|symptoms|allergies/i.test(key) || !!value && typeof value === 'object' && !(value instanceof Date) };
+      });
   }
   private label(key: string): string {
     return LABELS[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, letter => letter.toUpperCase());

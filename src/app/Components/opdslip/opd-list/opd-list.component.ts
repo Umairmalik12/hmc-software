@@ -1,3 +1,4 @@
+import { sameClinicalName } from 'src/app/Services/clinical-catalog.service';
 import { EventEmitter, Output } from '@angular/core';
 import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
 import { includesText, matchesDateFilter } from 'src/app/Shared/list-filters';
@@ -14,6 +15,7 @@ import { OpdDataService } from 'src/app/Services/opd-data.service';
 import { Opd } from 'src/app/Models/opd.model';
 import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
 import { UserLoginService } from 'src/app/Services/user-login.service';
+import { ProcedureOption, ProcedureService } from 'src/app/Services/procedure.service';
 import { OpdSlipComponent } from '../opd-slip/opd-slip.component';
 
 @Component({
@@ -33,7 +35,12 @@ export class OpdListComponent implements OnInit, OnDestroy {
   loadMore(): void { this.pagination.loadMore(this.total); this.updateDisplayedOpds(); }
 
   private refreshSubscription?: Subscription;
-  ngOnDestroy(): void { this.refreshSubscription?.unsubscribe(); this.loadVersion++; }
+  private procedureSubscription?: Subscription;
+  private procedureVersion = 0;
+  procedureOptions: ProcedureOption[] = [];
+  proceduresLoading = false;
+  proceduresFailed = false;
+  ngOnDestroy(): void { this.refreshSubscription?.unsubscribe(); this.procedureSubscription?.unsubscribe(); this.loadVersion++; this.procedureVersion++; }
   async viewOpd(id: number): Promise<void> {
     try {
       const record = await firstValueFrom(this.opdService.getOpdDetails(id));
@@ -52,8 +59,11 @@ export class OpdListComponent implements OnInit, OnDestroy {
   // 🔍 Search fields
   searchPatientId: string = '';
   searchName: string = '';
+  searchDrName = '';
+  get savedDoctorValues(): string[] { return [...new Set(this.opd.map(record => record.drName).filter(Boolean))]; }
   searchPhone: string = '';
   searchCity: string = '';
+  searchProcedure: string = '';
   dateFilter: string = 'all';
   total: number = 0;
   isSuperAdmin: boolean = false;
@@ -65,7 +75,8 @@ export class OpdListComponent implements OnInit, OnDestroy {
     private changeDetectorRef: ChangeDetectorRef,
     private notifyUpdate: NotifyUpdateService,
     private indexDb: SupabaseDataService,
-    private userLogin: UserLoginService
+    private userLogin: UserLoginService,
+    private procedures: ProcedureService = new ProcedureService(indexDb)
   ) {
     this.refreshSubscription = this.notifyUpdate.notify.subscribe(() => {
       this.dataActions('', 'asc', 0, 5);
@@ -73,9 +84,11 @@ export class OpdListComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit(): Promise<void> {
+    void this.loadProcedures();
+    this.procedureSubscription = this.indexDb.changes.subscribe(collection => { if (collection === 'procedures') void this.loadProcedures(); });
     this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
-      this.displayedColumns = ['patientId', 'patientName', 'dateTime', 'sex', 'drName', 'followUp', 'createdAt'];
+      this.displayedColumns = ['patientId', 'patientName', 'dateTime', 'sex', 'drName', 'procedure', 'followUp', 'createdAt'];
       this.displayedColumns.push('action');
       this.dataActions('', 'asc', 0, 5);
     }).catch(() => { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: 'Account permissions could not be loaded. Please refresh the page.' }); });
@@ -96,14 +109,35 @@ export class OpdListComponent implements OnInit, OnDestroy {
   }
 
   onDateFilter(reset = true): void {
-    this.filteredOpds = this.opd.filter(record => matchesDateFilter(record.createdAt, this.dateFilter) && includesText(record.patientId, this.searchPatientId) && includesText(record.patientName, this.searchName) && includesText(record.phone, this.searchPhone) && includesText(record.address, this.searchCity));
+    this.filteredOpds = this.opd.filter(record => matchesDateFilter(record.createdAt, this.dateFilter) && includesText(record.patientId, this.searchPatientId) && includesText(record.patientName, this.searchName) && includesText(record.phone, this.searchPhone) && (!this.searchDrName || sameClinicalName(record.drName, this.searchDrName)) && includesText(record.address, this.searchCity) && (!this.searchProcedure || this.sameProcedure(record.procedure || '', this.searchProcedure)));
     if (reset) this.pagination.reset();
     this.updateDisplayedOpds();
   }
 
   onSearch(): void { this.onDateFilter(); }
 
-  onClearSearch(): void { this.searchPatientId = ''; this.searchName = ''; this.searchPhone = ''; this.searchCity = ''; this.dateFilter = 'all'; this.onDateFilter(); }
+  readonly sameProcedure = (left: string, right: string): boolean => this.procedureKey(left) === this.procedureKey(right);
+  private procedureKey(value: string): string { return String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase(); }
+  get procedureFilterOptions(): string[] {
+    const names = new Map<string, string>();
+    for (const name of [...this.procedureOptions.map(option => option.name), ...this.opd.map(patient => patient.procedure || ''), this.searchProcedure]) {
+      const key = this.procedureKey(name);
+      if (key && !names.has(key)) names.set(key, String(name).trim());
+    }
+    return Array.from(names.values()).sort((a, b) => a.localeCompare(b));
+  }
+  async loadProcedures(): Promise<void> {
+    const version = ++this.procedureVersion;
+    this.proceduresLoading = true; this.proceduresFailed = false;
+    try {
+      const options = await this.procedures.getAll();
+      if (version === this.procedureVersion) this.procedureOptions = options;
+    } catch {
+      if (version === this.procedureVersion) { this.proceduresFailed = true; this.notifyUpdate.error('Unable to load the procedure filter. Use Retry to refresh it.'); }
+    } finally { if (version === this.procedureVersion) this.proceduresLoading = false; }
+  }
+
+  onClearSearch(): void { this.searchPatientId = ''; this.searchName = ''; this.searchDrName = ''; this.searchPhone = ''; this.searchCity = ''; this.searchProcedure = ''; this.dateFilter = 'all'; this.onDateFilter(); }
 
   exportToExcel(): void { exportRecords(this.filteredOpds, 'opd-visits.xlsx', 'Records', this.notifyUpdate); }
 

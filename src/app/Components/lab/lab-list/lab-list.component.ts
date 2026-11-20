@@ -1,3 +1,4 @@
+import { labTestNames, sameClinicalName } from 'src/app/Services/clinical-catalog.service';
 import { EventEmitter, Output } from '@angular/core';
 import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
 import { includesText, matchesDateFilter } from 'src/app/Shared/list-filters';
@@ -14,8 +15,7 @@ import { LabService } from 'src/app/Services/lab.service';
 import { LabPatient } from 'src/app/Models/lab.model';
 import { UserLoginService } from 'src/app/Services/user-login.service';
 import { formatTime12 } from 'src/app/Pipes/time-format.pipe';
-import { printThermal } from '../../patient-token/thermal-print';
-import { buildLabReceipt } from '../lab-thermal-receipt';
+import { LabSlipPreviewComponent } from '../lab-slip-preview.component';
 import { exportRecords } from 'src/app/Shared/export-records';
 
 @Component({
@@ -33,15 +33,20 @@ export class LabListComponent implements OnInit, OnDestroy {
   loadFailed = false;
   deletingId: number | null = null;
   searchQuery = '';
+  searchDoctorName = '';
+  searchTestName = '';
+  get savedDoctorValues(): string[] { return [...new Set(this.patient.map(record => record.suggestedDr).filter(Boolean))]; }
+  get savedTestValues(): string[] { return [...new Set(this.patient.flatMap(record => labTestNames(record.testName)))]; }
   filteredPatients: LabPatient[] = [];
   loadMore(): void { this.pagination.loadMore(this.total); this.updateDisplayedPatients(); }
 
   onDateFilter(reset = true): void {
-    this.filteredPatients = this.patient.filter(record => includesText([record.patientId,record.name,record.phone,record.testName,record.suggestedDr].join(' '), this.searchQuery));
+    this.filteredPatients = this.patient.filter(record => includesText([record.patientId,record.name,record.phone,record.testName,record.suggestedDr].join(' '), this.searchQuery) && (!this.searchDoctorName || sameClinicalName(record.suggestedDr, this.searchDoctorName)) && (!this.searchTestName || labTestNames(record.testName).some(name => sameClinicalName(name, this.searchTestName))));
     if (reset) this.pagination.reset();
     this.updateDisplayedPatients();
   }
   onSearch(): void { this.onDateFilter(); }
+  onClearSearch(): void { this.searchQuery = ''; this.searchDoctorName = ''; this.searchTestName = ''; this.onSearch(); }
 
   private refreshSubscription?: Subscription;
   ngOnDestroy(): void { this.refreshSubscription?.unsubscribe(); this.loadVersion++; }
@@ -152,18 +157,13 @@ ngOnInit(): void {
     finally { this.deletingId = null; }
   }
 
-printLabSlip(patientId: string): void {
-  const lab = this.patient.find(item => String(item.patientId) === String(patientId));
-
-  if (!lab) {
-    this.notifyUpdate.alertNotify.next({
-      msg: 'Lab data not found for printing.',
-      type: 'error'
-    });
-    return;
+  async printLabSlip(patientId: number): Promise<void> {
+    try {
+      const record = await firstValueFrom(this.labService.getLabPatientDetails(patientId));
+      if (!record) throw new Error('Lab data not found for printing. Refresh the list and try again.');
+      this.dialog.open(LabSlipPreviewComponent, { data: { record: { ...record } }, width: '480px', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
+    } catch (error) {
+      this.notifyUpdate.error(error instanceof Error ? error.message : 'Unable to load the laboratory slip.');
+    }
   }
-
-  // Keep the existing 80 mm lab roll and use the measured, centered renderer.
-  printThermal(buildLabReceipt(lab), 80, 'lab-slip-print', this.notifyUpdate);
-}
 }

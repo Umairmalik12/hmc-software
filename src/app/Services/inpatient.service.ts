@@ -83,14 +83,15 @@ export class InpatientService {
 
   async addNewInpatient(data: InPatientDetail): Promise<boolean> {
     try {
+      if (!this.validPatientId(data.inpatientId)) return false;
       const storedInpatients = await this.indexedDb.getItem<InPatientDetail[]>(STORAGE_KEY) || [];
-      data.inpatientId = await this.indexedDb.allocateId(STORAGE_KEY);
+      if (storedInpatients.some(patient => patient.inpatientId === data.inpatientId)) return false;
 
       if (!data.createdAt) {
         data.createdAt = new Date().toISOString();
       }
 
-      await this.indexedDb.upsertRecord(STORAGE_KEY, data.inpatientId, data);
+      await this.indexedDb.insertRecord(STORAGE_KEY, data.inpatientId, data);
       storedInpatients.push(data);
       this.inpatientDetail = storedInpatients;
       return true;
@@ -102,6 +103,7 @@ export class InpatientService {
 
   async updateInpatient(data: InPatientDetail): Promise<boolean> {
     try {
+      if (!this.validPatientId(data.inpatientId)) return false;
       const storedInpatients = await this.indexedDb.getItem<InPatientDetail[]>(STORAGE_KEY) || [];
       const index = storedInpatients.findIndex(p => p.inpatientId === data.inpatientId);
       if (index !== -1) {
@@ -115,6 +117,10 @@ export class InpatientService {
       console.error('Error updating inpatient:', e);
       return false;
     }
+  }
+
+  private validPatientId(value: number): boolean {
+    return Number.isSafeInteger(value) && value > 0;
   }
 
   private getInpatientBrief(inpatients: InPatientDetail[]): InPatient[] {

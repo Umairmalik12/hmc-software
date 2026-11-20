@@ -16,10 +16,7 @@
           <input matInput formControlName="patientName" /><mat-error>Enter the patient name</mat-error>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Doctor Name</mat-label>
-          <input matInput formControlName="doctorName" />
-        </mat-form-field>
+        <app-clinical-select kind="doctors" label="Doctor name" formControlName="doctorName"></app-clinical-select>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Room Number</mat-label>

@@ -15,6 +15,10 @@ export function legacyRpcDb() {
     from: (_table: string) => {
       let collection = '';
       const query = {
+        insert: async (record: { collection: string; record_id: string; data: unknown }) => {
+          if (rows(record.collection).has(record.record_id)) return { error: { message: 'This record already exists.' } };
+          rows(record.collection).set(record.record_id, clone(record.data)); return { error: null };
+        },
         select: () => query,
         eq: (field: string, value: string) => { if (field === 'collection') collection = value; return query; },
         order: () => query,

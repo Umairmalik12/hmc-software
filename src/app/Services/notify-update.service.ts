@@ -85,11 +85,9 @@ export class NotifyUpdateService implements OnDestroy {
     const msg = message?.trim(); if (!msg) return;
     const type: ToastType = ['success', 'error', 'warning', 'info'].includes(requestedType) ? requestedType as ToastType : 'info';
     const duplicate = this.state.value.find(toast => toast.type === type && toast.msg === msg);
-    if (!duplicate || type === 'success') {
-      this.updateHistory([{ id: globalThis.crypto?.randomUUID?.() || Date.now() + '-' + Math.random().toString(36).slice(2),
-        title: (details.title?.trim() || this.title(type, msg)).slice(0, 120), description: msg.slice(0, 2000), type,
-        createdAt: new Date().toISOString(), read: false, route: details.route === undefined ? this.currentRoute() : this.safeRoute(details.route) }, ...this.history.value].slice(0, 100));
-    }
+    this.updateHistory([{ id: globalThis.crypto?.randomUUID?.() || Date.now() + '-' + Math.random().toString(36).slice(2),
+      title: (details.title?.trim() || this.title(type, msg)).slice(0, 120), description: msg.slice(0, 2000), type,
+      createdAt: new Date().toISOString(), read: false, route: details.route === undefined ? this.currentRoute() : this.safeRoute(details.route) }, ...this.history.value].slice(0, 100));
     if (duplicate) return;
     if (this.state.value.length >= 4) this.dismiss(this.state.value[0].id);
     const id = ++this.nextId;

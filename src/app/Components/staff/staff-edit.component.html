@@ -1,0 +1,28 @@
+<h2 mat-dialog-title><mat-icon>badge</mat-icon><span>{{ data.record ? 'Edit staff member' : 'New staff member' }}<small>Designation, employment &amp; duty schedule</small></span></h2>
+<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <mat-dialog-content>
+    <div class="form-grid">
+      <mat-form-field appearance="outline"><mat-label>Staff name</mat-label><input matInput formControlName="name" maxlength="120" autocomplete="name" required><mat-error>Enter the staff name</mat-error></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Designation</mat-label><input matInput formControlName="designation" maxlength="120" [matAutocomplete]="titles" placeholder="Search or enter designation"><mat-autocomplete #titles="matAutocomplete" class="hmc-catalog-options"><mat-option *ngFor="let title of designationOptions()" [value]="title">{{ title }}</mat-option></mat-autocomplete><mat-error>Use 120 characters or fewer</mat-error></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Employment type</mat-label><mat-select formControlName="employmentType"><mat-option value="">Not recorded</mat-option><mat-option value="permanent">Permanent</mat-option><mat-option value="intern">Intern</mat-option></mat-select><mat-error>Select Permanent or Intern</mat-error></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Status</mat-label><mat-select formControlName="active"><mat-option [value]="true">Active</mat-option><mat-option [value]="false">Inactive</mat-option></mat-select></mat-form-field>
+    </div>
+    <div class="duty-section-heading"><h3><mat-icon>assignment_ind</mat-icon>Duties &amp; timing</h3><button mat-stroked-button type="button" (click)="addDuty()" [disabled]="saving"><mat-icon>add</mat-icon>Add duty</button></div>
+    <div formArrayName="assignments" class="duty-assignments">
+      <section class="duty-card" *ngFor="let assignment of assignments.controls; let i = index" [formGroupName]="i">
+        <div class="duty-card-heading"><strong>Duty {{ i + 1 }}</strong><button mat-icon-button type="button" color="warn" (click)="removeDuty(i)" [disabled]="saving" [attr.aria-label]="'Remove duty ' + (i + 1)"><mat-icon>delete_outline</mat-icon></button></div>
+        <div class="form-grid">
+          <app-searchable-select label="Duty" emptyLabel="Select duty" [options]="dutyOptions(assignment)" [value]="assignment.get('duty')?.value" [required]="true" [invalid]="!!assignment.get('duty')?.touched && !!assignment.get('duty')?.invalid" [disabled]="saving" [loading]="dutiesLoading" [error]="dutiesError" errorMessage="Select a duty from the list" (valueChange)="selectDuty(assignment, $event)" (touched)="assignment.get('duty')?.markAsTouched()" (retry)="loadDuties()"></app-searchable-select>
+          <mat-form-field appearance="outline"><mat-label>Shift</mat-label><input matInput formControlName="shift" maxlength="60" [matAutocomplete]="shifts" placeholder="Morning, Evening, Night..."><mat-autocomplete #shifts="matAutocomplete" class="hmc-catalog-options"><mat-option *ngFor="let shift of shiftOptions(assignment)" [value]="shift">{{ shift }}</mat-option></mat-autocomplete><mat-error>Use 60 characters or fewer</mat-error></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Duty starts</mat-label><input matInput type="time" step="60" formControlName="startTime" [required]="!!assignment.get('endTime')?.value"></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Duty ends</mat-label><input matInput type="time" step="60" formControlName="endTime" [required]="!!assignment.get('startTime')?.value"></mat-form-field>
+        </div>
+        <p class="form-error duty-message" role="alert" *ngIf="(assignment.touched || submitted) && timing(assignment)">{{ timing(assignment) }}</p>
+        <p class="overnight-note" *ngIf="overnight(assignment)"><mat-icon>nights_stay</mat-icon>Ends the following day</p>
+      </section>
+      <p class="duty-empty" *ngIf="!assignments.length">No duty assignments.</p>
+    </div>
+    <p *ngIf="error" class="form-error" role="alert">{{ error }}</p>
+  </mat-dialog-content>
+  <mat-dialog-actions><button mat-stroked-button type="button" (click)="close()" [disabled]="saving">Cancel</button><button mat-flat-button color="primary" type="submit" [appBusy]="saving" [disabled]="saving"><mat-icon>check</mat-icon>{{ data.record ? 'Save changes' : 'Save staff' }}</button></mat-dialog-actions>
+</form>

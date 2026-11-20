@@ -1,15 +1,17 @@
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Component, Inject, OnDestroy, OnInit, Optional } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { AbstractControl, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
 import { StaffIdentity, UserLoginService } from 'src/app/Services/user-login.service';
 import { requiredText } from 'src/app/Services/validators.service';
 import { exportRecords } from 'src/app/Shared/export-records';
 import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
-import { printThermal } from '../patient-token/thermal-print';
 import { collectionTotals, localPaymentDate, moneyCents, PaymentRecord, paymentDate, validMoney, validShiftDate } from './payment-record';
-import { buildPaymentReceipt } from './payment-receipt';
+import { PaymentSlipPreviewComponent } from './payment-slip-preview.component';
+import { StaffService, STAFF_COLLECTION } from 'src/app/Services/staff.service';
+import { StaffRecord, STAFF_SHIFTS, staffKey, uniqueStaffValues } from 'src/app/Models/staff.model';
 
 @Component({ selector: 'app-payment', templateUrl: './payment.component.html', styleUrls: ['./payment.component.css'] })
 export class PaymentComponent implements OnInit, OnDestroy {
@@ -19,7 +21,13 @@ export class PaymentComponent implements OnInit, OnDestroy {
   displayedColumns = ['patientName', 'createdAt', 'staff', 'amount', 'cash', 'paymentMethod', 'paymentStatus', 'actions'];
   readonly pagination = new ScrollPagination();
   readonly trackRecord = trackRecord;
-  readonly shiftSuggestions = ['Morning', 'Evening', 'Night'];
+  staffRecords: StaffRecord[] = [];
+  staffLoading = false;
+  staffLoadError = '';
+  staffLoaded = false;
+  private staffVersion = 0;
+  private editingStaffName = '';
+  readonly unrecordedStaffLabel = 'Not recorded (older payments)';
   cashReturn = 0;
   patientId = '';
   saving = false;
@@ -49,7 +57,8 @@ export class PaymentComponent implements OnInit, OnDestroy {
   private subscriptions = new Subscription();
   private clock?: ReturnType<typeof setInterval>;
 
-  constructor(private fb: FormBuilder, private indexedDbService: SupabaseDataService, private user: UserLoginService, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
+  constructor(private fb: FormBuilder, private indexedDbService: SupabaseDataService, private user: UserLoginService, private feedback: NotifyUpdateService = new NotifyUpdateService(), @Optional() @Inject(MatDialog) private dialog: MatDialog | null = null,
+    private staff: StaffService = new StaffService(indexedDbService)) {}
 
   async ngOnInit(): Promise<void> {
     this.paymentForm = this.fb.group({
@@ -59,7 +68,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
       cashGiven: [null, validMoney],
       paymentMethod: ['cash', [Validators.required, Validators.pattern(/^(cash|card)$/)]],
       paymentStatus: ['completed', [Validators.required, Validators.pattern(/^(completed|pending|failed)$/)]],
-      staffName: ['', [requiredText, Validators.maxLength(120)]],
+      staffName: ['', [requiredText, Validators.maxLength(120), this.validStaffSelection]],
       shiftName: ['', [requiredText, Validators.maxLength(60)]],
       shiftDate: [localPaymentDate(), [Validators.required, validShiftDate]],
       counterName: ['', Validators.maxLength(60)],
@@ -71,10 +80,45 @@ export class PaymentComponent implements OnInit, OnDestroy {
     }));
     this.subscriptions.add(this.indexedDbService.changes.subscribe(collection => {
       if (collection === 'payments') void this.loadPayments().catch(error => { this.errorMessage = this.message(error, 'Unable to refresh payments.'); this.feedback.error(this.errorMessage); });
+      if (collection === STAFF_COLLECTION) void this.loadStaff();
     }));
     this.clock = setInterval(() => this.currentTime = new Date(), 1000);
-    await Promise.all([this.loadAccount(), this.loadPayments().catch(error => { this.errorMessage = this.message(error, 'Unable to load payments.'); this.feedback.error(this.errorMessage); })]);
+    await Promise.all([this.loadAccount(), this.loadStaff(), this.loadPayments().catch(error => { this.errorMessage = this.message(error, 'Unable to load payments.'); this.feedback.error(this.errorMessage); })]);
+    this.restoreStaffDefault();
   }
+
+  private readonly validStaffSelection = (control: AbstractControl): { staff: boolean } | null => {
+    const name = staffKey(control.value);
+    return !name || (!!this.editingId && name === staffKey(this.editingStaffName)) || this.staffRecords.some(record => record.active && staffKey(record.name) === name) ? null : { staff: true };
+  };
+  get activeStaffNames(): string[] { return uniqueStaffValues(this.staffRecords.filter(record => record.active).map(record => record.name)); }
+  get staffEntryOptions(): string[] { return uniqueStaffValues([...this.activeStaffNames, ...(this.editingId ? [this.editingStaffName] : [])]); }
+  get shiftSuggestions(): string[] {
+    const selected = staffKey(this.paymentForm?.get('staffName')?.value);
+    return uniqueStaffValues([...STAFF_SHIFTS, ...this.staffRecords.filter(record => record.active && staffKey(record.name) === selected).flatMap(record => record.assignments.map(assignment => assignment.shift))]);
+  }
+  selectStaff(name: string): void { const control = this.paymentForm.get('staffName')!; control.setValue(name); control.markAsDirty(); control.markAsTouched(); }
+  async loadStaff(): Promise<void> {
+    const version = ++this.staffVersion; this.staffLoading = true;
+    try {
+      const records = await this.staff.getAll(true);
+      if (!this.destroyed && version === this.staffVersion) {
+        this.staffRecords = records; this.staffLoaded = true; this.staffLoadError = '';
+        const control = this.paymentForm.get('staffName'); control?.updateValueAndValidity({ emitEvent: false });
+        if (!this.accountLoading && !control?.dirty) this.restoreStaffDefault();
+      }
+    } catch { if (!this.destroyed && version === this.staffVersion) { this.staffLoadError = 'Unable to load staff. Use Retry to refresh the staff list.'; this.feedback.error(this.staffLoadError); } }
+    finally { if (!this.destroyed && version === this.staffVersion) this.staffLoading = false; }
+  }
+  private restoreStaffDefault(): void {
+    if (this.editingId || !this.staffLoaded || this.staffLoadError) return;
+    const selected = this.staffRecords.find(record => record.active && staffKey(record.name) === staffKey(this.context.staffName));
+    this.context.staffName = selected?.name || '';
+    this.paymentForm.get('staffName')!.setValue(this.context.staffName, { emitEvent: false });
+  }
+  get staffFilterOptions(): string[] { return [...this.staffOptions, this.unrecordedStaffLabel]; }
+  get staffFilterValue(): string { return this.staffFilter === '__unrecorded__' ? this.unrecordedStaffLabel : this.staffFilter; }
+  selectStaffFilter(name: string): void { this.staffFilter = name === this.unrecordedStaffLabel ? '__unrecorded__' : name; this.applyPaymentFilter(); }
 
   private async loadAccount(): Promise<void> {
     try {
@@ -95,9 +139,9 @@ export class PaymentComponent implements OnInit, OnDestroy {
     finally { this.accountLoading = false; }
   }
 
-  async retryAccount(): Promise<void> { this.accountLoading = true; await this.loadAccount(); }
+  async retryAccount(): Promise<void> { this.accountLoading = true; await this.loadAccount(); this.restoreStaffDefault(); }
 
-  ngOnDestroy(): void { this.destroyed = true; this.loadVersion++; this.subscriptions.unsubscribe(); if (this.clock) clearInterval(this.clock); }
+  ngOnDestroy(): void { this.destroyed = true; this.loadVersion++; this.staffVersion++; this.subscriptions.unsubscribe(); if (this.clock) clearInterval(this.clock); }
   private message(error: unknown, fallback: string): string { return error instanceof Error ? error.message : fallback; }
   generatePatientId(): string { return this.patientId = 'P-' + Math.random().toString(36).slice(2, 11); }
   loadMore(): void { this.pagination.loadMore(this.filteredPayments.length); this.applyPaymentFilter(false); }
@@ -126,6 +170,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
   private attributionValidators(editing: boolean): void {
     for (const [field, max] of [['staffName', 120], ['shiftName', 60]] as const) {
       this.paymentForm.get(field)!.setValidators(editing ? [Validators.maxLength(max)] : [requiredText, Validators.maxLength(max)]);
+      if (field === 'staffName') this.paymentForm.get(field)!.addValidators(this.validStaffSelection);
       this.paymentForm.get(field)!.updateValueAndValidity({ emitEvent: false });
     }
     this.paymentForm.get('shiftDate')!.setValidators(editing ? [validShiftDate] : [Validators.required, validShiftDate]);
@@ -142,6 +187,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
     if (this.saving || this.deletingId || this.accountLoading) return;
     this.errorMessage = ''; this.successMessage = '';
     if (!this.identity) { this.errorMessage = 'Refresh your staff account before recording a payment.'; if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' }); return; }
+    if (this.staffLoading || !this.staffLoaded || this.staffLoadError) { this.errorMessage = 'Load the staff list before saving this payment. Use Retry on the staff dropdown.'; this.feedback.error(this.errorMessage); return; }
     if (this.paymentForm.invalid) { this.paymentForm.markAllAsTouched(); this.errorMessage = 'Complete the highlighted fields before saving.'; if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' }); return; }
     this.saving = true;
     const wasEditing = !!this.editingId;
@@ -169,7 +215,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
       this.successMessage = wasEditing ? 'Payment updated.' : 'Payment #' + payment.id + ' saved.'; if (this.successMessage) this.feedback.alertNotify.next({ msg: this.successMessage, type: 'success' });
       try { await this.refreshPaymentList(); }
       catch { this.errorMessage = 'Payment saved. The history could not refresh; use Refresh to reload it.'; if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' }); }
-      if (!wasEditing && this.printAfterSave) this.showReceipt(payment);
+      if (!wasEditing && this.printAfterSave) await this.showReceipt(payment);
       setTimeout(() => { if (!this.destroyed) document.getElementById('payment-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
     } catch (error) { this.errorMessage = this.message(error, 'Unable to save the payment. Please try again.'); if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' }); }
     finally { this.saving = false; }
@@ -185,9 +231,20 @@ export class PaymentComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
     try { await this.loadPayments(); } catch (error) { this.errorMessage = this.message(error, 'Unable to refresh payments.'); if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' }); }
   }
-  showReceipt(payment: PaymentRecord): void {
+  changePaperWidth(width: 58 | 80): void {
+    this.paperWidth = width === 80 ? 80 : 58;
     try { localStorage.setItem('hmc.paymentPaperWidth', String(this.paperWidth)); } catch { /* Keep this print selection in memory. */ }
-    printThermal(buildPaymentReceipt(payment), this.paperWidth, 'payment-receipt', this.feedback);
+  }
+  async showReceipt(payment: PaymentRecord): Promise<void> {
+    try {
+      if (!this.dialog) throw new Error('Payment preview could not be opened. Refresh the page and try again.');
+      const record = (await this.indexedDbService.getItem<PaymentRecord[]>('payments') || []).find(item => item.id === payment.id);
+      if (!record) throw new Error('This payment no longer exists. Refresh the payment list.');
+      if (this.destroyed) return;
+      this.changePaperWidth(this.paperWidth);
+      const preview = this.dialog.open(PaymentSlipPreviewComponent, { data: { record: { ...record }, paperWidth: this.paperWidth }, width: '480px', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
+      this.subscriptions.add(preview.beforeClosed().subscribe(() => { if (!this.destroyed) this.paperWidth = preview.componentInstance.paperWidth; }));
+    } catch (error) { this.errorMessage = this.message(error, 'Unable to load the payment receipt.'); this.feedback.error(this.errorMessage); }
   }
 
   async updatePaymentStatus(paymentId: string, newStatus: string, select?: { value: string }): Promise<void> {
@@ -213,13 +270,13 @@ export class PaymentComponent implements OnInit, OnDestroy {
     } finally { this.saving = false; }
   }
 
-  get staffOptions(): string[] { return [...new Set(this.payments.map(item => item.staffName?.trim()).filter((value): value is string => !!value))].sort(); }
+  get staffOptions(): string[] { return uniqueStaffValues([...this.staffRecords.map(record => record.name), ...this.payments.map(item => item.staffName || '')]); }
   get shiftOptions(): string[] { return [...new Set(this.payments.map(item => item.shiftName?.trim()).filter((value): value is string => !!value))].sort(); }
   get filteredPayments(): PaymentRecord[] {
     const query = this.paymentSearch.trim().toLocaleLowerCase();
     return this.payments.filter(payment => (!query || [payment.patientName, payment.patientId, payment.id, payment.paymentMethod, payment.paymentStatus, payment.staffName, payment.counterName, payment.shiftName, payment.shiftDate]
       .some(value => String(value || '').toLocaleLowerCase().includes(query)))
-      && (!this.staffFilter || (this.staffFilter === '__unrecorded__' ? !payment.staffName : payment.staffName === this.staffFilter))
+      && (!this.staffFilter || (this.staffFilter === '__unrecorded__' ? !staffKey(payment.staffName) : staffKey(payment.staffName) === staffKey(this.staffFilter)))
       && (!this.shiftFilter || (this.shiftFilter === '__unrecorded__' ? !payment.shiftName : payment.shiftName === this.shiftFilter))
       && (!this.statusFilter || payment.paymentStatus === this.statusFilter) && (!this.methodFilter || payment.paymentMethod === this.methodFilter)
       && (!this.fromDate || paymentDate(payment) >= this.fromDate) && (!this.toDate || (!!paymentDate(payment) && paymentDate(payment) <= this.toDate)));
@@ -238,7 +295,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
   }
   editPayment(payment: PaymentRecord): void {
     if (this.saving || this.deletingId) return;
-    this.editingId = payment.id; this.patientId = payment.patientId || '';
+    this.editingId = payment.id; this.editingStaffName = payment.staffName || ''; this.patientId = payment.patientId || '';
     this.attributionValidators(true);
     this.paymentForm.reset({ patientName: payment.patientName, patientId: this.patientId, amount: payment.amount, cashGiven: payment.cashGiven ?? null,
       paymentMethod: payment.paymentMethod || 'cash', paymentStatus: payment.paymentStatus || 'pending', staffName: payment.staffName || '',
@@ -262,9 +319,10 @@ export class PaymentComponent implements OnInit, OnDestroy {
       this.context = { staffName: raw.staffName || '', shiftName: raw.shiftName || '', counterName: raw.counterName || '' };
       this.counterDate = raw.shiftDate || localPaymentDate();
     }
-    this.editingId = ''; this.pendingCreateId = ''; this.attributionValidators(false);
+    this.editingId = ''; this.editingStaffName = ''; this.pendingCreateId = ''; this.attributionValidators(false);
     this.paymentForm.reset({ patientName: '', patientId: this.generatePatientId(), amount: null, cashGiven: null, paymentMethod: 'cash', paymentStatus: 'completed',
       ...this.context, shiftDate: this.counterDate });
+    this.restoreStaffDefault();
     this.cashReturn = 0;
   }
 }

@@ -1,0 +1,15 @@
+<mat-form-field #field appearance="outline" class="hmc-searchable-field">
+  <mat-label>{{ label }}</mat-label><mat-icon matPrefix class="hmc-picker-search">search</mat-icon>
+  <input #input matInput type="text" autocomplete="off" [ngModel]="text" [ngModelOptions]="{standalone:true}" (ngModelChange)="type($event)" [matAutocomplete]="suggestions" [disabled]="disabled || loading" [errorStateMatcher]="errorMatcher" [attr.aria-label]="ariaLabel || label" [attr.aria-required]="required || null" [placeholder]="'Search ' + label.toLocaleLowerCase()" (focus)="focus()" (blur)="blur()" (keydown.enter)="$event.preventDefault()">
+  <button *ngIf="value || text" matSuffix mat-icon-button type="button" class="hmc-picker-button" [disabled]="disabled || loading" (mousedown)="$event.preventDefault()" (click)="clear()" [attr.aria-label]="'Clear ' + label.toLocaleLowerCase()"><mat-icon>close</mat-icon></button>
+  <button matSuffix mat-icon-button type="button" class="hmc-picker-button" [disabled]="disabled || loading" (mousedown)="$event.preventDefault()" (click)="open()" [attr.aria-label]="'Browse ' + label.toLocaleLowerCase()"><mat-icon>expand_more</mat-icon></button>
+  <mat-autocomplete #suggestions="matAutocomplete" class="hmc-catalog-options" [panelWidth]="panelWidth" (optionSelected)="select($event)">
+    <mat-option *ngIf="showEmptyOption" value="" class="hmc-picker-empty"><mat-icon>filter_alt_off</mat-icon><span class="hmc-option-label">{{ emptyLabel }}</span></mat-option>
+    <mat-option *ngFor="let name of filteredOptions; trackBy: trackName" [value]="name"><span class="hmc-option-label">{{ name }}</span><mat-icon *ngIf="isSelected(name)" class="hmc-picker-selected">check</mat-icon></mat-option>
+    <mat-option *ngIf="!filteredOptions.length" disabled>{{ options.length ? 'No matching options' : 'No options available' }}</mat-option>
+  </mat-autocomplete>
+  <mat-error>{{ errorMessage }}</mat-error>
+  <mat-hint *ngIf="loading" role="status">Loading options...</mat-hint>
+  <mat-hint *ngIf="error" role="status">{{ error }}</mat-hint>
+  <button *ngIf="error" mat-icon-button matSuffix type="button" (click)="retry.emit()" [attr.aria-label]="'Retry loading ' + label.toLocaleLowerCase()"><mat-icon>refresh</mat-icon></button>
+</mat-form-field>

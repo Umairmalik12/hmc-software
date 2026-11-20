@@ -3,21 +3,15 @@
     <p *ngIf="loading" class="hmc-loading-state" role="status">Loading operation patient records...</p><p *ngIf="loadFailed" class="form-error" role="alert">Records could not be loaded. <button mat-stroked-button type="button" (click)="dataActions('', 'asc', 0, 20)" [disabled]="loading">Retry</button></p>
     <div class="search-bar" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
         <mat-form-field appearance="outline">
-            <mat-label>Patient ID</mat-label>
-            <input matInput [(ngModel)]="searchPatientId" placeholder="Search by ID">
+            <mat-label>MR Number</mat-label>
+            <input matInput type="search" inputmode="numeric" [(ngModel)]="searchPatientId" (ngModelChange)="onSearch()" placeholder="MR Number" aria-label="MR Number">
         </mat-form-field>
         <mat-form-field appearance="outline">
             <mat-label>Name</mat-label>
             <input matInput [(ngModel)]="searchName" placeholder="Search by Name">
         </mat-form-field>
-        <mat-form-field appearance="outline">
-            <mat-label>Phone</mat-label>
-            <input matInput [(ngModel)]="searchPhone" placeholder="Search by Phone">
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-            <mat-label>Procedure</mat-label>
-            <input matInput [(ngModel)]="searchProcedure" placeholder="Search by Procedure">
-        </mat-form-field>
+        <app-clinical-select class="catalog-filter" kind="doctors" label="Doctor name" emptyLabel="All doctors" [savedValues]="savedDoctorValues" [(ngModel)]="searchDrName" (ngModelChange)="onSearch()"></app-clinical-select>
+        <app-searchable-select class="catalog-filter" label="Procedure" ariaLabel="Filter by procedure" emptyLabel="All Procedures" [options]="procedureFilterOptions" [value]="searchProcedure" (valueChange)="searchProcedure = $event; onSearch()" [loading]="proceduresLoading" [error]="proceduresFailed ? 'Procedures could not be loaded. Retry to refresh.' : ''" (retry)="loadProcedures()"></app-searchable-select>
         <mat-form-field appearance="outline">
             <mat-label>Date Filter</mat-label>
             <mat-select [(ngModel)]="dateFilter" (selectionChange)="onDateFilter()">
@@ -28,10 +22,9 @@
                 <mat-option value="thirty">Last 30 Days</mat-option>
             </mat-select>
         </mat-form-field>
-        <button mat-raised-button color="primary" (click)="onSearch()"><mat-icon>search</mat-icon>Search</button>
+        <div class="search-actions"><button mat-raised-button color="primary" (click)="onSearch()"><mat-icon>search</mat-icon>Search</button>
         <button mat-raised-button color="accent" (click)="onClearSearch()"><mat-icon>filter_alt_off</mat-icon>Clear</button>
-        <span style="flex: 1 1 auto;"></span>
-        <button mat-raised-button color="primary" (click)="exportToExcel()"><mat-icon>file_download</mat-icon>Export</button>
+        <button class="search-export" mat-raised-button color="primary" (click)="exportToExcel()"><mat-icon>file_download</mat-icon>Export</button></div>
     </div>
     <div class="table-scroll-container" appScrollPagination [scrollDisabled]="loading" [scrollTotal]="total" [scrollShown]="displayedPatients.length" [scrollResetKey]="pagination.revision" (loadMore)="loadMore()" scrollLabel="Operation patients">
     <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource" [trackBy]="trackRecord">

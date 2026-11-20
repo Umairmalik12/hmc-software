@@ -9,6 +9,7 @@ export interface Opd {
     temp: string;
     weight: string;
     patientCategory: string;
+    procedure?: string;
     amount: number;
     phone: string;
     address: string;
@@ -17,4 +18,4 @@ export interface Opd {
     followUp: string;
     createdAt: string;
   }
-  
+

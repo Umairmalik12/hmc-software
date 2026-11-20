@@ -3,7 +3,7 @@ import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { InpatientService } from '../../../Services/inpatient.service';
-import { requiredText } from 'src/app/Services/validators.service';
+import { requiredText, wholeNumber } from 'src/app/Services/validators.service';
 
 @Component({
   selector: 'app-inpatient-edit',
@@ -33,7 +33,7 @@ export class InpatientEditComponent {
 
     this.inpatientForm = this.fb.group({
       inpatientDetail: this.fb.group({
-        inpatientId: [defaultData.inpatientId],
+        inpatientId: [defaultData.inpatientId || null, [Validators.required, Validators.min(1), wholeNumber]],
         createdAt: [defaultData.createdAt || ''],
         basicInfo: this.fb.group({
           patientName: [defaultData.patientName, [Validators.required, requiredText]],
@@ -76,7 +76,7 @@ export class InpatientEditComponent {
   ResultRefactoring(): any {
     return {
       inpatientId: this.b['inpatientId'].value,
-      patientName: this.c['patientName'].value,
+      patientName: this.c['patientName'].value.trim(),
       surgeonName: this.c['surgeonName'].value,
       procedure: this.d['procedure'].value,
       admissionDate: this.e['admissionDate'].value,

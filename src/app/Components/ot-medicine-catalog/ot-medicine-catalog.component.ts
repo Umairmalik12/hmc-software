@@ -8,14 +8,18 @@ import { ScrollPagination, trackRecord } from '../../Shared/scroll-pagination';
 import { exportRecords } from '../../Shared/export-records';
 import { OtMedicineEditComponent } from './ot-medicine-edit.component';
 import { OtMedicineDeleteComponent } from './ot-medicine-delete.component';
+import { MedicineAlphabet, trackMedicineLetter } from '../../Shared/medicine-alphabet';
 
-@Component({ selector: 'app-ot-medicine-catalog', templateUrl: './ot-medicine-catalog.component.html', styleUrls: ['./ot-medicine-catalog.component.css'] })
+@Component({ selector: 'app-ot-medicine-catalog', templateUrl: './ot-medicine-catalog.component.html', styleUrls: ['./ot-medicine-catalog.component.css', '../../Shared/medicine-catalog-layout.css'] })
 export class OtMedicineCatalogComponent implements OnInit, OnDestroy {
   readonly pagination = new ScrollPagination();
   readonly trackRecord = trackRecord;
+  readonly trackLetter = trackMedicineLetter;
+  private readonly alphabet = new MedicineAlphabet<OtCatalogMedicine>();
   readonly embedded: boolean;
   medicines: OtCatalogMedicine[] = [];
   query = '';
+  letterFilter = '';
   status = 'all';
   category = '';
   loading = false;
@@ -27,11 +31,16 @@ export class OtMedicineCatalogComponent implements OnInit, OnDestroy {
   constructor(private catalog: OtMedicineCatalogService, private dialog: MatDialog, @Optional() @Inject(MAT_DIALOG_DATA) data: { embedded?: boolean } | null, private feedback: NotifyUpdateService = new NotifyUpdateService()) { this.embedded = data?.embedded === true; }
   get activeCount(): number { return this.medicines.filter(item => item.active).length; }
   get categories(): string[] { return Array.from(new Set(this.medicines.map(item => item.category).filter(Boolean))).sort(); }
-  get filtered(): OtCatalogMedicine[] {
+  get alphabetView() {
     const query = otMedicineKey(this.query);
-    return this.medicines.filter(item => (!query || otMedicineKey([item.name, item.genericName, item.strength, item.type].join(' ')).includes(query)) && (!this.category || item.category === this.category) && (this.status === 'all' || item.active === (this.status === 'active')));
+    return this.alphabet.view(this.medicines, JSON.stringify([query, this.category, this.status]), item => (!query || otMedicineKey([item.name, item.genericName, item.strength, item.type].join(' ')).includes(query)) && (!this.category || item.category === this.category) && (this.status === 'all' || item.active === (this.status === 'active')), this.letterFilter);
   }
+  get filtered(): OtCatalogMedicine[] { return this.alphabetView.items; }
   get visible(): OtCatalogMedicine[] { return this.pagination.slice(this.filtered); }
+  get visibleGroups() { return this.alphabet.visibleGroups(this.alphabetView, this.pagination.limit); }
+  onFilterChange(): void { this.pagination.reset(); }
+  selectLetter(letter: string): void { this.letterFilter = letter === 'all' ? '' : letter; this.onFilterChange(); }
+  clearFilters(): void { this.query = ''; this.letterFilter = ''; this.category = ''; this.status = 'all'; this.onFilterChange(); }
   loadMore(): void { this.pagination.loadMore(this.filtered.length); }
   ngOnInit(): void { void this.load(); this.subscriptions.add(this.catalog.changes.subscribe(() => void this.load())); }
   ngOnDestroy(): void { this.subscriptions.unsubscribe(); this.version++; }

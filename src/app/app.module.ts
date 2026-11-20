@@ -1,3 +1,6 @@
+import { SearchableSelectComponent } from './Shared/searchable-select.component';
+import { ClinicalCatalogComponent } from './Components/clinical-catalog/clinical-catalog.component';
+import { ClinicalCatalogSelectComponent } from './Components/clinical-catalog/clinical-catalog-select.component';
 import { ThermalReceiptPreviewComponent } from './Shared/thermal-receipt-preview.component';
 import { PatientTokenPreviewComponent } from './Components/patient-token/patient-token-preview.component';
 import { FeedbackModule } from './Shared/feedback.module';
@@ -16,6 +19,12 @@ import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { LoginComponent } from './Components/login/login.component';
 import { HomeComponent } from './Components/home/home.component';
+import { StaffListComponent } from './Components/staff/staff-list.component';
+import { StaffEditComponent } from './Components/staff/staff-edit.component';
+import { StaffDutyManagerComponent } from './Components/staff/staff-duty-manager.component';
+import { ExpensesComponent } from './Components/expenses/expenses.component';
+import { ExpenseEditComponent } from './Components/expenses/expense-edit.component';
+import { ExpenseMonthPreviewComponent } from './Components/expenses/expense-month-preview.component';
 import { PatientComponent } from './Components/patient/patient.component';
 import { PatientListComponent } from './Components/patient/patient-list/patient-list.component';
 import { PatientEditComponent } from './Components/patient/patient-edit/patient-edit.component';
@@ -43,6 +52,7 @@ import { OpdListComponent } from './Components/opdslip/opd-list/opd-list.compone
 import { OpdEditComponent } from './Components/opdslip/opd-edit/opd-edit.component';
 import { LabComponent } from './Components/lab/lab.component';
 import { LabListComponent } from './Components/lab/lab-list/lab-list.component';
+import { LabSlipPreviewComponent } from './Components/lab/lab-slip-preview.component';
 import { LabEditComponent } from './Components/lab/lab-edit/lab-edit.component';
 import { OtMedicineCatalogComponent } from './Components/ot-medicine-catalog/ot-medicine-catalog.component';
 import { OtMedicineEditComponent } from './Components/ot-medicine-catalog/ot-medicine-edit.component';
@@ -50,6 +60,7 @@ import { OtMedicineDeleteComponent } from './Components/ot-medicine-catalog/ot-m
 import { OtFormComponent } from './Components/otslip/otslip.component';
 import { OtlistComponent } from './Components/otlist/otlist.component';
 import { PaymentComponent } from './Components/payment/payment.component';
+import { PaymentSlipPreviewComponent } from './Components/payment/payment-slip-preview.component';
 import { PreciptionComponent } from './Components/precipion/precipion.component';
 import { PrescriptionListComponent } from './Components/precipion/prescription-list.component';
 import { PrescriptionPreviewComponent } from './Components/precipion/prescription-preview.component';
@@ -82,6 +93,12 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
     AppComponent,
     LoginComponent,
     HomeComponent,
+    StaffListComponent,
+    StaffEditComponent,
+    StaffDutyManagerComponent,
+    ExpensesComponent,
+    ExpenseEditComponent,
+    ExpenseMonthPreviewComponent,
     PatientComponent,
     PatientListComponent,
     PatientEditComponent,
@@ -91,6 +108,7 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
     OpdSlipComponent,
     LabComponent,
     LabListComponent,
+    LabSlipPreviewComponent,
     LabEditComponent,
     OtFormComponent,
     OtMedicineCatalogComponent,
@@ -99,6 +117,7 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
     AgePipePipe,
     OtlistComponent,
     PaymentComponent,
+    PaymentSlipPreviewComponent,
     PreciptionComponent,
     MedicineCatalogComponent,
     MedicineOptionDialogComponent,
@@ -108,6 +127,7 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
     PrescriptionDocumentComponent,
     ProcedureSelectComponent,
     ProceduresComponent,
+    ClinicalCatalogComponent,
     OtMedicinePreviewComponent,
     RecordDetailsComponent,
     RecordPreviewDirective,
@@ -129,6 +149,8 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
   ],
   imports: [
     BrowserModule,
+    ClinicalCatalogSelectComponent,
+    SearchableSelectComponent,
     FeedbackModule,
     AppRoutingModule,
     BrowserAnimationsModule,

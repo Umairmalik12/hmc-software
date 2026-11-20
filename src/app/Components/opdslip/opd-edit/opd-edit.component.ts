@@ -4,7 +4,7 @@ import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { Opd } from 'src/app/Models/opd.model';
-import { requiredText } from 'src/app/Services/validators.service';
+import { finiteNumber, requiredText, wholeNumber } from 'src/app/Services/validators.service';
 
 @Component({
   selector: 'app-opd-edit',
@@ -34,14 +34,15 @@ export class OpdEditComponent {
     }
 
     this.opdForm = this.fb.group({
-      patientId: [this.opdDetails.patientId || null, Validators.min(1)],
+      patientId: [this.opdDetails.patientId || null, [Validators.required, Validators.min(1), wholeNumber]],
       createdAt: [this.opdDetails.createdAt || ''],
       patientName: [this.opdDetails.patientName || '', [Validators.required, requiredText]],
-      age: [this.opdDetails.age ?? null, [Validators.min(0), Validators.max(120)]],
-      sex: [this.opdDetails.sex || ''],
+      age: [this.opdDetails.age ?? null, [Validators.min(0), Validators.max(120), finiteNumber]],
+      sex: [this.opdDetails.sex || '', Validators.pattern(/^(Male|Female)$/)],
       bp: [this.opdDetails.bp || ''],
       temp: [this.opdDetails.temp || ''],
       patientCategory: [this.opdDetails.patientCategory || ''],
+      procedure: [this.opdDetails.procedure || ''],
       amount: [this.opdDetails.amount ?? null, Validators.min(0)],
       phone: [this.opdDetails.phone || '', Validators.pattern(/^[+\d\s()-]{7,20}$/)],
       address: [this.opdDetails.address || ''],
@@ -60,7 +61,7 @@ export class OpdEditComponent {
     const value = this.opdForm.getRawValue();
     this.dialogRef.close({
       ...this.opdDetails, ...value,
-      patientId: Number(value.patientId) || 0,
+      patientId: value.patientId,
       patientName: value.patientName.trim(),
       amount: Number(value.amount) || 0,
       oldPatientId: this.oldPatientId,

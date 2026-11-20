@@ -1,3 +1,4 @@
+import { sameClinicalName } from 'src/app/Services/clinical-catalog.service';
 import { EventEmitter, Output } from '@angular/core';
 import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
 import { includesText, matchesDateFilter } from 'src/app/Shared/list-filters';
@@ -16,6 +17,7 @@ import { ShowalertService } from 'src/app/Services/showalert.service';
 import { PatientEditComponent } from '../patient-edit/patient-edit.component';
 import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
 import { UserLoginService } from 'src/app/Services/user-login.service';
+import { ProcedureOption, ProcedureService } from 'src/app/Services/procedure.service';
 
 @Component({
   selector: 'app-patient-list',
@@ -34,7 +36,12 @@ export class PatientListComponent implements OnInit, OnDestroy {
   loadMore(): void { this.pagination.loadMore(this.total); this.updateDisplayedPatients(); }
 
   private refreshSubscription?: Subscription;
-  ngOnDestroy(): void { this.refreshSubscription?.unsubscribe(); this.loadVersion++; }
+  private procedureSubscription?: Subscription;
+  private procedureVersion = 0;
+  procedureOptions: ProcedureOption[] = [];
+  proceduresLoading = false;
+  proceduresFailed = false;
+  ngOnDestroy(): void { this.refreshSubscription?.unsubscribe(); this.procedureSubscription?.unsubscribe(); this.loadVersion++; this.procedureVersion++; }
   async viewPatient(id: number): Promise<void> {
     try {
       const record = await firstValueFrom(this.patientService.getPatientDetails(id));
@@ -53,7 +60,8 @@ export class PatientListComponent implements OnInit, OnDestroy {
   // 🔍 Search fields
   searchPatientId: string = '';
   searchName: string = '';
-  searchPhone: string = '';
+  searchDrName: string = '';
+  get savedDoctorValues(): string[] { return [...new Set(this.patient.map(record => record.drName).filter(Boolean))]; }
   searchProcedure: string = '';
   searchCity: string = '';
   dateFilter: string = 'all';
@@ -83,7 +91,8 @@ export class PatientListComponent implements OnInit, OnDestroy {
     private changeDetectorRef: ChangeDetectorRef,
     private notifyUpdate: NotifyUpdateService,
     private indexedDbService: SupabaseDataService,
-    private userLogin: UserLoginService
+    private userLogin: UserLoginService,
+    private procedures: ProcedureService = new ProcedureService(indexedDbService)
   ) {
     this.refreshSubscription = this.notifyUpdate.notify.subscribe(() => {
       this.dataActions('', 'asc', 0, 5);
@@ -91,6 +100,8 @@ export class PatientListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    void this.loadProcedures();
+    this.procedureSubscription = this.indexedDbService.changes.subscribe(collection => { if (collection === 'procedures') void this.loadProcedures(); });
     this.loading = true;
     this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
@@ -115,14 +126,35 @@ export class PatientListComponent implements OnInit, OnDestroy {
   }
 
   onDateFilter(reset = true): void {
-    this.filteredPatients = this.patient.filter(record => matchesDateFilter(record.createdAt, this.dateFilter) && includesText(record.patientId, this.searchPatientId) && includesText(record.name, this.searchName) && includesText(record.contact, this.searchPhone) && includesText(record.procedure, this.searchProcedure) && includesText(record.city, this.searchCity));
+    this.filteredPatients = this.patient.filter(record => matchesDateFilter(record.createdAt, this.dateFilter) && includesText(record.patientId, this.searchPatientId) && includesText(record.name, this.searchName) && (!this.searchDrName || sameClinicalName(record.drName, this.searchDrName)) && (!this.searchProcedure || this.sameProcedure(record.procedure, this.searchProcedure)) && includesText(record.city, this.searchCity));
     if (reset) this.pagination.reset();
     this.updateDisplayedPatients();
   }
 
   onSearch(): void { this.onDateFilter(); }
 
-  onClearSearch(): void { this.searchPatientId = ''; this.searchName = ''; this.searchPhone = ''; this.searchProcedure = ''; this.searchCity = ''; this.dateFilter = 'all'; this.onDateFilter(); }
+  readonly sameProcedure = (left: string, right: string): boolean => this.procedureKey(left) === this.procedureKey(right);
+  private procedureKey(value: string): string { return String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase(); }
+  get procedureFilterOptions(): string[] {
+    const names = new Map<string, string>();
+    for (const name of [...this.procedureOptions.map(option => option.name), ...this.patient.map(patient => patient.procedure), this.searchProcedure]) {
+      const key = this.procedureKey(name);
+      if (key && !names.has(key)) names.set(key, String(name).trim());
+    }
+    return Array.from(names.values()).sort((a, b) => a.localeCompare(b));
+  }
+  async loadProcedures(): Promise<void> {
+    const version = ++this.procedureVersion;
+    this.proceduresLoading = true; this.proceduresFailed = false;
+    try {
+      const options = await this.procedures.getAll();
+      if (version === this.procedureVersion) this.procedureOptions = options;
+    } catch {
+      if (version === this.procedureVersion) { this.proceduresFailed = true; this.notifyUpdate.error('Unable to load the procedure filter. Use Retry to refresh it.'); }
+    } finally { if (version === this.procedureVersion) this.proceduresLoading = false; }
+  }
+
+  onClearSearch(): void { this.searchPatientId = ''; this.searchName = ''; this.searchDrName = ''; this.searchProcedure = ''; this.searchCity = ''; this.dateFilter = 'all'; this.onDateFilter(); }
 
   exportToExcel(): void { exportRecords(this.filteredPatients, 'operation-patients.xlsx', 'Records', this.notifyUpdate); }
 

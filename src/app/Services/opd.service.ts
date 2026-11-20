@@ -69,20 +69,16 @@ export class OpdService {
 
   async addNewOpd(data: Opd): Promise<boolean> {
     try {
+      if (!this.validRegistration(data)) return false;
       if (!data.createdAt) {
         data.createdAt = new Date().toISOString();
       }
       await this.loadOpdData();
-      if (data.patientId > 0) {
-        // Check for duplicate MR No
-        if (this.opdDetail.some(o => o.patientId === data.patientId)) {
-          console.error('Duplicate MR No (patientId) exists');
-          return false;
-        }
-      } else {
-        data.patientId = await this.dbService.allocateId('opdDetails');
+      if (this.opdDetail.some(o => o.patientId === data.patientId)) {
+        console.error('Duplicate MR No (patientId) exists');
+        return false;
       }
-      await this.dbService.upsertRecord('opdDetails', data.patientId, data);
+      await this.dbService.insertRecord('opdDetails', data.patientId, data);
       this.opdDetail.push(data);
       return true;
     } catch (e) {
@@ -93,6 +89,7 @@ export class OpdService {
 
   async updateOpd(data: Opd & {oldPatientId?: number}): Promise<boolean> {
     try {
+      if (!this.validRegistration(data)) return false;
       await this.loadOpdData();
       const oldId = data.oldPatientId;
       const index = oldId ? this.opdDetail.findIndex(o => o.patientId === oldId) : -1;
@@ -120,6 +117,12 @@ export class OpdService {
       console.error('Error updating OPD:', e);
       return false;
     }
+  }
+
+  private validRegistration(data: Opd): boolean {
+    return Number.isSafeInteger(data.patientId) && data.patientId > 0
+      && (data.sex == null || data.sex === '' || ['Male', 'Female'].includes(data.sex))
+      && (data.age == null || (Number.isFinite(data.age) && data.age >= 0 && data.age <= 120));
   }
 
   async deleteOpd(id: number): Promise<boolean> {

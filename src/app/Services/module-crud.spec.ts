@@ -23,7 +23,7 @@ describe('Core module CRUD persistence', () => {
       const other = { [module.id]: 900, [module.name]: 'Another patient', createdAt: '2020-01-01T00:00:00Z', medicines: [] };
       collections.set(module.collection, new Map([['900', other]]));
       const service: any = new module.service(db);
-      const draft = { [module.id]: 0, [module.name]: 'Ali', lastName: '', gender: '', age: 30, phone: '', city: '', address: '', drName: '',
+      const draft = { [module.id]: ['patientDetails', 'opdDetails', 'inpatientDetails'].includes(module.collection) ? 901 : 0, [module.name]: 'Ali', lastName: '', gender: '', age: 30, phone: '', city: '', address: '', drName: '',
         procedure: 'Cystoscopy', surgeonName: '', admissionDate: '', dischargeDate: '', roomNo: '', doctorName: '',
         medicines: [{ medicineName: 'Medicine A', quantity: 2 }], name: 'Ali', testName: 'CBC', price: 0, suggestedDr: '', dateTime: new Date().toISOString(), createdAt: '' };
       expect(await service[module.add](draft)).toBeTrue();

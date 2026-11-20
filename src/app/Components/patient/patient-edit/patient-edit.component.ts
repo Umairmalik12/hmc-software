@@ -4,7 +4,7 @@ import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { PatientDetail } from 'src/app/Models/patientDetail.model';
-import { requiredText, ValidatorsService } from 'src/app/Services/validators.service';
+import { finiteNumber, requiredText, ValidatorsService, wholeNumber } from 'src/app/Services/validators.service';
 
 @Component({
   selector: 'app-patient-edit',
@@ -36,7 +36,7 @@ export class PatientEditComponent {
 
     this.patientForm = this.fb.group({
       patientDetail: this.fb.group({
-           patientId: [this.patientDetails.patientId || null, [Validators.min(1)]],
+           patientId: [this.patientDetails.patientId || null, [Validators.required, Validators.min(1), wholeNumber]],
            createdAt: [this.patientDetails.createdAt || '', []],
         fullName: this.fb.group({
           firstName: [this.patientDetails.firstName, [Validators.required, requiredText]],
@@ -44,8 +44,8 @@ export class PatientEditComponent {
           drName: [this.patientDetails.drName || ''],
         }),
         bioDetail: this.fb.group({
-          gender: [this.patientDetails.gender || ''],
-          age: [this.tempAge, [Validators.min(0), Validators.max(120)]],
+          gender: [this.patientDetails.gender || '', Validators.pattern(/^(Male|Female)$/)],
+          age: [this.tempAge, [Validators.min(0), Validators.max(120), finiteNumber]],
         }),
         procedureInfo: this.fb.group({
           procedure: [this.patientDetails.procedure || ''],
@@ -95,7 +95,7 @@ export class PatientEditComponent {
 
   ResultRefactoring(): PatientDetail {
     let tempPatient: PatientDetail = {
-      patientId: Number(this.b['patientId'].value) || 0,
+      patientId: this.b['patientId'].value,
       createdAt: this.b['createdAt'].value,
       firstName: this.c['firstName'].value.trim(), lastName: this.c['lastName'].value, drName: this.c['drName'].value,
       gender: this.d['gender'].value, age: this.d['age'].value,

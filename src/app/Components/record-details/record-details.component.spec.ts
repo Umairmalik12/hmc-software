@@ -1,5 +1,5 @@
 import { FeedbackModule } from 'src/app/Shared/feedback.module';
-import { Component } from '@angular/core';
+import { ApplicationRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -72,5 +72,21 @@ describe('Record preview dialog', () => {
     const fixture = TestBed.createComponent(PreviewHost); fixture.componentInstance.record = null;
     fixture.detectChanges(); fixture.nativeElement.querySelector('button').click();
     expect(TestBed.inject(MatDialog).openDialogs.length).toBe(0); fixture.destroy();
+  });
+  it('gives long notes and nested medicines a full row without losing values or clipping actions', async () => {
+    const record = { description: 'LongDescriptionWithoutSpaces'.repeat(30), amount: 123456789.25, remarks: 'Line one\nLine two',
+      medicines: Array.from({ length: 30 }, (_, i) => ({ name: 'Medicine ' + (i + 1), quantity: i + 1 })), location: '' };
+    const ref = TestBed.inject(MatDialog).open(RecordDetailsComponent, { data: { title: 'Full record preview', record } });
+    TestBed.inject(ApplicationRef).tick();
+    await new Promise(resolve => setTimeout(resolve, 50));
+    TestBed.inject(ApplicationRef).tick();
+    const panel = document.querySelector<HTMLElement>('.hmc-dialog-panel')!;
+    const details = panel.querySelector<HTMLElement>('.record-details-grid')!;
+    expect(details.querySelectorAll('.record-detail-wide').length).toBe(3);
+    expect(details.scrollWidth).toBeLessThanOrEqual(details.clientWidth + 1);
+    expect(details.querySelector('.record-detail-money')!.textContent).toContain('123,456,789.25');
+    expect(details.textContent).toContain('Medicine 30'); expect(details.textContent).toContain('Line two');
+    const actions = panel.querySelector('mat-dialog-actions')!.getBoundingClientRect(); expect(actions.bottom).toBeLessThanOrEqual(window.innerHeight);
+    ref.close();
   });
 });

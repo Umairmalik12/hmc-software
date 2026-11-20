@@ -7,15 +7,7 @@ import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
 
 @Component({
   selector: 'app-procedure-select',
-  template: `<mat-form-field appearance="outline"><mat-label>Procedure</mat-label>
-    <mat-select [value]="value" [disabled]="disabled || loading" (selectionChange)="choose($event.value)" (closed)="touched()">
-      <mat-option value="">Not specified</mat-option>
-      <mat-option *ngIf="hasSavedValue" [value]="value">{{ value }} (saved value)</mat-option>
-      <mat-option *ngFor="let option of options" [value]="option.name">{{ option.name }}</mat-option>
-    </mat-select>
-    <button *ngIf="error" mat-icon-button matSuffix type="button" (click)="load()" aria-label="Retry loading procedures"><mat-icon>refresh</mat-icon></button>
-    <mat-hint *ngIf="error">{{ error }}</mat-hint>
-  </mat-form-field>`,
+  templateUrl: './procedure-select.component.html',
   styles: [':host{display:block;min-width:0}mat-form-field{width:100%}'],
   providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => ProcedureSelectComponent), multi: true }],
 })
@@ -30,6 +22,7 @@ export class ProcedureSelectComponent implements ControlValueAccessor, OnInit, O
   private changes?: Subscription;
   private version = 0;
   constructor(private procedures: ProcedureService, private db: SupabaseDataService, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
+  get optionNames(): string[] { return [...new Set([this.value, ...this.options.map(option => option.name)].filter(Boolean))].sort((a, b) => a.localeCompare(b)); }
   get hasSavedValue(): boolean { return !!this.value && !this.options.some(option => option.name === this.value); }
   ngOnInit(): void {
     void this.load();

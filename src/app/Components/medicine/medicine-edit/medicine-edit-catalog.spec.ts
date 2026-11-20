@@ -1,3 +1,7 @@
+import { SearchableSelectComponent } from 'src/app/Shared/searchable-select.component';
+import { ClinicalCatalogSelectComponent } from 'src/app/Components/clinical-catalog/clinical-catalog-select.component';
+import { ClinicalCatalogService, DEFAULT_LAB_TESTS } from 'src/app/Services/clinical-catalog.service';
+import { Subject as ClinicalChanges } from 'rxjs';
 import { FeedbackModule } from 'src/app/Shared/feedback.module';
 import { ApplicationRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -49,9 +53,9 @@ describe('Daily medicine form using the shared medicine catalogue', () => {
   beforeEach(async () => {
     store = memoryDb();
     await TestBed.configureTestingModule({
-      imports: [FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatAutocompleteModule, MatDialogModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule],
+      imports: [SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatAutocompleteModule, MatDialogModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule],
       declarations: [MedicineEditComponent, RoomSelectComponent, PrescriptionMedicineSelectComponent, MedicineCatalogComponent, MedicineOptionDialogComponent, ScrollPaginationDirective, ScrollListFooterComponent, RecordPreviewDirective],
-      providers: [{ provide: SupabaseDataService, useValue: store.db }],
+      providers: [{ provide: ClinicalCatalogService, useValue: { changes: new ClinicalChanges<string>(), getAll: async (kind: string) => kind === 'lab-tests' ? DEFAULT_LAB_TESTS : [] } }, { provide: SupabaseDataService, useValue: store.db }],
     }).compileComponents();
   });
   afterEach(() => TestBed.inject(MatDialog).closeAll());
@@ -91,7 +95,7 @@ describe('Daily medicine form using the shared medicine catalogue', () => {
     const editor = document.querySelector<HTMLElement>('app-medicine-option-dialog')!;
     type(editor.querySelector<HTMLInputElement>('input')!, 'Daily Catalogue New'); await settle();
     editor.querySelector<HTMLElement>('mat-select[aria-label="Medicine strength"] .mat-mdc-select-trigger')!.click(); await settle();
-    Array.from(document.querySelectorAll<HTMLElement>('.mat-mdc-select-panel mat-option')).find(option => option.textContent?.trim() === '500 mg')!.click(); await settle();
+    Array.from(document.querySelectorAll<HTMLElement>('.mat-mdc-select-panel mat-option')).find(option => (option.querySelector('.hmc-option-label')?.textContent || option.textContent)?.trim() === '500 mg')!.click(); await settle();
     const save = Array.from(editor.querySelectorAll<HTMLButtonElement>('mat-dialog-actions button')).find(button => button.textContent?.includes('Save medicine'))!;
     save.click(); await settle();
     expect((await TestBed.inject(PrescriptionMedicineCatalogService).getAll()).some(option => option.name === 'Daily Catalogue New 500 mg' && option.strength === '500 mg')).toBeTrue();

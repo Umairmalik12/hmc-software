@@ -33,10 +33,12 @@ describe('App-wide CRUD notifications', () => {
     service.clearNotifications(); expect(history).toEqual([]); expect(unread).toBe(0);
   });
 
-  it('records separate successful actions even when their transient toast text is identical', () => {
+  it('records each action while combining identical transient toasts', () => {
     service.success('Successfully saved'); service.success('Successfully saved');
     expect(toasts.length).toBe(1); expect(history.length).toBe(2); expect(history[0].id).not.toBe(history[1].id); expect(unread).toBe(2);
-    service.error('Offline'); service.error('Offline'); expect(history.length).toBe(3);
+    service.error('Offline'); service.error('Offline'); expect(history.length).toBe(4);
+    service.markAsRead(history[0].id); service.error('Offline'); expect(history.length).toBe(5); expect(history[0].read).toBeFalse();
+    service.clearNotifications(); service.error('Offline'); expect(history.length).toBe(1); expect(unread).toBe(1);
   });
 
   it('restores read state per staff account and isolates histories when signing out or switching accounts', () => {

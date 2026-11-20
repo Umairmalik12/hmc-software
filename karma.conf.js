@@ -31,6 +31,7 @@ module.exports = function (config) {
     browsers: ['Chrome'],
     customLaunchers: {
       ChromeHeadlessDesktop: { base: 'ChromeHeadless', flags: ['--window-size=1440,1000'] },
+      ChromeHeadlessCompactDesktop: { base: 'ChromeHeadless', flags: ['--window-size=1115,760'] },
       ChromeHeadlessMobile: { base: 'ChromeHeadless', flags: ['--window-size=390,844'] }
     },
     singleRun: false,

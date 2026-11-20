@@ -6,9 +6,9 @@
       <mat-form-field appearance="outline"><mat-label>MR number</mat-label><input matInput type="number" formControlName="patientId" placeholder="Auto-assigned"><mat-error>Enter a number greater than zero</mat-error></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Patient name</mat-label><input matInput formControlName="name" autocomplete="name"><mat-error>Enter the patient name</mat-error></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Phone number</mat-label><input matInput type="tel" formControlName="phone" autocomplete="tel"><mat-error>Enter a valid phone number</mat-error></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Referred by</mat-label><input matInput formControlName="suggestedDr"></mat-form-field>
+      <app-clinical-select kind="doctors" label="Referred by" formControlName="suggestedDr"></app-clinical-select>
       <div class="form-section-title"><mat-icon>biotech</mat-icon>Test details</div>
-      <mat-form-field appearance="outline" class="form-span"><mat-label>Lab tests</mat-label><mat-select formControlName="testName" multiple><mat-option *ngFor="let test of testList" [value]="test.viewValue">{{ test.viewValue }}</mat-option></mat-select><mat-error>Select at least one test</mat-error></mat-form-field>
+      <app-clinical-select class="form-span" kind="lab-tests" label="Lab tests" formControlName="testName" [multiple]="true" [required]="true" [invalid]="c.testName.invalid && c.testName.touched"></app-clinical-select>
       <mat-form-field appearance="outline"><mat-label>Price (PKR)</mat-label><input matInput type="number" min="0" formControlName="price"><mat-error>Price cannot be negative</mat-error></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Test date &amp; time</mat-label><input matInput type="datetime-local" formControlName="dateTime"></mat-form-field>
     </div>

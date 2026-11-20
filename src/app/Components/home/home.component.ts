@@ -33,6 +33,10 @@ export class HomeComponent implements OnInit, OnDestroy {
   currentDateTime: Date = new Date();
 
   otPatientId = '';
+  isShowDoctors = false;
+  isShowStaff = false;
+  isShowExpenses = false;
+  isShowLabTestCatalog = false;
   isShowProcedures = false;
   isShowRooms = false;
   isShowMedicineCatalog = false;
@@ -275,6 +279,18 @@ export class HomeComponent implements OnInit, OnDestroy {
       case 'prescription-list':
         this.isShowPrescriptionList = true;
         break;
+      case 'doctors':
+        this.isShowDoctors = true;
+        break;
+      case 'staff':
+        this.isShowStaff = true;
+        break;
+      case 'expenses':
+        this.isShowExpenses = true;
+        break;
+      case 'lab-test-catalog':
+        this.isShowLabTestCatalog = true;
+        break;
       case 'procedures':
         this.isShowProcedures = true;
         break;
@@ -320,6 +336,10 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.isShowPayment = false;
     this.isShowPrecption = false;
     this.isShowPrescriptionList = false;
+    this.isShowDoctors = false;
+    this.isShowStaff = false;
+    this.isShowExpenses = false;
+    this.isShowLabTestCatalog = false;
     this.isShowProcedures = false;
     this.isShowRooms = false;
     this.isShowMedicineCatalog = false;

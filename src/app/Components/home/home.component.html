@@ -20,6 +20,10 @@
       <a mat-list-item routerLink="/ot-records" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>inventory_2</mat-icon><span matListItemTitle>OT medicine records</span></a>
       <a mat-list-item routerLink="/ot-slip" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>post_add</mat-icon><span matListItemTitle>New OT medicine slip</span></a>
       <h3 class="sidebar-title">ADMINISTRATION</h3>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/expenses" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>receipt_long</mat-icon><span matListItemTitle>Expenses</span></a>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/staff" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>badge</mat-icon><span matListItemTitle>Staff &amp; duties</span></a>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/doctors" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>medical_services</mat-icon><span matListItemTitle>Doctors &amp; surgeons</span></a>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/lab-tests" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>biotech</mat-icon><span matListItemTitle>Lab test catalogue</span></a>
       <a *ngIf="isSuperAdmin" mat-list-item routerLink="/rooms" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>bed</mat-icon><span matListItemTitle>Rooms &amp; beds</span></a>
       <a *ngIf="isSuperAdmin" mat-list-item routerLink="/procedures" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>medical_services</mat-icon><span matListItemTitle>Procedures</span></a>
       <a mat-list-item routerLink="/payments" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>account_balance_wallet</mat-icon><span matListItemTitle>Payments</span></a>
@@ -45,8 +49,12 @@
       <app-ot-medicine-catalog *ngIf="isSuperAdmin && isShowOtMedicineCatalog"></app-ot-medicine-catalog>
       <app-otlist *ngIf="isShowOtList"></app-otlist>
       <app-payment *ngIf="isShowPayment"></app-payment>
+      <app-staff-list *ngIf="isSuperAdmin && isShowStaff"></app-staff-list>
+      <app-expenses *ngIf="isSuperAdmin && isShowExpenses"></app-expenses>
       <app-preciption *ngIf="isSuperAdmin && isShowPrecption"></app-preciption>
       <app-prescription-list *ngIf="isSuperAdmin && isShowPrescriptionList"></app-prescription-list>
+      <app-clinical-catalog *ngIf="isSuperAdmin && isShowDoctors" kind="doctors"></app-clinical-catalog>
+      <app-clinical-catalog *ngIf="isSuperAdmin && isShowLabTestCatalog" kind="lab-tests"></app-clinical-catalog>
       <app-procedures *ngIf="isSuperAdmin && isShowProcedures"></app-procedures>
       <app-rooms *ngIf="isSuperAdmin && isShowRooms"></app-rooms>
       <app-prescription-medicine-catalog *ngIf="isSuperAdmin && isShowMedicineCatalog"></app-prescription-medicine-catalog>

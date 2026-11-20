@@ -14,6 +14,10 @@ export function memoryDb(): { db: SupabaseDataService; collections: Map<string, 
     getItem: jasmine.createSpy('getItem').and.callFake(async (collection: string) => rows(collection).size === 1 && rows(collection).has('__singleton__')
       ? clone(rows(collection).get('__singleton__')) : Array.from(rows(collection).values()).map(value => clone(value))),
     allocateId: jasmine.createSpy('allocateId').and.callFake(async (collection: string) => Math.max(0, ...Array.from(rows(collection).keys()).map(key => Number(key) || 0)) + 1),
+    insertRecord: jasmine.createSpy('insertRecord').and.callFake(async (collection: string, id: string | number, value: any) => {
+      if (rows(collection).has(String(id))) throw new Error('This record already exists.');
+      rows(collection).set(String(id), clone(value)); changes.next(collection);
+    }),
     upsertRecord: jasmine.createSpy('upsertRecord').and.callFake(async (collection: string, id: string | number, value: any) => { rows(collection).set(String(id), clone(value)); changes.next(collection); }),
     deleteRecord: jasmine.createSpy('deleteRecord').and.callFake(async (collection: string, id: string | number) => { rows(collection).delete(String(id)); changes.next(collection); }),
     moveRecord: jasmine.createSpy('moveRecord').and.callFake(async (collection: string, oldId: string | number, id: string | number, value: any) => { rows(collection).delete(String(oldId)); rows(collection).set(String(id), clone(value)); changes.next(collection); }),

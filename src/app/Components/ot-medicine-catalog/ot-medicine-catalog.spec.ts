@@ -1,3 +1,7 @@
+import { SearchableSelectComponent } from 'src/app/Shared/searchable-select.component';
+import { ClinicalCatalogSelectComponent } from 'src/app/Components/clinical-catalog/clinical-catalog-select.component';
+import { ClinicalCatalogService, DEFAULT_LAB_TESTS } from 'src/app/Services/clinical-catalog.service';
+import { Subject as ClinicalChanges } from 'rxjs';
 import { FeedbackModule } from 'src/app/Shared/feedback.module';
 import { ApplicationRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -35,9 +39,9 @@ describe('OT medicine catalogue interface', () => {
   beforeEach(async () => {
     store = memoryDb();
     await TestBed.configureTestingModule({
-      imports: [FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatAutocompleteModule, MatDialogModule, MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, MatCheckboxModule, MatCardModule],
+      imports: [SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatAutocompleteModule, MatDialogModule, MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, MatCheckboxModule, MatCardModule],
       declarations: [OtMedicineCatalogComponent, OtMedicineEditComponent, OtMedicineDeleteComponent, ScrollPaginationDirective, ScrollListFooterComponent, RecordPreviewDirective, RecordDetailsComponent, OtFormComponent, ProcedureSelectComponent],
-      providers: [{ provide: SupabaseDataService, useValue: store.db }, { provide: ProcedureService, useValue: { getAll: async () => [] } }],
+      providers: [{ provide: ClinicalCatalogService, useValue: { changes: new ClinicalChanges<string>(), getAll: async (kind: string) => kind === 'lab-tests' ? DEFAULT_LAB_TESTS : [] } }, { provide: SupabaseDataService, useValue: store.db }, { provide: ProcedureService, useValue: { getAll: async () => [] } }],
     }).compileComponents();
   });
   afterEach(() => TestBed.inject(MatDialog).closeAll());
@@ -55,7 +59,7 @@ describe('OT medicine catalogue interface', () => {
       expect(panel.scrollWidth).toBeLessThanOrEqual(panel.clientWidth + 1);
       action('Save medicine').click(); await settle(); fixture.detectChanges();
       fixture.componentInstance.query = 'UI medicine'; fixture.componentInstance.pagination.reset(); fixture.detectChanges();
-      expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(1);
+      expect(fixture.nativeElement.querySelectorAll('tbody .medicine-row').length).toBe(1);
       fixture.nativeElement.querySelector('button[aria-label="Edit OT medicine"]').click(); await settle();
       const editing = TestBed.inject(MatDialog).openDialogs[0].componentInstance as OtMedicineEditComponent;
       expect(editing.form.value).toEqual(jasmine.objectContaining({ name: 'UI medicine', genericName: 'UI generic', strength: '10mg/ml', active: true }));
@@ -100,7 +104,7 @@ describe('OT medicine catalogue interface', () => {
       expect(fixture.componentInstance.visible.length).toBe(20); fixture.componentInstance.loadMore(); expect(fixture.componentInstance.visible.length).toBe(40);
       const input = fixture.nativeElement.querySelector('input[type="search"]') as HTMLInputElement;
       input.value = 'inj. avil'; input.dispatchEvent(new Event('input', { bubbles: true })); fixture.detectChanges(); await settle(); fixture.detectChanges();
-      expect(fixture.nativeElement.querySelectorAll('tbody tr').length).toBe(1);
+      expect(fixture.nativeElement.querySelectorAll('tbody .medicine-row').length).toBe(1);
       fixture.nativeElement.querySelector('button[aria-label="Preview OT medicine"]').click(); await settle();
       expect(TestBed.inject(MatDialog).openDialogs[0].componentInstance instanceof RecordDetailsComponent).toBeTrue();
       expect(document.querySelector('.hmc-dialog-panel')?.textContent).toContain('INJ. AVIL'); expect(store.db.upsertRecord).not.toHaveBeenCalled();

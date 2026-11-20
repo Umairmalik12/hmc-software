@@ -1,0 +1,10 @@
+<app-searchable-select *ngIf="!multiple" [label]="label" [emptyLabel]="emptyLabel" [value]="singleValue" [options]="optionNames" [disabled]="disabled" [loading]="loading" [error]="error" [required]="required" [invalid]="invalid" (valueChange)="choose($event)" (touched)="touched()" (retry)="load()"></app-searchable-select>
+<mat-form-field *ngIf="multiple" appearance="outline"><mat-label>{{ label }}</mat-label>
+  <mat-select [ngModel]="value" [ngModelOptions]="{standalone: true}" [multiple]="true" [required]="required" [errorStateMatcher]="errorMatcher" [compareWith]="sameName" [disabled]="disabled || loading" [attr.aria-label]="label" panelClass="hmc-catalog-options" (ngModelChange)="choose($event)" (closed)="touched()">
+    <mat-option *ngFor="let name of optionNames" [value]="name">{{ name }}</mat-option>
+  </mat-select>
+  <mat-error>Select at least one lab test</mat-error>
+  <mat-hint *ngIf="loading">Loading options...</mat-hint>
+  <mat-hint *ngIf="error" role="status">{{ error }}</mat-hint>
+  <button *ngIf="error" mat-icon-button matSuffix type="button" (click)="load()" [attr.aria-label]="'Retry loading ' + label"><mat-icon>refresh</mat-icon></button>
+</mat-form-field>

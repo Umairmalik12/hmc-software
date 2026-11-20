@@ -1,3 +1,4 @@
+import { sameClinicalName } from 'src/app/Services/clinical-catalog.service';
 import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
 import { includesText, matchesDateFilter } from 'src/app/Shared/list-filters';
 import { firstValueFrom, Subscription } from 'rxjs';
@@ -53,6 +54,7 @@ export class MedicineListComponent implements OnInit, OnDestroy {
   searchPatientName: string = '';
   searchMedicineName: string = '';
   searchDoctorName: string = '';
+  get savedDoctorValues(): string[] { return [...new Set(this.medicine.map(record => record.doctorName).filter(Boolean))]; }
   dateFilter: string = 'all';
   get savedRoomValues(): string[] { return [...new Set(this.medicine.map(record => record.roomNo).filter(Boolean))]; }
 
@@ -120,7 +122,7 @@ export class MedicineListComponent implements OnInit, OnDestroy {
   onClearSearch(): void { this.searchMedicineId = ''; this.searchRoomNo = ''; this.searchPatientName = ''; this.searchDoctorName = ''; this.searchMedicineName = ''; this.dateFilter = 'all'; this.onDateFilter(); }
 
   onDateFilter(reset = true): void {
-    this.filteredMedicines = this.medicine.filter(record => matchesDateFilter(record.createdAt, this.dateFilter) && includesText(record.medicineId, this.searchMedicineId) && (!this.searchRoomNo || record.roomNo === this.searchRoomNo) && includesText(record.patientName, this.searchPatientName) && includesText(record.doctorName, this.searchDoctorName) && includesText(record.medicines.map(medicine => medicine.medicineName).join(' '), this.searchMedicineName));
+    this.filteredMedicines = this.medicine.filter(record => matchesDateFilter(record.createdAt, this.dateFilter) && includesText(record.medicineId, this.searchMedicineId) && (!this.searchRoomNo || record.roomNo === this.searchRoomNo) && includesText(record.patientName, this.searchPatientName) && (!this.searchDoctorName || sameClinicalName(record.doctorName, this.searchDoctorName)) && includesText(record.medicines.map(medicine => medicine.medicineName).join(' '), this.searchMedicineName));
     if (reset) this.pagination.reset();
     this.updateDisplayedMedicines();
   }

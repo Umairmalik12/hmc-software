@@ -55,7 +55,7 @@ export class ProceduresComponent implements OnInit, OnDestroy {
     if (this.saving) return;
     if (this.name.invalid) { this.name.markAsTouched(); this.feedback.warning('Enter a procedure name before saving.'); return; }
     this.saving = true;
-    try { await this.procedures.save(this.name.value, this.editingId || undefined); this.cancel(); this.feedback.success('Procedure saved successfully.'); await this.load(); }
+    try { const updating = !!this.editingId; await this.procedures.save(this.name.value, this.editingId || undefined); this.cancel(); this.feedback.success(updating ? 'Procedure updated successfully.' : 'Procedure saved successfully.', { route: '/procedures' }); await this.load(); }
     catch (error) { this.error = error instanceof Error ? error.message : 'Unable to save procedure.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }
     finally { this.saving = false; }
   }

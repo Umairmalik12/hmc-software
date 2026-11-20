@@ -55,7 +55,7 @@ export class RoomsComponent implements OnInit, OnDestroy {
     if (this.saving) return;
     if (this.name.invalid) { this.name.markAsTouched(); this.feedback.warning('Enter a room or bed name before saving.'); return; }
     this.saving = true; this.error = ''; this.success = '';
-    try { await this.rooms.save(this.name.value, this.editingId || undefined); this.cancel(); this.success = 'Room / bed saved.'; if (this.success) this.feedback.alertNotify.next({ msg: this.success, type: 'success' }); await this.load(); }
+    try { const updating = !!this.editingId; await this.rooms.save(this.name.value, this.editingId || undefined); this.cancel(); this.success = updating ? 'Room / bed updated successfully.' : 'Room / bed saved successfully.'; this.feedback.success(this.success, { route: '/rooms' }); await this.load(); }
     catch (error) { this.error = error instanceof Error ? error.message : 'Unable to save room or bed.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }
     finally { this.saving = false; }
   }

@@ -17,25 +17,7 @@ export class LabEditComponent {
   labTestDetails: LabPatient
 
   
-  testList = [
-    { value: 'rpm', viewValue: 'RPM' },
-    { value: 'hb', viewValue: 'H/B' },
-    { value: 'cue', viewValue: 'CUE' },
-    { value: 'rbs', viewValue: 'RBS' },
-    { value: 'cbc', viewValue: 'CBC' },
-    { value: 'se', viewValue: 'S/E' },
-    { value: 'uric_acid', viewValue: 'Uric Acid' },
-    { value: 'anti_hcv', viewValue: 'Anti-HCV' },
-    { value: 'hbs_ag', viewValue: 'HBS AG' },
-    { value: 'psa', viewValue: 'PSA' },
-    { value: 'blood_group', viewValue: 'Blood Group' },
-    { value: 'cross_match', viewValue: 'Cross Match' },
-    { value: 'lfts', viewValue: 'LFTs' },
-    { value: 'lipo_profile', viewValue: 'Lipo-Profile' },
-    { value: 'xray', viewValue: 'X-ray' } 
-  ];
-
-  constructor(
+constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<LabEditComponent>,
     @Inject(MAT_DIALOG_DATA)  labTestDetails: any,

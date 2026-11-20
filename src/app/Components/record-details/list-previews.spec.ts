@@ -1,3 +1,7 @@
+import { SearchableSelectComponent } from 'src/app/Shared/searchable-select.component';
+import { ClinicalCatalogSelectComponent } from 'src/app/Components/clinical-catalog/clinical-catalog-select.component';
+import { ClinicalCatalogService, DEFAULT_LAB_TESTS } from 'src/app/Services/clinical-catalog.service';
+import { Subject as ClinicalChanges } from 'rxjs';
 import { FeedbackModule } from 'src/app/Shared/feedback.module';
 import { TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
@@ -72,10 +76,10 @@ describe('Preview actions in every record list', () => {
     dialog = jasmine.createSpyObj<MatDialog>('dialog', ['open']);
     dialog.open.and.returnValue({ beforeClosed: () => EMPTY } as unknown as MatDialogRef<unknown>);
     await TestBed.configureTestingModule({
-      imports: [FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatDialogModule,
+      imports: [SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatDialogModule,
         MatTableModule, MatCardModule, MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, MatPaginatorModule],
       declarations: [...clinical, ...others, ScrollPaginationDirective, ScrollListFooterComponent, TimeFormatPipe, RecordPreviewDirective, RoomSelectComponent],
-      providers: [
+      providers: [{ provide: ClinicalCatalogService, useValue: { changes: new ClinicalChanges<string>(), getAll: async (kind: string) => kind === 'lab-tests' ? DEFAULT_LAB_TESTS : [] } },
         ...[PatientService, OpdService, InpatientService, MedicineService, LabService, OtMedicineService, PrescriptionService, ProcedureService].map(provide => ({ provide, useValue: service })),
         { provide: SupabaseDataService, useValue: db }, { provide: MatDialog, useValue: dialog },
         { provide: RoomService, useValue: { getAll: async () => DEFAULT_ROOMS } },

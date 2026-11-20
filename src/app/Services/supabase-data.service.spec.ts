@@ -13,6 +13,7 @@ describe('SupabaseDataService', () => {
       subscribe: jasmine.createSpy('subscribe'),
     };
     query = {
+      insert: jasmine.createSpy('insert').and.resolveTo({ error: null }),
       select: jasmine.createSpy('select').and.callFake(() => query),
       eq: jasmine.createSpy('eq').and.callFake(() => query),
       order: jasmine.createSpy('order').and.callFake(() => query),
@@ -42,6 +43,24 @@ describe('SupabaseDataService', () => {
       p_updates: [],
       p_delete_ids: [],
     });
+  });
+
+  it('inserts manual-MR registrations without an upsert or ID allocation RPC', async () => {
+    const record = { patientId: 8123, firstName: 'Ali' };
+    await service.insertRecord('patientDetails', 8123, record);
+    expect(query.insert).toHaveBeenCalledWith({ collection: 'patientDetails', record_id: '8123', data: record, sort_order: 0 });
+    expect(client.rpc).not.toHaveBeenCalled();
+    query.insert.and.resolveTo({ error: { message: 'Duplicate MR' } });
+    await expectAsync(service.insertRecord('patientDetails', 8123, record)).toBeRejectedWithError('Duplicate MR');
+  });
+
+  it('blocks automatic operation/OPD MR and inpatient patient ID allocation while keeping other modules supported', async () => {
+    await expectAsync(service.allocateId('patientDetails')).toBeRejectedWithError(/Enter the patient MR number/);
+    await expectAsync(service.allocateId('opdDetails')).toBeRejectedWithError(/Enter the patient MR number/);
+    await expectAsync(service.allocateId('inpatientDetails')).toBeRejectedWithError(/Enter the patient ID/);
+    expect(client.rpc).not.toHaveBeenCalled();
+    client.rpc.and.resolveTo({ data: 7, error: null });
+    expect(await service.allocateId('labDetails')).toBe(7);
   });
 
   it('updates only a token patient name and returns its unchanged queue identity', async () => {

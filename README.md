@@ -102,6 +102,130 @@ The **Procedures** page manages the fourteen default procedure choices plus any
 custom additions. Operation, inpatient and OT forms share this catalog. Removing
 or renaming a choice preserves the procedure text on existing records.
 
+Operation patient registration requires a manually entered positive whole **MR
+Number** and patient name. The existing `patientId` field stores that MR; no MR is
+generated or substituted from an internal ID. New registrations use an insert that
+rejects duplicate MRs instead of overwriting another patient. Gender choices are
+Male and Female, and optional numeric ages remain within the existing 0–120 range.
+The operation list's procedure dropdown combines the live catalogue with saved
+historical procedure names, supports **All Procedures**, and works alongside MR
+search and scroll pagination.
+
+Existing Supabase installations must apply
+[`20261120_manual_operation_patient_mr.sql`](./supabase/migrations/20261120_manual_operation_patient_mr.sql)
+to block operation-patient ID allocation and enforce explicit valid MRs in database
+writes. The full schema includes these safeguards. The migration does not renumber
+existing records; other modules keep their existing allocation behavior.
+
+OPD registration also requires an entered positive whole **MR Number** and patient
+name, with Male/Female gender choices and optional Age (0-120). OPD keeps MR in
+its existing `patientId` field, rejects duplicate registrations, and never allocates
+an MR. The optional Procedure dropdown uses the shared catalogue and stores its
+selected name in the existing JSON record. Existing OPD records need no rewrite.
+The list filters actual MR numbers and procedures, including saved historical
+procedure names, with **All Procedures** and scroll pagination.
+
+For existing Supabase databases, apply
+[`20261120_opd_patient_manual_mr.sql`](./supabase/migrations/20261120_opd_patient_manual_mr.sql)
+after the operation-patient migration above. It blocks OPD MR allocation and
+validates manually supplied MRs on inserts/updates, preserving existing records
+and other modules' ID allocation. Both safeguards are included in the full schema.
+
+Inpatient registration requires an entered positive whole **Patient ID** and
+patient name. The existing `inpatientId` stores the entered value; registration
+never substitutes a generated ID. Duplicate IDs cannot overwrite existing
+admissions. Discharge date remains optional. The Patient ID list search updates
+as you type across all records, including rows beyond the first scroll page.
+The Procedure list filter loads the shared catalogue and saved historical names,
+with **All Procedures**, while registration retains its catalogue dropdown.
+
+Apply [`20261120_require_inpatient_patient_id.sql`](./supabase/migrations/20261120_require_inpatient_patient_id.sql)
+after the OPD migration above to disable inpatient ID allocation and enforce
+entered IDs on database writes. It preserves existing rows and IDs. The full
+schema includes these safeguards; no new columns are needed.
+
+The **Doctors & surgeons** (`/doctors`) and **Lab test catalogue** (`/lab-tests`)
+admin pages provide search, preview, add/edit, active/inactive status, confirmation
+before deletion, restore through editing, scroll pagination and export. Both use
+the existing `hmc_records` table (`doctorCatalog` and `labTestCatalog`). Only the
+name is required. Lab registration retains its separate patient test price.
+
+Doctor/surgeon, doctor and referral inputs share the doctor dropdown across
+operation patients, OPD, admissions, daily medicines, OT slips and laboratory
+registration. Their lists include doctor dropdown filters; laboratory also has a
+test dropdown filter. Dropdowns retain historical saved names for edits/filters,
+while new selections use active catalogue entries. Lab registration supports
+multiple tests from the live catalogue. Procedure and doctor/surgeon dropdowns
+share an outline search field, case-insensitive word matching, keyboard selection,
+clear/reset controls, wrapped option labels and panels that fit the viewport.
+Typing searches without overwriting the selected value; choose an option to apply
+it. List procedure filters use the same control, including All Procedures.
+Renaming or deactivating an option never
+rewrites saved patient details, prescriptions or print snapshots.
+
+Apply [`20261120_shared_doctor_lab_catalogues.sql`](./supabase/migrations/20261120_shared_doctor_lab_catalogues.sql)
+to seed the fifteen existing lab tests, import existing doctor/surgeon and older
+test names, and add database uniqueness for catalogue names. This adds no tables
+or columns. The initial historical import runs once; rerunning the migration
+preserves later edits and inactive entries. The full schema includes this setup.
+
+The admin **Staff & duties** page (`/staff`) manages staff profiles, designations,
+Permanent/Intern employment type and active/inactive status. Each staff member can
+have multiple duties with separate shift names and start/end times. Suggestions
+include OT in-charge, counter/reception, room/ward care, patient medicines and OPD
+checking; **Manage duties** in the list header opens a modal for adding, editing,
+searching, removing and restoring duty options. The staff form uses searchable duty
+dropdowns from this catalogue; custom shift and designation names remain supported. Overnight
+duties display **next day**. Staff name is required; additional profile details and
+schedules can be completed later. Once a duty row is added its duty name is required,
+and a recorded start time must have a valid, different end time.
+
+Staff CRUD uses the existing `hmc_records` table with collection `staffDetails`;
+no new table, ALTER TABLE or additional migration is required on an existing HMC
+database. Deletion deactivates the staff record, retaining its duties for review
+or restoration through Edit. Saved payment staff/shift attribution is preserved.
+The list supports preview, name/designation search, combined duty/shift filters,
+employment/status filters, scroll pagination and export. Login permissions continue
+to use the existing account-role system.
+
+Duty options use collection `staffDutyCatalog` in the existing `hmc_records` table,
+so no additional table, column or SQL migration is needed. The five original duties
+and previously typed custom assignments are available in the manager. Removing a
+duty stores an inactive option for future selections, while saved staff assignments,
+timings and historical filters retain their original text. Renamed duties retain
+their prior names in catalogue metadata so old assignments cannot recreate removed
+options. Existing assignments remain editable, and active options refresh in the
+staff form and list filter when catalogue changes are saved.
+
+The admin **Expenses** page (`/expenses`) follows the supplied expense workbook:
+date, description/purpose, one expense head and amount, with optional remarks and
+place/location. It supports add, preview, edit, confirmed soft deletion and restore,
+search, year/month/date-range/group/head/status filters and scroll pagination.
+Daily, Monday-week, monthly and head summaries use integer paise for exact totals;
+deleted records are excluded. The date defaults to the local PC date.
+
+**Export workbook** reads all saved, non-deleted expenses across all years, regardless
+of list filters or visible page. It generates formatted annual calendar registers,
+Daily/Weekly/Monthly/Overall/Head summaries, a Head List and a **Print Month** sheet
+with month/year dropdowns, recalculating formulas, complete monthly totals and an
+expanding A4 landscape print area. Excel recalculation must be enabled for changing
+the selectors. Calendar sheets include 2026–2030 plus any additional saved years;
+leap days and multiple entries per day are retained. The app also offers an A4
+landscape monthly print preview with fit-to-width, zoom and actual-size controls.
+The preview and print window share one document, including the existing HAQ mark,
+wrapped descriptions, repeated table headers and complete monthly totals. Long
+months continue across pages. Expense filters align in responsive rows, numeric
+columns align to the right, and row actions remain visible while scrolling across
+the table. Shared record previews give notes and nested medicine lists a full row.
+Staff eating/night meals/refreshments share one
+head to reconcile the varying labels in the reference workbook. No sample financial
+values are imported, and editing the exported workbook does not update the database.
+
+Expenses use the existing `hmc_records` table with collection `expenseDetails`;
+**no new table, ALTER TABLE or additional SQL migration is required** on an existing
+HMC database. Saves update individual records and retain creation timestamps;
+deleted entries remain available for review and restoration.
+
 All record lists provide Excel export. Import controls are removed. Exports use
 the current search/filter results. OT records support a compact one-page A4
 preview and print layout.
@@ -114,8 +238,14 @@ browser.
 
 Payments save the counter staff name, shift name, shift date, optional counter name,
 and signed-in account with each receipt in the existing `payments` collection. New
-payments require a staff name and shift; the staff name defaults to the account's
-display name or email. Counter defaults are remembered per account on the device,
+payments require a staff name and shift. Counter staff is a searchable dropdown
+loaded from **Staff & duties**, offering active staff for new selections. Account
+and remembered staff names are reused only when they match an active master record;
+unregistered account display names are not assigned as counter staff. Changes to
+the staff master refresh the dropdown automatically, and assigned shift names are
+included in shift suggestions. Older names remain available on their saved receipts
+and in the searchable history filter, including inactive and renamed staff. A load
+failure offers Retry and preserves the payment draft. Counter defaults are remembered per account on the device,
 while payment records remain in Supabase. For overnight shifts, select the date the
 shift started. The actual receipt time comes from the computer when saving.
 Staff/shift/date filters, collection totals, and exports use every matching record,
@@ -151,6 +281,15 @@ the existing common medicines and legacy `customMedicines` values, and saves edi
 and removals as individual records in `prescriptionMedicineCatalog`. Removed default
 and legacy names stay removed after reload. Saved prescriptions retain their original
 medicine and dose text. The existing database schema supports the catalogue fields.
+Both the main and OT medicine catalogues show case-insensitive A–Z groups followed
+by a separate **#** group for numeric and special-character initials. Independent
+alphabet dropdowns combine with existing searches (and OT status/category filters).
+Letter counts reflect all matching records before pagination; partially loaded
+sections show how many of that letter's medicines are visible. Changing filters
+resets the scroll position and visible batch without fetching or writing records.
+Sorting is cached per source refresh, rows retain their existing IDs and details,
+and the two catalogue collections remain separate. No schema migration is required.
+
 The **New medicine record** and **Edit medicine record** dialogs use this same
 searchable catalogue for every medicine-name row, with the existing required-name
 and quantity validation. Their **Manage catalogue** button opens the shared list
@@ -163,6 +302,21 @@ in the existing JSON record and included in medicine suggestions, selections,
 previews and exports. Different strengths of the same medicine can be registered
 separately. Editing catalogue strength preserves medicine text already saved in
 prescriptions and daily medicine records. No SQL migration is required.
+
+Payment row **Print** and the optional after-save receipt action open an OPD-style
+thermal preview with 58 mm / 80 mm paper, Close and Print controls. It reloads the
+saved payment, freezes that receipt for matching preview/printing, and retains all
+amounts, cash/change, payment status, counter staff and shift details. Paper choices
+are remembered separately under `hmc.paymentPaperWidth` and closing the preview
+updates the payment page's paper selector, including Escape/backdrop dismissal.
+The existing 58 mm payment default and accounting rules remain unchanged.
+
+Laboratory row **Print** opens the same size-selectable thermal modal as token
+slips, with 58 mm / 80 mm, Close and Print controls. It reloads the selected saved
+lab record before opening, retains the existing 80 mm default and remembers the
+laboratory paper choice separately. Preview and printing share the same saved
+receipt markup, printable width, bottom padding and 8 mm paper feed, including
+long test names and the complete Thank You footer.
 
 OPD slips use a dedicated thermal preview and print window with a saved 80 mm or
 58 mm roll setting. Patient, doctor and follow-up text wrap within the printable

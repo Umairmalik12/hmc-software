@@ -1,3 +1,4 @@
+import { sameClinicalName } from 'src/app/Services/clinical-catalog.service';
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
 import { Component, OnDestroy, OnInit } from '@angular/core';
@@ -16,6 +17,8 @@ export class OtlistComponent implements OnInit, OnDestroy {
   readonly trackRecord = trackRecord;
   allRecords: OtMedicineRecord[] = [];
   query = '';
+  searchDoctorName = '';
+  get savedDoctorValues(): string[] { return [...new Set(this.allRecords.map(record => record.doctorName).filter(Boolean))]; }
   readonly pagination = new ScrollPagination();
   onSearch(): void { this.pagination.reset(); }
   loadMore(): void { this.pagination.loadMore(this.filteredRecords.length); }
@@ -34,8 +37,8 @@ export class OtlistComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void { this.changes?.unsubscribe(); this.version++; }
   get filteredRecords(): OtMedicineRecord[] {
     const query = this.query.trim().toLocaleLowerCase();
-    return this.allRecords.filter(record => !query || [record.patientName, record.doctorName, record.procedure, record.roomNumber, record.operationDate, record.id,
-      ...record.products.map(product => product.name)].some(value => String(value || '').toLocaleLowerCase().includes(query)));
+    return this.allRecords.filter(record => (!this.searchDoctorName || sameClinicalName(record.doctorName, this.searchDoctorName)) && (!query || [record.patientName, record.doctorName, record.procedure, record.roomNumber, record.operationDate, record.id,
+      ...record.products.map(product => product.name)].some(value => String(value || '').toLocaleLowerCase().includes(query))));
   }
   get visibleRecords(): OtMedicineRecord[] { return this.pagination.slice(this.filteredRecords); }
   async load(): Promise<void> {

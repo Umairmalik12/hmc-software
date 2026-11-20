@@ -8,10 +8,7 @@
             <input matInput [(ngModel)]="searchPatientName" placeholder="Search by Patient Name">
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-            <mat-label>Doctor Name</mat-label>
-            <input matInput [(ngModel)]="searchDoctorName" placeholder="Search by Doctor Name">
-        </mat-form-field>
+        <app-clinical-select class="catalog-filter" kind="doctors" label="Doctor name" emptyLabel="All doctors" [savedValues]="savedDoctorValues" [(ngModel)]="searchDoctorName" (ngModelChange)="onSearch()"></app-clinical-select>
         <mat-form-field appearance="outline">
             <mat-label>Date Filter</mat-label>
             <mat-select [(ngModel)]="dateFilter" (selectionChange)="onDateFilter()">
@@ -20,10 +17,9 @@
                 <mat-option value="yesterday">Yesterday</mat-option>
             </mat-select>
         </mat-form-field>
-        <button mat-raised-button color="primary" (click)="onSearch()"><mat-icon>search</mat-icon>Search</button>
+        <div class="search-actions"><button mat-raised-button color="primary" (click)="onSearch()"><mat-icon>search</mat-icon>Search</button>
         <button mat-raised-button color="accent" (click)="onClearSearch()"><mat-icon>filter_alt_off</mat-icon>Clear</button>
-        <span style="flex: 1 1 auto;"></span>
-        <button mat-raised-button color="primary" (click)="exportToExcel()"><mat-icon>file_download</mat-icon>Export</button>
+        <button class="search-export" mat-raised-button color="primary" (click)="exportToExcel()"><mat-icon>file_download</mat-icon>Export</button></div>
     </div>
     <div class="table-scroll-container" appScrollPagination [scrollDisabled]="loading" [scrollTotal]="total" [scrollShown]="displayedMedicines.length" [scrollResetKey]="pagination.revision" (loadMore)="loadMore()" scrollLabel="Medicine records">
     <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource" [trackBy]="trackRecord">

@@ -118,6 +118,14 @@ export class SupabaseDataService {
     }, 2);
   }
 
+  async insertRecord(collection: string, id: string | number, data: any, sortOrder = 0): Promise<void> {
+    return this.loading.track('Saving record...', async () => {
+      // A new registration must fail on an existing MR, including concurrent submissions.
+      const { error } = await this.client.from('hmc_records').insert({ collection, record_id: String(id), data, sort_order: sortOrder });
+      this.throwIfError(error);
+    }, 2);
+  }
+
   async upsertRecord(collection: string, id: string | number, data: any, sortOrder = 0): Promise<void> {
     return this.loading.track('Saving record...', async () => {
       // The RPC insert branch already uses INSERT ... ON CONFLICT DO UPDATE.
@@ -165,6 +173,9 @@ export class SupabaseDataService {
   }
 
   async allocateId(collection: string): Promise<number> {
+    if (collection === 'patientDetails') throw new Error('Enter the patient MR number. Operation patient MR numbers are not assigned automatically.');
+    if (collection === 'opdDetails') throw new Error('Enter the patient MR number. OPD patient MR numbers are not assigned automatically.');
+    if (collection === 'inpatientDetails') throw new Error('Enter the patient ID. Inpatient patient IDs are not assigned automatically.');
     return this.loading.track('Preparing record...', async () => {
       const { data, error } = await this.client.rpc('next_hmc_id', {
         p_collection: collection,

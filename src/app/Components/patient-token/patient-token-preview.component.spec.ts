@@ -1,3 +1,7 @@
+import { PaymentSlipPreviewComponent } from '../payment/payment-slip-preview.component';
+import { PaymentRecord } from '../payment/payment-record';
+import { LabSlipPreviewComponent } from '../lab/lab-slip-preview.component';
+import { LabPatient } from 'src/app/Models/lab.model';
 import { ApplicationRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
@@ -22,18 +26,20 @@ describe('Thermal previews matching the printed receipt', () => {
   const token: PatientTokenSlip = { id: 5, tokenNumber: 'A12345678901234567890', sequence: 5, customerName: 'LongPatientName'.repeat(14) + ' <b>Ali</b>', date: '2026-11-19', time: '13:35', createdAt: '2026-11-19T08:35:00Z' };
   let previousPaper: string | null;
   let previousOpdPaper: string | null;
+  let previousLabPaper: string | null;
+  let previousPaymentPaper: string | null;
   const settle = async () => { TestBed.inject(ApplicationRef).tick(); await new Promise(resolve => setTimeout(resolve, 60)); TestBed.inject(ApplicationRef).tick(); };
   beforeEach(async () => {
-    previousPaper = localStorage.getItem('hmc.tokenPaperWidth'); previousOpdPaper = localStorage.getItem('hmc.opdPaperWidth');
+    previousPaper = localStorage.getItem('hmc.tokenPaperWidth'); previousOpdPaper = localStorage.getItem('hmc.opdPaperWidth'); previousLabPaper = localStorage.getItem('hmc.labPaperWidth'); previousPaymentPaper = localStorage.getItem('hmc.paymentPaperWidth');
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, NoopAnimationsModule, FeedbackModule, MatDialogModule, MatButtonModule, MatIconModule],
-      declarations: [PatientTokenPreviewComponent, OpdSlipComponent, ThermalReceiptPreviewComponent, PatientTokenComponent, TimeFormatPipe, ScrollPaginationDirective, ScrollListFooterComponent],
+      declarations: [PaymentSlipPreviewComponent, LabSlipPreviewComponent, PatientTokenPreviewComponent, OpdSlipComponent, ThermalReceiptPreviewComponent, PatientTokenComponent, TimeFormatPipe, ScrollPaginationDirective, ScrollListFooterComponent],
       providers: [{ provide: SupabaseDataService, useValue: { getAllPatientTokens: async () => [token], changes: new Subject<string>() } }],
     }).compileComponents();
   });
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
-    for (const [key, value] of [['hmc.tokenPaperWidth', previousPaper], ['hmc.opdPaperWidth', previousOpdPaper]]) {
+    for (const [key, value] of [['hmc.tokenPaperWidth', previousPaper], ['hmc.opdPaperWidth', previousOpdPaper], ['hmc.labPaperWidth', previousLabPaper], ['hmc.paymentPaperWidth', previousPaymentPaper]]) {
       if (value === null) localStorage.removeItem(key!); else localStorage.setItem(key!, value!);
     }
   });
@@ -115,6 +121,79 @@ describe('Thermal previews matching the printed receipt', () => {
       } finally { frame.remove(); ref.close(); }
     });
   }
+
+  for (const width of [58, 80] as const) {
+    it(`uses identical ${width} mm laboratory preview and print geometry with complete long test names and footer`, async () => {
+      localStorage.setItem('hmc.labPaperWidth', String(width));
+      const source: LabPatient = { patientId: 123, name: 'LongPatientName'.repeat(10) + ' <b>Ali</b>', phone: '0313 6076780',
+        testName: Array.from({ length: 18 }, (_, index) => 'Long laboratory test ' + index).join(', '), price: 2500,
+        suggestedDr: 'LongSurgeonName'.repeat(10), dateTime: new Date('2026-11-20T08:30:00Z') };
+      const name = source.name;
+      const ref = TestBed.inject(MatDialog).open(LabSlipPreviewComponent, { data: { record: source }, width: '480px', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
+      source.name = 'Changed outside preview'; source.dateTime.setFullYear(2000); await settle();
+      const frame = document.createElement('iframe'); frame.style.width = '420px'; document.body.appendChild(frame);
+      const popup = frame.contentWindow!; spyOn(window, 'open').and.returnValue(popup); spyOn(popup, 'focus'); spyOn(popup, 'close');
+      const printed = new Promise<void>(resolve => spyOn(popup, 'print').and.callFake(resolve));
+      try {
+        const panel = document.querySelector<HTMLElement>('.hmc-dialog-panel')!;
+        const preview = panel.querySelector<HTMLElement>('.thermal-receipt')!;
+        expect(preview.textContent).toContain(name); expect(preview.querySelector('b')).toBeNull(); expect(preview.textContent).toContain('20/11/2026');
+        expect(panel.querySelector('mat-dialog-actions')!.getBoundingClientRect().bottom).toBeLessThanOrEqual(innerHeight + 1);
+        const content = panel.querySelector<HTMLElement>('mat-dialog-content')!; expect(content.scrollWidth).toBeLessThanOrEqual(content.clientWidth + 1);
+        ref.componentInstance.print(); await printed;
+        const receipt = popup.document.getElementById('lab-slip-print')!;
+        assertMatching(preview, receipt, popup);
+        expect(popup.document.body.textContent).toContain('Long laboratory test 17'); expect(popup.document.querySelector('b')).toBeNull();
+        expect(popup.document.body.getBoundingClientRect().width * 25.4 / 96).toBeCloseTo(width, 1);
+        expect(localStorage.getItem('hmc.labPaperWidth')).toBe(String(width));
+      } finally { frame.remove(); ref.close(); }
+    });
+  }
+
+  for (const width of [58, 80] as const) {
+    it(`matches ${width} mm payment preview and print geometry after switching the paper control`, async () => {
+      const source: PaymentRecord = { id: '123', patientName: 'LongPatientName'.repeat(10) + ' <b>Ali</b>', patientId: 'P-123', amount: 123.45,
+        cashGiven: 150, cashReturn: 26.55, paymentMethod: 'cash', paymentStatus: width === 58 ? 'pending' : 'completed', staffName: 'LongCounterStaffName'.repeat(8),
+        shiftName: 'Night shift '.repeat(10), shiftDate: '2026-11-20', counterName: 'Reception counter '.repeat(8), createdAt: '2026-11-20T08:30:00Z' };
+      const expectedName = source.patientName; const expectedStatus = source.paymentStatus;
+      const ref = TestBed.inject(MatDialog).open(PaymentSlipPreviewComponent, { data: { record: source, paperWidth: width === 58 ? 80 : 58 }, width: '480px', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
+      source.patientName = 'Changed outside preview'; source.amount = 0; source.paymentStatus = 'failed'; await settle();
+      const panel = document.querySelector<HTMLElement>('.hmc-dialog-panel')!;
+      const select = panel.querySelector<HTMLSelectElement>('select[aria-label="Payment receipt paper size"]')!;
+      expect(Array.from(select.options).map(option => option.textContent?.trim())).toEqual(['58 mm', '80 mm']);
+      select.selectedIndex = width === 58 ? 0 : 1; select.dispatchEvent(new Event('change', { bubbles: true })); await settle();
+      const frame = document.createElement('iframe'); frame.style.width = '420px'; document.body.appendChild(frame);
+      const popup = frame.contentWindow!; spyOn(window, 'open').and.returnValue(popup); spyOn(popup, 'focus'); spyOn(popup, 'close');
+      const printed = new Promise<void>(resolve => spyOn(popup, 'print').and.callFake(resolve));
+      try {
+        const preview = panel.querySelector<HTMLElement>('.thermal-receipt')!;
+        expect(preview.textContent).toContain(expectedName); expect(preview.querySelector('b')).toBeNull();
+        expect(preview.textContent).toContain('Rs 123.45'); expect(preview.textContent).toContain('PAYMENT ' + expectedStatus!.toUpperCase());
+        expect(panel.querySelector('mat-dialog-actions')!.getBoundingClientRect().bottom).toBeLessThanOrEqual(innerHeight + 1);
+        const content = panel.querySelector<HTMLElement>('mat-dialog-content')!; expect(content.scrollWidth).toBeLessThanOrEqual(content.clientWidth + 1);
+        ref.componentInstance.print(); await printed;
+        assertMatching(preview, popup.document.getElementById('payment-receipt')!, popup);
+        expect(popup.document.body.textContent).toContain('LongCounterStaffName'); expect(popup.document.querySelector('b')).toBeNull();
+        expect(popup.document.body.getBoundingClientRect().width * 25.4 / 96).toBeCloseTo(width, 1);
+        expect(localStorage.getItem('hmc.paymentPaperWidth')).toBe(String(width));
+      } finally { frame.remove(); ref.close(); }
+    });
+  }
+
+  it('switches laboratory paper sizes immediately and remembers the choice on closing the modal', async () => {
+    localStorage.removeItem('hmc.labPaperWidth');
+    const record: LabPatient = { patientId: 1, name: 'Ali', phone: '', testName: 'CBC', price: 100, suggestedDr: '', dateTime: new Date('2026-11-20T08:30:00Z') };
+    const config = { data: { record }, width: '480px', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' };
+    const ref = TestBed.inject(MatDialog).open(LabSlipPreviewComponent, config); await settle();
+    expect(ref.componentInstance.paperWidth).toBe(80);
+    const select = document.querySelector<HTMLSelectElement>('select[aria-label="Laboratory paper size"]')!;
+    expect(Array.from(select.options).map(option => option.textContent?.trim())).toEqual(['58 mm', '80 mm']);
+    select.selectedIndex = 0; select.dispatchEvent(new Event('change', { bubbles: true })); await settle();
+    expect(ref.componentInstance.paperWidth).toBe(58); expect(document.querySelector('.lab-preview-content .thermal-receipt')!.classList.contains('thermal-paper-58')).toBeTrue();
+    expect(localStorage.getItem('hmc.labPaperWidth')).toBe('58'); ref.close(); await settle();
+    const reopened = TestBed.inject(MatDialog).open(LabSlipPreviewComponent, config); await settle();
+    expect(reopened.componentInstance.paperWidth).toBe(58); reopened.close();
+  });
 
   it('switches paper size, refits the token and retains the selection for later reprints', async () => {
     const ref = TestBed.inject(MatDialog).open(PatientTokenPreviewComponent, { data: { record: token, paperWidth: 80 }, width: '480px', maxWidth: '94vw', panelClass: 'hmc-dialog-panel' }); await settle();

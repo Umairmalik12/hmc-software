@@ -23,6 +23,20 @@ describe('Module list filtering and pagination', () => {
     [LabListComponent, 'patient', 'displayedPatients', 'searchQuery'],
   ] as const;
   for (const [type, source, displayed, query] of modules) {
+    it(`filters ${type.name} by a selected doctor or surgeon across all pages and clears the selection`, () => {
+      const dependency = { ...new NotifyUpdateService() };
+      const component: any = new (type as any)(dependency, dependency, dependency, dependency, dependency, dependency, dependency);
+      const field = type === PatientListComponent || type === OpdListComponent ? 'drName' : type === InpatientListComponent ? 'surgeonName' : type === LabListComponent ? 'suggestedDr' : 'doctorName';
+      const doctorQuery = type === PatientListComponent || type === OpdListComponent ? 'searchDrName' : type === InpatientListComponent ? 'searchSurgeonName' : 'searchDoctorName';
+      component[source] = Array.from({ length: 32 }, (_, index) => ({ patientId: index + 1, inpatientId: index + 1, medicineId: index + 1,
+        name: 'Patient ' + (index + 1), patientName: 'Patient ' + (index + 1), [field]: index === 25 ? 'Dr Ali' : 'Dr Ali Noor', medicines: [], createdAt: new Date().toISOString() }));
+      component.onSearch(); expect(component[displayed].length).toBe(20);
+      component[doctorQuery] = ' dr   ALI '; component.onSearch();
+      expect(component.total).toBe(1); expect(component[displayed][0].patientId).toBe(26);
+      component[query] = 'Patient 1'; component.onSearch(); expect(component.total).toBe(0);
+      component.onClearSearch(); expect(component[doctorQuery]).toBe(''); expect(component.total).toBe(32); expect(component[displayed].length).toBe(20);
+      component.ngOnDestroy();
+    });
     it(`paginates and filters ${type.name} consistently`, () => {
       const dependency = { ...new NotifyUpdateService() };
       const component: any = new (type as any)(dependency, dependency, dependency, dependency, dependency, dependency, dependency);
@@ -77,6 +91,22 @@ describe('Module list filtering and pagination', () => {
       expect(component.total).toBe(42);
     });
   }
+});
+
+describe('Laboratory catalogue filters', () => {
+  it('matches individual tests in saved multiple-test records and combines them with the doctor dropdown', () => {
+    const dependency = { ...new NotifyUpdateService() };
+    const component: any = new (LabListComponent as any)(dependency, dependency, dependency, dependency, dependency, dependency);
+    component.patient = [
+      { patientId: 1, name: 'Ali', testName: 'CBC, LFTs', suggestedDr: 'Dr Ali' },
+      { patientId: 2, name: 'Sara', testName: ['CBC', 'Older test'], suggestedDr: 'Dr Sara' },
+      { patientId: 3, name: 'Other', testName: 'CBC extra', suggestedDr: 'Dr Ali' },
+    ];
+    component.searchTestName = 'cbc'; component.onSearch(); expect(component.filteredPatients.map((row: any) => row.patientId)).toEqual([1, 2]);
+    component.searchDoctorName = 'Dr Ali'; component.onSearch(); expect(component.filteredPatients.map((row: any) => row.patientId)).toEqual([1]);
+    component.onClearSearch(); expect(component.total).toBe(3); expect(component.searchTestName).toBe(''); expect(component.searchDoctorName).toBe('');
+    component.ngOnDestroy();
+  });
 });
 
 describe('Remaining module scroll lists', () => {

@@ -3,13 +3,15 @@ import { PaymentComponent } from './payment.component';
 import { StaffIdentity, UserLoginService } from 'src/app/Services/user-login.service';
 import { memoryDb } from 'src/app/testing/memory-db';
 import { PaymentRecord } from './payment-record';
+import { StaffService } from 'src/app/Services/staff.service';
 
 describe('Payment counter and CRUD', () => {
   const identity: StaffIdentity = { id: 'payment-test-staff', name: 'Ayesha', email: 'ayesha@example.test' };
   let component: PaymentComponent;
   let store: ReturnType<typeof memoryDb>;
-  async function setup(): Promise<void> {
+  async function setup(withStaff = true): Promise<void> {
     store = memoryDb();
+    if (withStaff) store.collections.set('staffDetails', new Map([['staff-1', { id: 'staff-1', name: 'Ayesha', designation: 'Counter staff', employmentType: 'permanent', active: true, assignments: [{ duty: 'Counter / reception', shift: 'Night', startTime: '20:00', endTime: '08:00' }] }]]));
     component = new PaymentComponent(new FormBuilder(), store.db, { getLoginUser: async () => 'admin', getStaffIdentity: async () => identity } as UserLoginService);
     await component.ngOnInit(); component.printAfterSave = false;
   }
@@ -17,6 +19,16 @@ describe('Payment counter and CRUD', () => {
   const stored = (): PaymentRecord[] => Array.from(store.collections.get('payments')?.values() || []);
   beforeEach(() => localStorage.removeItem('hmc.paymentCounter.' + identity.id));
   afterEach(() => { component?.ngOnDestroy(); localStorage.removeItem('hmc.paymentCounter.' + identity.id); });
+
+  it('opens the after-save preview only once the new payment is stored and keeps edits from reopening it', async () => {
+    await setup(); fill(); component.printAfterSave = true;
+    const preview = spyOn(component, 'showReceipt').and.callFake(async payment => {
+      expect(stored().find(record => record.id === payment.id)).toEqual(payment);
+    });
+    await component.processPayment(); expect(preview).toHaveBeenCalledTimes(1);
+    const saved = stored()[0]; component.editPayment(saved); component.paymentForm.get('amount')!.setValue(90);
+    await component.processPayment(); expect(preview).toHaveBeenCalledTimes(1); expect(stored()[0].amount).toBe(90);
+  });
 
   it('saves staff, shift and account attribution, edits with a stable ID and deletes only the chosen payment', async () => {
     await setup();
@@ -121,5 +133,42 @@ describe('Payment counter and CRUD', () => {
     await setup(); fill(); component.identity = undefined; await component.processPayment(); expect(store.db.upsertRecord).not.toHaveBeenCalled();
     component.isSuperAdmin = false; const confirm = spyOn(window, 'confirm');
     await component.deletePayment({ id: '1', patientName: 'Ali', amount: 10 }); expect(confirm).not.toHaveBeenCalled(); expect(store.db.deleteRecord).not.toHaveBeenCalled();
+  });
+  it('loads names from the staff master, offers only active staff for new payments and preserves historical names in filters', async () => {
+    await setup(); const staff = new StaffService(store.db);
+    const bilal = await staff.save({ name: 'Bilal', designation: 'Counter staff', employmentType: 'permanent', active: true, assignments: [{ duty: 'Counter / reception', shift: 'Weekend', startTime: '', endTime: '' }] });
+    await staff.save({ name: 'Inactive staff', designation: '', employmentType: '', active: false, assignments: [] });
+    await component.loadStaff(); expect(component.staffEntryOptions).toEqual(['Ayesha', 'Bilal']);
+    component.payments = [{ id: 'old', patientName: 'Old patient', amount: 50, staffName: 'Former cashier' }];
+    expect(component.staffOptions).toEqual(['Ayesha', 'Bilal', 'Former cashier', 'Inactive staff']);
+    component.selectStaff('Bilal'); expect(component.shiftSuggestions).toContain('Weekend'); fill(); await component.processPayment();
+    const payment = stored()[0]; expect(payment.staffName).toBe('Bilal'); expect(payment.recordedById).toBe(identity.id);
+    await staff.save({ ...bilal, name: 'Bilal Khan' }, bilal.id); await component.loadStaff();
+    expect(stored()[0].staffName).toBe('Bilal'); component.editPayment(payment);
+    expect(component.staffEntryOptions).toContain('Bilal'); expect(component.paymentForm.valid).toBeTrue();
+    await component.processPayment(); expect(stored()[0].staffName).toBe('Bilal');
+    expect(component.staffEntryOptions).not.toContain('Bilal'); expect(component.paymentForm.get('staffName')!.value).toBe('');
+  });
+  it('does not use an account display name as an unregistered counter staff member', async () => {
+    await setup(false); expect(component.paymentForm.get('staffName')!.value).toBe('');
+    fill(); component.selectStaff('Ayesha'); await component.processPayment(); expect(store.db.allocateId).not.toHaveBeenCalled();
+    const staff = new StaffService(store.db); await staff.save({ name: 'Ayesha', designation: '', employmentType: '', active: true, assignments: [] });
+    await component.loadStaff(); component.selectStaff('Ayesha'); await component.processPayment(); expect(stored()[0].staffName).toBe('Ayesha');
+  });
+  it('handles staff loading errors with retry without losing the payment draft or writing an unverified staff selection', async () => {
+    await setup(); fill(); const original = [...component.staffRecords];
+    const load = spyOn(StaffService.prototype, 'getAll').and.rejectWith(new Error('Offline'));
+    await component.loadStaff(); expect(component.staffLoadError).toContain('Unable to load staff'); await component.processPayment();
+    expect(store.db.allocateId).not.toHaveBeenCalled(); expect(component.paymentForm.get('patientName')!.value).toBe('Ali');
+    load.and.resolveTo(original); await component.loadStaff(); await component.processPayment(); expect(stored()[0].staffName).toBe('Ayesha');
+  });
+  it('refreshes staff on master changes and disallows inactive names on new payments while allowing unchanged older attribution', async () => {
+    await setup(); fill(); component.selectStaff('Ayesha');
+    const staff = new StaffService(store.db); await staff.delete('staff-1'); await component.loadStaff();
+    expect(component.staffEntryOptions).not.toContain('Ayesha'); expect(component.paymentForm.get('staffName')!.invalid).toBeTrue();
+    await component.processPayment(); expect(store.db.upsertRecord).toHaveBeenCalledTimes(1); // Staff deactivation only.
+    const legacy = { id: 'old', patientName: 'Legacy', amount: 20, staffName: 'Ayesha', shiftName: 'Night', paymentMethod: 'card', paymentStatus: 'completed' };
+    store.collections.set('payments', new Map([['old', legacy]])); component.editPayment(legacy); await component.processPayment();
+    expect(stored()[0].staffName).toBe('Ayesha'); expect(component.paymentForm.get('staffName')!.value).toBe('');
   });
 });

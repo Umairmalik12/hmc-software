@@ -1,3 +1,7 @@
+import { SearchableSelectComponent } from 'src/app/Shared/searchable-select.component';
+import { ClinicalCatalogSelectComponent } from 'src/app/Components/clinical-catalog/clinical-catalog-select.component';
+import { ClinicalCatalogService, DEFAULT_LAB_TESTS } from 'src/app/Services/clinical-catalog.service';
+import { Subject as ClinicalChanges } from 'rxjs';
 import { FeedbackModule } from 'src/app/Shared/feedback.module';
 import { TestBed } from '@angular/core/testing';
 import { ApplicationRef } from '@angular/core';
@@ -31,10 +35,10 @@ describe('Responsive form dialogs', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [FeedbackModule, NoopAnimationsModule, ReactiveFormsModule, MatDialogModule, MatInputModule,
+      imports: [SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, NoopAnimationsModule, ReactiveFormsModule, MatDialogModule, MatInputModule,
         MatSelectModule, MatAutocompleteModule, MatIconModule, MatButtonModule, MatDatepickerModule, MatNativeDateModule],
       declarations: [...components, ProcedureSelectComponent, RoomSelectComponent, PrescriptionMedicineSelectComponent],
-      providers: [{ provide: MedicineService, useValue: {} },
+      providers: [{ provide: ClinicalCatalogService, useValue: { changes: new ClinicalChanges<string>(), getAll: async (kind: string) => kind === 'lab-tests' ? DEFAULT_LAB_TESTS : [] } }, { provide: MedicineService, useValue: {} },
         { provide: RoomService, useValue: { getAll: async () => DEFAULT_ROOMS } },
         { provide: PrescriptionMedicineCatalogService, useValue: { getAll: async () => DEFAULT_PRESCRIPTION_MEDICINES, changes: new Subject<void>() } },
         { provide: ProcedureService, useValue: { getAll: () => Promise.resolve(DEFAULT_PROCEDURES) } },
