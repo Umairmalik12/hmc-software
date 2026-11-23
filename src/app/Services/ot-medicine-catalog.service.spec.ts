@@ -4,6 +4,21 @@ import { memoryDb } from '../testing/memory-db';
 import { DEFAULT_OT_CATALOG, OT_MEDICINE_CATALOG, OtMedicineCatalogService } from './ot-medicine-catalog.service';
 
 describe('OT medicine master database persistence', () => {
+  it('supports the same medicine in different strengths and scopes duplicate, edit, delete and restore to one strength', async () => {
+    const { db, collections } = memoryDb(); const catalog = new OtMedicineCatalogService(db);
+    try {
+      const one = await catalog.save({ ...emptyOtCatalogMedicine(), name: '2SUM', strength: '1g' });
+      const two = await catalog.save({ ...emptyOtCatalogMedicine(), name: '2SUM', strength: '2g' });
+      expect(one.id).not.toBe(two.id);
+      const historical = { ...emptyOtRecord(), id: 'p', products: [{ name: '2SUM', strength: '1g', catalogueId: one.id, quantity: 2 }] };
+      collections.set('otFormData', new Map([['p', historical]]));
+      await expectAsync(catalog.save({ ...emptyOtCatalogMedicine(), name: '2sum 1 g' })).toBeRejectedWithError(/already exists/);
+      await expectAsync(catalog.save({ ...one, strength: '2 g' })).toBeRejectedWithError(/already exists/);
+      const changed = await catalog.save({ ...two, strength: '500mg' }); expect(changed.id).toBe(two.id); expect((await catalog.getById(one.id))!.strength).toBe('1g');
+      await catalog.delete(two.id); const restored = await catalog.save({ ...emptyOtCatalogMedicine(), name: '2SUM', strength: '500 mg' });
+      expect(restored.id).toBe(two.id); expect((await catalog.getAll()).filter(item => item.name === '2SUM').length).toBe(2); expect(collections.get('otFormData')!.get('p')).toEqual(historical);
+    } finally { catalog.ngOnDestroy(); }
+  });
   it('keeps the original supplies and persists optional medicine details across service reloads', async () => {
     const { db } = memoryDb(); const catalog = new OtMedicineCatalogService(db);
     try {

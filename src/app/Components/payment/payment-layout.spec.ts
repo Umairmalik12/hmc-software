@@ -1,3 +1,4 @@
+import { DateTimeFieldComponent } from '../../Shared/date-time-field.component';
 import { FeedbackModule } from 'src/app/Shared/feedback.module';
 import { TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
@@ -32,7 +33,7 @@ describe('Payment screen and counter register layout', () => {
     collections.set('payments', new Map(Array.from({ length: 65 }, (_, id) => [String(id), { id: String(id), patientName: 'Patient ' + id,
       amount: 100, cashGiven: 150, cashReturn: 50, paymentMethod: 'cash', paymentStatus: 'completed', staffName: 'Ayesha', shiftName: 'Night', shiftDate: '2026-11-16', createdAt: '2026-11-17T00:30:00Z' }])));
     await TestBed.configureTestingModule({
-      imports: [SearchableSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, MatCardModule, MatInputModule, MatSelectModule, MatIconModule, MatTableModule, MatButtonModule, MatDialogModule],
+      imports: [DateTimeFieldComponent, SearchableSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, MatCardModule, MatInputModule, MatSelectModule, MatIconModule, MatTableModule, MatButtonModule, MatDialogModule],
       declarations: [PaymentComponent, ScrollPaginationDirective, ScrollListFooterComponent, RecordPreviewDirective],
       providers: [{ provide: SupabaseDataService, useValue: db }, { provide: UserLoginService, useValue: {
         getLoginUser: async () => 'staff', getStaffIdentity: async () => ({ id: 'layout-test-staff', name: 'Ayesha', email: 'ayesha@example.test' }),
@@ -80,7 +81,7 @@ describe('Payment screen and counter register layout', () => {
       expect(page.paymentForm.get('staffName')!.value).toBe('Ayesha');
       labels = Array.from(document.querySelectorAll<HTMLElement>('.hmc-catalog-options .hmc-option-label'));
       labels.find(option => option.textContent?.trim() === 'Bilal')!.closest('mat-option')!.dispatchEvent(new MouseEvent('click', { bubbles: true })); await settle();
-      expect(page.paymentForm.get('staffName')!.value).toBe('Bilal'); page.paymentForm.patchValue({ patientName: 'Selected staff patient', amount: 50, shiftName: 'Evening' }); page.printAfterSave = false;
+      expect(page.paymentForm.get('staffName')!.value).toBe('Bilal'); page.paymentForm.patchValue({ patientName: 'Selected staff patient', amount: 50, shiftName: 'Evening', shiftDate: '2026-11-20' }); page.printAfterSave = false;
       await page.processPayment(); await settle();
       const stored = await TestBed.inject(SupabaseDataService).getItem<any[]>('payments') || []; expect(stored.find(item => item.patientName === 'Selected staff patient').staffName).toBe('Bilal');
       const added = await TestBed.inject(StaffService).save({ name: 'Zara', designation: 'Counter staff', employmentType: 'intern', active: true, assignments: [] }); await settle();

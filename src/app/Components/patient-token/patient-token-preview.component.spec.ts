@@ -1,3 +1,4 @@
+import { DateTimeFieldComponent } from '../../Shared/date-time-field.component';
 import { PaymentSlipPreviewComponent } from '../payment/payment-slip-preview.component';
 import { PaymentRecord } from '../payment/payment-record';
 import { LabSlipPreviewComponent } from '../lab/lab-slip-preview.component';
@@ -32,9 +33,9 @@ describe('Thermal previews matching the printed receipt', () => {
   beforeEach(async () => {
     previousPaper = localStorage.getItem('hmc.tokenPaperWidth'); previousOpdPaper = localStorage.getItem('hmc.opdPaperWidth'); previousLabPaper = localStorage.getItem('hmc.labPaperWidth'); previousPaymentPaper = localStorage.getItem('hmc.paymentPaperWidth');
     await TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, NoopAnimationsModule, FeedbackModule, MatDialogModule, MatButtonModule, MatIconModule],
+      imports: [DateTimeFieldComponent, CommonModule, FormsModule, NoopAnimationsModule, FeedbackModule, MatDialogModule, MatButtonModule, MatIconModule],
       declarations: [PaymentSlipPreviewComponent, LabSlipPreviewComponent, PatientTokenPreviewComponent, OpdSlipComponent, ThermalReceiptPreviewComponent, PatientTokenComponent, TimeFormatPipe, ScrollPaginationDirective, ScrollListFooterComponent],
-      providers: [{ provide: SupabaseDataService, useValue: { getAllPatientTokens: async () => [token], changes: new Subject<string>() } }],
+      providers: [{ provide: SupabaseDataService, useValue: { getAllPatientTokens: async () => [token], updatePatientTokenName: jasmine.createSpy('updatePatientTokenName'), deletePatientToken: jasmine.createSpy('deletePatientToken'), changes: new Subject<string>() } }],
     }).compileComponents();
   });
   afterEach(() => {
@@ -63,6 +64,39 @@ describe('Thermal previews matching the printed receipt', () => {
     expect(preview.getBoundingClientRect().bottom - thanks[thanks.length - 1].getBoundingClientRect().bottom).toBeGreaterThan(10.9 * 96 / 25.4);
   }
 
+  const settleToken = async (fixture: { detectChanges(): void }) => { fixture.detectChanges(); await settle(); fixture.detectChanges(); };
+  it('shows staff preview/print actions while hiding and blocking edit/delete', async () => {
+    const fixture = TestBed.createComponent(PatientTokenComponent);
+    try {
+      fixture.detectChanges(); await settleToken(fixture); const root = fixture.nativeElement as HTMLElement;
+      const issuePicker = root.querySelector<HTMLElement>('.token-issue-date')!;
+      const issueInputs = Array.from(issuePicker.querySelectorAll<HTMLInputElement>('input'));
+      expect(issueInputs.length).toBe(2); expect(issueInputs.every(input => !input.value && input.required)).toBeTrue();
+      expect(issuePicker.scrollWidth).toBeLessThanOrEqual(issuePicker.clientWidth + 1);
+      expect(fixture.componentInstance.tokenDateTime).toBe('');
+      expect(Array.from(root.querySelectorAll('td.actions button')).map(button => button.textContent?.trim())).toEqual(['Preview', 'Print']);
+      expect(root.querySelector('[aria-label="Edit patient token"]')).toBeNull(); expect(root.querySelector('[aria-label="Delete patient token"]')).toBeNull();
+      const confirm = spyOn(window, 'confirm'); fixture.componentInstance.editSlip(token); await fixture.componentInstance.deleteSlip(token);
+      expect(fixture.componentInstance.editingSlipId).toBeNull(); expect(confirm).not.toHaveBeenCalled();
+      root.querySelector<HTMLButtonElement>('[aria-label="Preview patient token"]')!.click(); await settleToken(fixture);
+      expect(TestBed.inject(MatDialog).openDialogs[0].componentInstance).toEqual(jasmine.any(PatientTokenPreviewComponent));
+    } finally { TestBed.inject(MatDialog).closeAll(); fixture.destroy(); }
+  });
+  it('allows admin editing and removes the editor immediately when admin access is removed', async () => {
+    const fixture = TestBed.createComponent(PatientTokenComponent), db = TestBed.inject(SupabaseDataService);
+    (db.updatePatientTokenName as jasmine.Spy).and.resolveTo({ ...token, customerName: 'Updated name' });
+    try {
+      fixture.componentRef.setInput('isSuperAdmin', true); fixture.detectChanges(); await settleToken(fixture); const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('[aria-label="Delete patient token"]')).not.toBeNull(); root.querySelector<HTMLButtonElement>('[aria-label="Edit patient token"]')!.click(); await settleToken(fixture);
+      const input = root.querySelector<HTMLInputElement>('td input[aria-label="Patient name"]')!; expect(input).not.toBeNull(); input.value = 'Updated name'; input.dispatchEvent(new Event('input', { bubbles: true })); await settleToken(fixture);
+      Array.from(root.querySelectorAll<HTMLButtonElement>('td.actions button')).find(button => button.textContent?.trim() === 'Save')!.click(); await settleToken(fixture);
+      expect(db.updatePatientTokenName).toHaveBeenCalledWith(token.id, 'Updated name'); expect(root.querySelector('tbody')!.textContent).toContain('Updated name'); expect(root.querySelector('tbody')!.textContent).toContain(token.tokenNumber);
+      root.querySelector<HTMLButtonElement>('[aria-label="Edit patient token"]')!.click(); await settleToken(fixture); fixture.componentRef.setInput('isSuperAdmin', false); fixture.detectChanges(); await settleToken(fixture);
+      expect(fixture.componentInstance.editingSlipId).toBeNull(); expect(fixture.componentInstance.editedPatientName).toBe(''); expect(root.querySelector('td input')).toBeNull(); expect(root.querySelector('[aria-label="Delete patient token"]')).toBeNull();
+      fixture.componentInstance.editedPatientName = 'Blocked'; await fixture.componentInstance.saveSlip(token); await fixture.componentInstance.deleteSlip(token);
+      expect(db.updatePatientTokenName).toHaveBeenCalledTimes(1); expect(db.deletePatientToken).not.toHaveBeenCalled();
+    } finally { fixture.destroy(); }
+  });
   it('offers paper sizes on the token page and opens Print in the same size-selectable preview as OPD', async () => {
     localStorage.setItem('hmc.tokenPaperWidth', '58');
     const fixture = TestBed.createComponent(PatientTokenComponent);
@@ -130,7 +164,7 @@ describe('Thermal previews matching the printed receipt', () => {
         suggestedDr: 'LongSurgeonName'.repeat(10), dateTime: new Date('2026-11-20T08:30:00Z') };
       const name = source.name;
       const ref = TestBed.inject(MatDialog).open(LabSlipPreviewComponent, { data: { record: source }, width: '480px', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
-      source.name = 'Changed outside preview'; source.dateTime.setFullYear(2000); await settle();
+      source.name = 'Changed outside preview'; (source.dateTime as Date).setFullYear(2000); await settle();
       const frame = document.createElement('iframe'); frame.style.width = '420px'; document.body.appendChild(frame);
       const popup = frame.contentWindow!; spyOn(window, 'open').and.returnValue(popup); spyOn(popup, 'focus'); spyOn(popup, 'close');
       const printed = new Promise<void>(resolve => spyOn(popup, 'print').and.callFake(resolve));

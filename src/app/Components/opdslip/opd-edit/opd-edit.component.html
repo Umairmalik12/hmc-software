@@ -2,8 +2,8 @@
 <form [formGroup]="opdForm" (ngSubmit)="onSubmit()" novalidate>
   <mat-dialog-content>
     <div class="form-grid">
-      <mat-form-field appearance="outline"><mat-label>MR Number</mat-label><input matInput type="number" min="1" step="1" required formControlName="patientId" [readonly]="edit" placeholder="Enter MR Number"><mat-error>Enter the patient's MR number as a positive whole number</mat-error></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Registered on</mat-label><input matInput [value]="opdForm.get('createdAt')?.value | date:'dd MMM y, h:mm a'" readonly></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>MR Number</mat-label><input matInput type="number" min="1" step="1" required formControlName="patientId" [readonly]="edit" placeholder="Enter MR Number"><mat-hint *ngIf="matchedPatient">Existing patient loaded: {{ matchedPatient }}</mat-hint><mat-error>Enter the patient's MR number as a positive whole number</mat-error></mat-form-field>
+      <app-date-time-field class="form-span" kind="datetime" label="Registered on" formControlName="createdAt"></app-date-time-field>
       <div class="form-section-title"><mat-icon>person_outline</mat-icon>Patient information</div>
       <mat-form-field appearance="outline"><mat-label>Patient name</mat-label><input matInput formControlName="patientName" autocomplete="name"><mat-error>Enter the patient name</mat-error></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Age</mat-label><input matInput type="number" min="0" max="120" step="any" placeholder="Age" formControlName="age"><mat-error>Enter an age between 0 and 120</mat-error></mat-form-field>

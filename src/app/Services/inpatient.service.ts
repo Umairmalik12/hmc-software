@@ -7,6 +7,7 @@ const STORAGE_KEY = 'inpatientDetails';
 
 export interface InPatientDetail {
   inpatientId: number;
+  mrNumber?: number;
   patientName: string;
   procedure: string;
   admissionDate: string;
@@ -87,9 +88,6 @@ export class InpatientService {
       const storedInpatients = await this.indexedDb.getItem<InPatientDetail[]>(STORAGE_KEY) || [];
       if (storedInpatients.some(patient => patient.inpatientId === data.inpatientId)) return false;
 
-      if (!data.createdAt) {
-        data.createdAt = new Date().toISOString();
-      }
 
       await this.indexedDb.insertRecord(STORAGE_KEY, data.inpatientId, data);
       storedInpatients.push(data);
@@ -126,6 +124,7 @@ export class InpatientService {
   private getInpatientBrief(inpatients: InPatientDetail[]): InPatient[] {
     return inpatients.map(p => ({
       inpatientId: p.inpatientId,
+      mrNumber: p.mrNumber,
       patientName: p.patientName,
       procedure: p.procedure,
       admissionDate: p.admissionDate,

@@ -1,7 +1,7 @@
 import { Component, Inject } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { EXPENSE_HEADS, ExpenseRecord, localExpenseDate, validExpenseDate } from '../../Models/expense.model';
+import { EXPENSE_HEADS, ExpenseRecord, validExpenseDate } from '../../Models/expense.model';
 import { ExpenseService } from '../../Services/expense.service';
 import { NotifyUpdateService } from '../../Services/notify-update.service';
 import { requiredText } from '../../Services/validators.service';
@@ -18,7 +18,7 @@ export class ExpenseEditComponent {
     private expenses: ExpenseService, private feedback: NotifyUpdateService) {
     const record = data.record;
     this.form = fb.group({
-      date: [record?.date || localExpenseDate(), [Validators.required, (control: AbstractControl) => validExpenseDate(control.value) ? null : { date: true }]],
+      date: [record?.date || '', [Validators.required, (control: AbstractControl) => validExpenseDate(control.value) ? null : { date: true }]],
       description: [record?.description || '', [Validators.required, requiredText, Validators.maxLength(1000)]],
       headId: [record?.headId || '', Validators.required],
       amount: [record?.amount ?? null, [Validators.required, Validators.min(0.01), validMoney]],

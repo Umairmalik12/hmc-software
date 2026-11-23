@@ -27,6 +27,7 @@ export function legacyRpcDb() {
       return query;
     },
     rpc: jasmine.createSpy('legacyRpc').and.callFake(async (name: string, args: any) => {
+      if (name === 'hmc_is_admin') return { data: true, error: null };
       const stored = rows(args.p_collection);
       if (name === 'next_hmc_id') return { data: Math.max(4, ...Array.from(stored.keys()).filter(id => /^\d+$/.test(id)).map(Number)) + 1, error: null };
       if (name !== 'apply_hmc_record_changes') throw new Error('Unsupported test RPC: ' + name);

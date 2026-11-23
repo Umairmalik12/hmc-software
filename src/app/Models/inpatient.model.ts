@@ -1,5 +1,6 @@
 export interface InPatient {
   inpatientId: number;
+  mrNumber?: number;
   patientName: string;
   procedure: string;
   admissionDate: string;

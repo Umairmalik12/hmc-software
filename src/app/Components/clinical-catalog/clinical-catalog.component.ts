@@ -12,6 +12,7 @@ import { exportRecords } from '../../Shared/export-records';
 })
 export class ClinicalCatalogComponent implements OnInit, OnDestroy {
   @Input() kind: ClinicalCatalogKind = 'doctors';
+  @Input() isSuperAdmin = false;
   readonly pagination = new ScrollPagination();
   readonly trackRecord = trackRecord;
   readonly name = new FormControl('', { nonNullable: true, validators: [Validators.required, requiredText, Validators.maxLength(120)] });

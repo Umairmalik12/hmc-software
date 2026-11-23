@@ -3,7 +3,8 @@
   <mat-dialog-content>
     <div formGroupName="inpatientDetail" class="form-grid">
       <mat-form-field appearance="outline"><mat-label>Patient ID</mat-label><input matInput type="number" min="1" step="1" required formControlName="inpatientId" [readonly]="edit" placeholder="Enter Patient ID"><mat-error>Enter the patient ID as a positive whole number</mat-error></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Registered on</mat-label><input matInput [value]="f.value | date:'dd MMM y, h:mm a'" readonly></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>MR Number (optional)</mat-label><input matInput type="number" min="1" step="1" formControlName="mrNumber" placeholder="Enter existing MR number"><mat-hint *ngIf="matchedPatient">Existing patient loaded: {{ matchedPatient }}</mat-hint><mat-error>Enter a positive whole MR number</mat-error></mat-form-field>
+      <app-date-time-field class="form-span" kind="datetime" label="Registered on" formControlName="createdAt"></app-date-time-field>
       <div class="form-section-title"><mat-icon>person_outline</mat-icon>Patient &amp; care</div>
       <div formGroupName="basicInfo" class="form-grid form-span">
         <mat-form-field appearance="outline"><mat-label>Patient name</mat-label><input matInput formControlName="patientName" autocomplete="name"><mat-error>Enter the patient name</mat-error></mat-form-field>
@@ -12,8 +13,8 @@
       <div formGroupName="procedureInfo" class="form-span"><app-procedure-select formControlName="procedure"></app-procedure-select></div>
       <div class="form-section-title"><mat-icon>date_range</mat-icon>Admission &amp; discharge</div>
       <div formGroupName="dates" class="form-grid form-span">
-        <mat-form-field appearance="outline"><mat-label>Admission date</mat-label><input matInput [matDatepicker]="admissionPicker" formControlName="admissionDate"><mat-datepicker-toggle matIconSuffix [for]="admissionPicker"></mat-datepicker-toggle><mat-datepicker #admissionPicker></mat-datepicker><mat-error>Enter a valid date</mat-error></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Discharge date</mat-label><input matInput [matDatepicker]="dischargePicker" formControlName="dischargeDate"><mat-datepicker-toggle matIconSuffix [for]="dischargePicker"></mat-datepicker-toggle><mat-datepicker #dischargePicker></mat-datepicker><mat-error>Enter a valid date</mat-error></mat-form-field>
+        <app-date-time-field label="Admission date" formControlName="admissionDate" [emptyValue]="null"></app-date-time-field>
+        <app-date-time-field label="Discharge date" formControlName="dischargeDate" [emptyValue]="null"></app-date-time-field>
       </div>
     </div>
   </mat-dialog-content>

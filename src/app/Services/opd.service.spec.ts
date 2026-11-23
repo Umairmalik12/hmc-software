@@ -3,19 +3,21 @@ import { Opd } from '../Models/opd.model';
 import { memoryDb } from '../testing/memory-db';
 import { OpdService } from './opd.service';
 
-describe('OPD manual MR persistence', () => {
+describe('OPD encounter persistence and manual MR', () => {
   const patient = (overrides: Partial<Opd> = {}): Opd => ({ patientId: 8123, patientName: 'Ali', sex: 'Male', age: 30, procedure: 'Cystoscopy', ...overrides } as Opd);
 
-  it('creates, edits and reads the entered MR, gender and procedure without allocating an ID', async () => {
+  it('creates an encounter ID separately from MR, edits that visit and keeps MR, gender and procedure', async () => {
     const { db } = memoryDb(); const service = new OpdService(db);
     expect(await service.addNewOpd(patient())).toBeTrue();
-    expect(db.insertRecord).toHaveBeenCalledWith('opdDetails', 8123, jasmine.objectContaining({ patientId: 8123, sex: 'Male', procedure: 'Cystoscopy' }));
+    const visitId = service.opdDetail[0].visitId!;
+    expect(visitId).toBeTruthy();
+    expect(db.insertRecord).toHaveBeenCalledWith('opdDetails', visitId, jasmine.objectContaining({ visitId, patientId: 8123, sex: 'Male', procedure: 'Cystoscopy' }));
     expect(db.allocateId).not.toHaveBeenCalled();
-    expect(await service.updateOpd({ ...patient({ sex: 'Female', procedure: 'Right nephrectomy' }), oldPatientId: 8123 })).toBeTrue();
-    const saved = await firstValueFrom(service.getOpdDetails(8123));
+    expect(await service.updateOpd({ ...patient({ sex: 'Female', procedure: 'Right nephrectomy', visitId }), oldPatientId: 8123 })).toBeTrue();
+    const saved = await firstValueFrom(service.getOpdDetails(visitId));
     expect(saved.sex).toBe('Female'); expect(saved.procedure).toBe('Right nephrectomy'); expect(saved.patientId).toBe(8123);
-    expect(await service.deleteOpd(8123)).toBeTrue();
-    expect(await firstValueFrom(service.getOpdDetails(8123))).toBeUndefined();
+    expect(await service.deleteOpd(visitId)).toBeTrue();
+    expect(await firstValueFrom(service.getOpdDetails(visitId))).toBeUndefined();
   });
 
   it('rejects invalid MR, age and gender on creates and updates before database writes', async () => {
@@ -33,13 +35,15 @@ describe('OPD manual MR persistence', () => {
     expect(db.insertRecord).not.toHaveBeenCalled(); expect(db.upsertRecord).not.toHaveBeenCalled();
   });
 
-  it('preserves existing patient data on duplicate and concurrent registrations', async () => {
+  it('allows multiple visits for the same MR without overwriting either visit', async () => {
     const { db, collections } = memoryDb();
     const first = new OpdService(db); const second = new OpdService(db);
     const results = await Promise.all([first.addNewOpd(patient({ patientName: 'First patient' })), second.addNewOpd(patient({ patientName: 'Second patient' }))]);
-    expect(results).toEqual([true, false]);
-    expect(await first.addNewOpd(patient({ patientName: 'Duplicate' }))).toBeFalse();
-    expect(collections.get('opdDetails')!.get('8123').patientName).toBe('First patient');
+    expect(results).toEqual([true, true]);
+    expect(await first.addNewOpd(patient({ patientName: 'Third visit' }))).toBeTrue();
+    const visits = Array.from(collections.get('opdDetails')!.values());
+    expect(visits.length).toBe(3); expect(visits.every(item => item.patientId === 8123)).toBeTrue();
+    expect(visits.map(item => item.patientName).sort()).toEqual(['First patient', 'Second patient', 'Third visit']);
     expect(db.upsertRecord).not.toHaveBeenCalled(); expect(db.allocateId).not.toHaveBeenCalled();
   });
 

@@ -3,7 +3,7 @@
   <mat-dialog-content>
     <div class="form-grid">
       <h3 class="form-section-title"><mat-icon>receipt_long</mat-icon>Expense details</h3>
-      <mat-form-field appearance="outline"><mat-label>Expense date</mat-label><input matInput type="date" min="1900-01-01" max="9999-12-31" formControlName="date" required><mat-error>Enter a valid date</mat-error></mat-form-field>
+      <app-date-time-field label="Expense date" formControlName="date" min="1900-01-01" max="9999-12-31" [required]="true"></app-date-time-field>
       <mat-form-field appearance="outline"><mat-label>Amount (PKR)</mat-label><span matTextPrefix>Rs&nbsp;</span><input matInput type="number" inputmode="decimal" min="0.01" step="0.01" formControlName="amount" required><mat-error>Enter a positive amount with up to two decimals</mat-error></mat-form-field>
       <app-searchable-select class="full-width" label="Expense head" emptyLabel="Select expense head" [options]="headOptions" [value]="headName" [required]="true" [disabled]="saving" [invalid]="!!form.get('headId')?.touched && !!form.get('headId')?.invalid" (valueChange)="selectHead($event)" (touched)="form.get('headId')?.markAsTouched()"></app-searchable-select>
       <mat-form-field appearance="outline" class="full-width"><mat-label>Description / purpose</mat-label><textarea matInput formControlName="description" rows="2" maxlength="1000" required></textarea><mat-error>Enter the expense purpose (up to 1,000 characters)</mat-error></mat-form-field>

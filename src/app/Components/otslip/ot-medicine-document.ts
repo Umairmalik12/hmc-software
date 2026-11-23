@@ -27,7 +27,7 @@ export function buildOtMedicineDocument(record: OtMedicineRecord): string {
     <div class="ot-print-meta">${row('Patient', record.patientName)}${row('Doctor', record.doctorName)}${row('Operation date', record.operationDate)}${row('Time', formatTime12(record.operationTime))}${row('Room', record.roomNumber)}${row('Record', record.id)}${row('Procedure', record.procedure, true)}</div>
     <table><thead><tr><th>S. No.</th><th>Name</th><th>Qty.</th><th>Amount</th></tr></thead><tbody>${products.map((product, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(medicineName(product))}</td><td>${escapeHtml(product.quantity)}${product.unit ? ' ' + escapeHtml(product.unit) : ''}</td><td>${typeof product.amount === 'number' && Number.isFinite(product.amount) ? escapeHtml(product.amount.toLocaleString('en-PK', { maximumFractionDigits: 2 })) : '&nbsp;'}</td></tr>`).join('')}</tbody></table>
     <div class="ot-print-footer"><div class="ot-print-signature">Patient / attendant signature</div><div class="ot-print-signature">Pharmacy signature</div></div>
-    <div class="ot-print-stamp">Haq Medical Center · ${record.includeMedicineHeader === 'withoutMedicine' ? 'Without medicine' : 'With medicine'} · ${escapeHtml(new Date().toLocaleString())}</div></article>`;
+    <div class="ot-print-stamp">Haq Medical Center · ${record.includeMedicineHeader === 'withoutMedicine' ? 'Without medicine' : 'With medicine'}</div></article>`;
 }
 
 export function printOtMedicine(record: OtMedicineRecord, target?: Window | null): boolean {

@@ -1,3 +1,4 @@
+import { DateTimeFieldComponent } from '../Shared/date-time-field.component';
 import { SearchableSelectComponent } from 'src/app/Shared/searchable-select.component';
 import { ClinicalCatalogSelectComponent } from 'src/app/Components/clinical-catalog/clinical-catalog-select.component';
 import { ClinicalCatalogService, DEFAULT_LAB_TESTS } from 'src/app/Services/clinical-catalog.service';
@@ -35,7 +36,7 @@ describe('Responsive form dialogs', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, NoopAnimationsModule, ReactiveFormsModule, MatDialogModule, MatInputModule,
+      imports: [DateTimeFieldComponent, SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, NoopAnimationsModule, ReactiveFormsModule, MatDialogModule, MatInputModule,
         MatSelectModule, MatAutocompleteModule, MatIconModule, MatButtonModule, MatDatepickerModule, MatNativeDateModule],
       declarations: [...components, ProcedureSelectComponent, RoomSelectComponent, PrescriptionMedicineSelectComponent],
       providers: [{ provide: ClinicalCatalogService, useValue: { changes: new ClinicalChanges<string>(), getAll: async (kind: string) => kind === 'lab-tests' ? DEFAULT_LAB_TESTS : [] } }, { provide: MedicineService, useValue: {} },

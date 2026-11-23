@@ -1,3 +1,4 @@
+import { DateTimeFieldComponent } from '../../Shared/date-time-field.component';
 import { SearchableSelectComponent } from 'src/app/Shared/searchable-select.component';
 import { Component } from '@angular/core';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
@@ -46,7 +47,7 @@ describe('Clinical catalogue management and dropdowns', () => {
   beforeEach(async () => {
     const memory = memoryDb(); db = memory.db; collections = memory.collections; close = jasmine.createSpy('close'); dialogData = {};
     await TestBed.configureTestingModule({
-      imports: [SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, MatDialogModule, MatSelectModule, MatInputModule, MatButtonModule, MatIconModule],
+      imports: [DateTimeFieldComponent, SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, MatDialogModule, MatSelectModule, MatInputModule, MatButtonModule, MatIconModule],
       declarations: [ClinicalCatalogComponent, SelectionHost, LabEditComponent, ScrollPaginationDirective, ScrollListFooterComponent, RecordPreviewDirective, RecordDetailsComponent],
       providers: [{ provide: SupabaseDataService, useValue: db }, { provide: MAT_DIALOG_DATA, useValue: dialogData }, { provide: MatDialogRef, useValue: { close } }],
     }).compileComponents();

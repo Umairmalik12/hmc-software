@@ -10,4 +10,5 @@ export interface Patient {
         address: string;
         procedure: string;
         createdAt: string;
+        dischargeDate?: string;
     }

@@ -4,6 +4,7 @@ export interface OtMedicineItem {
 }
 export interface OtMedicineRecord {
   id: string;
+  mrNumber?: number;
   patientName: string;
   doctorName: string;
   roomNumber: string;
@@ -17,11 +18,8 @@ export interface OtMedicineRecord {
 }
 
 export function emptyOtRecord(): OtMedicineRecord {
-  const now = new Date();
-  const pad = (value: number): string => String(value).padStart(2, '0');
   return { id: '', patientName: '', doctorName: '', roomNumber: '', procedure: '',
-    operationDate: now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()),
-    operationTime: pad(now.getHours()) + ':' + pad(now.getMinutes()), includeMedicineHeader: 'withMedicine', products: [], createdAt: '' };
+    operationDate: '', operationTime: '', includeMedicineHeader: 'withMedicine', products: [], createdAt: '' };
 }
 
 export function copyOtRecord(record: OtMedicineRecord): OtMedicineRecord {

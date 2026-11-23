@@ -64,12 +64,32 @@ describe('SupabaseDataService', () => {
   });
 
   it('updates only a token patient name and returns its unchanged queue identity', async () => {
+    client.rpc.and.resolveTo({ data: true, error: null });
     query.single.and.resolveTo({ data: { id: 7, token_number: 'A003', sequence: 3, customer_name: 'Ali Khan', token_date: '2026-11-17', token_time: '01:35 PM', created_at: '2026-11-17T08:35:00Z' }, error: null });
     const saved = await service.updatePatientTokenName(7, ' Ali Khan ');
     expect(query.update).toHaveBeenCalledWith({ customer_name: 'Ali Khan' });
     expect(saved.tokenNumber).toBe('A003');
     expect(saved.sequence).toBe(3);
     expect(saved.customerName).toBe('Ali Khan');
+    expect(client.rpc).toHaveBeenCalledWith('hmc_is_admin');
+  });
+
+  it('denies token updates and deletion for staff, missing roles and failed permission checks before issuing writes', async () => {
+    for (const data of [false, null, 'true']) {
+      client.rpc.and.resolveTo({ data, error: null });
+      await expectAsync(service.updatePatientTokenName(7, 'Name')).toBeRejectedWithError(/Only administrators/);
+      await expectAsync(service.deletePatientToken(7)).toBeRejectedWithError(/Only administrators/);
+    }
+    client.rpc.and.resolveTo({ data: null, error: { message: 'Role check failed' } });
+    await expectAsync(service.updatePatientTokenName(7, 'Name')).toBeRejectedWithError('Role check failed');
+    await expectAsync(service.deletePatientToken(7)).toBeRejectedWithError('Role check failed');
+    expect(query.update).not.toHaveBeenCalled(); expect(query.delete).not.toHaveBeenCalled();
+  });
+
+  it('allows an administrator to delete only the requested token after checking the current role', async () => {
+    client.rpc.and.resolveTo({ data: true, error: null }); query.select.and.resolveTo({ data: [{ id: 7 }], error: null });
+    await service.deletePatientToken(7);
+    expect(client.rpc).toHaveBeenCalledWith('hmc_is_admin'); expect(client.from).toHaveBeenCalledWith('patient_token_slips'); expect(query.delete).toHaveBeenCalled(); expect(query.eq).toHaveBeenCalledWith('id', 7);
   });
 
   it('updates existing IDs in collections with nonstandard record keys', async () => {
@@ -154,10 +174,11 @@ describe('SupabaseDataService', () => {
       error: null,
     }));
 
-    const slip = await service.createPatientToken(' Ali Khan ');
+    const slip = await service.createPatientToken(' Ali Khan ', '2026-11-11T10:30');
 
-    expect(client.rpc).toHaveBeenCalledWith('create_patient_token', {
+    expect(client.rpc).toHaveBeenCalledWith('create_patient_token_at', {
       p_customer_name: 'Ali Khan',
+      p_token_date: '2026-11-11', p_token_time: '10:30',
     });
     expect(slip).toEqual({
       id: 12,
@@ -170,6 +191,13 @@ describe('SupabaseDataService', () => {
     });
   });
 
+  it('rejects missing or invalid token dates before making a database request', async () => {
+    for (const date of ['', '2020-02-30T12:00', '2020-01-01T24:00', '2020-01-01', 'invalid']) {
+      await expectAsync(service.createPatientToken('Ali', date)).toBeRejectedWithError('Select a valid token date and time.');
+    }
+    expect(client.rpc).not.toHaveBeenCalled();
+  });
+
   it('surfaces Supabase failures rather than returning success-shaped data', async () => {
     query.range.and.returnValue(Promise.resolve({
       data: null,
@@ -178,5 +206,26 @@ describe('SupabaseDataService', () => {
 
     await expectAsync(service.getItem<any[]>('patientDetails'))
       .toBeRejectedWithError('Network unavailable');
+  });
+  it('uses the stored row key for prescriptions even if the payload ID is stale or missing', async () => {
+    query.range.and.resolveTo({ data: [{ record_id: '42', data: { id: '7', patient: { name: 'Ali' } } }, { record_id: '43', data: { patient: { name: 'Sara' } } }], error: null });
+    expect((await service.getItem<any[]>('prescriptions'))!.map(row => row.id)).toEqual(['42', '43']);
+  });
+  it('verifies admin prescription deletion against the returned database row and refreshes subscribers', async () => {
+    client.rpc.and.resolveTo({ data: true, error: null });
+    query.select.and.resolveTo({ data: [{ record_id: '42' }], error: null });
+    const changes = jasmine.createSpy('changes'); service.changes.subscribe(changes);
+    await service.deletePrescriptionRecord('prescriptions', '42');
+    expect(query.delete).toHaveBeenCalledTimes(1); expect(query.eq).toHaveBeenCalledWith('collection', 'prescriptions'); expect(query.eq).toHaveBeenCalledWith('record_id', '42');
+    expect(changes).toHaveBeenCalledWith('prescriptions');
+    query.select.and.resolveTo({ data: [], error: null });
+    await expectAsync(service.deletePrescriptionRecord('prescriptions', '42')).toBeRejectedWithError(/not deleted/);
+    expect(changes).toHaveBeenCalledTimes(1);
+  });
+  it('blocks staff prescription deletion and surfaces database errors without reporting success', async () => {
+    client.rpc.and.resolveTo({ data: false, error: null });
+    await expectAsync(service.deletePrescriptionRecord('prescriptions', '42')).toBeRejectedWithError('Only administrators can delete prescriptions.'); expect(query.delete).not.toHaveBeenCalled();
+    client.rpc.and.resolveTo({ data: true, error: null }); query.select.and.resolveTo({ data: null, error: { message: 'Network unavailable' } });
+    await expectAsync(service.deletePrescriptionRecord('prescriptions', '42')).toBeRejectedWithError('Network unavailable');
   });
 });

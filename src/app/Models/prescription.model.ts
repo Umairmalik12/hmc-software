@@ -22,6 +22,10 @@ export interface PrescriptionMedicine {
 
 export interface PrescriptionRecord {
   id: string;
+  /** Links this prescription to one OPD encounter, not merely to the patient MR. */
+  opdVisitId?: string;
+  doctorName?: string;
+  status?: 'draft' | 'completed';
   patient: PrescriptionPatient;
   medicines: PrescriptionMedicine[];
   issuedAt: string;
@@ -31,7 +35,7 @@ export interface PrescriptionRecord {
 
 export function emptyPrescription(): PrescriptionRecord {
   return {
-    id: '', issuedAt: new Date().toISOString(), createdAt: '', updatedAt: '',
+    id: '', issuedAt: '', createdAt: '', updatedAt: '',
     patient: { refId: '', visit: '', name: '', relation: '', age: '', sex: '', weight: '',
       contact: '', allergies: '', symptoms: '', findings: '', diagnosis: '' },
     medicines: [{ name: '', morning: false, afternoon: false, evening: false }],

@@ -30,7 +30,7 @@
     <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource" [trackBy]="trackRecord">
         <ng-container matColumnDef="patientId">
             <mat-header-cell *matHeaderCellDef >MR number</mat-header-cell>
-            <mat-cell *matCellDef="let patient">{{patient.patientId}}</mat-cell>
+            <mat-cell *matCellDef="let patient"><button mat-icon-button class="history-toggle" type="button" (click)="toggleHistory(patient)" [attr.aria-expanded]="expandedHistoryFor === patient.patientId" [attr.aria-label]="(expandedHistoryFor === patient.patientId ? 'Collapse' : 'Expand') + ' history for MR ' + patient.patientId"><mat-icon>{{ expandedHistoryFor === patient.patientId ? 'expand_less' : 'expand_more' }}</mat-icon></button><span><strong>{{ patient.patientId }}</strong><small>{{ historyCount(patient) }} linked records</small></span></mat-cell>
         </ng-container>
         <ng-container matColumnDef="name">
             <mat-header-cell *matHeaderCellDef>Name</mat-header-cell>
@@ -60,6 +60,10 @@
       <mat-header-cell *matHeaderCellDef>Created</mat-header-cell>
       <mat-cell *matCellDef="let patient">{{patient.createdAt | date:'dd/MM/yy h:mm a'}}</mat-cell>
     </ng-container>
+        <ng-container matColumnDef="dischargeDate">
+            <mat-header-cell *matHeaderCellDef>Discharge date</mat-header-cell>
+            <mat-cell *matCellDef="let patient">{{ patient.dischargeDate ? (patient.dischargeDate | date:'dd/MM/yyyy') : '—' }}</mat-cell>
+        </ng-container>
         <ng-container matColumnDef="action">
             <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
             <mat-cell  *matCellDef="let patient">
@@ -72,6 +76,17 @@
         <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
         <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
     </mat-table>
+    <section *ngIf="expandedHistoryFor !== null" class="patient-history-panel" aria-live="polite">
+      <header><div><h3>Patient history · MR {{ expandedHistoryFor }} <span *ngIf="expandedPatient">· {{ expandedPatient.name }}</span></h3><p>{{ expandedHistoryRecords.length }} linked records, newest first</p></div><button mat-icon-button type="button" (click)="expandedHistoryFor = null" aria-label="Collapse patient history"><mat-icon>close</mat-icon></button></header>
+      <p *ngIf="historyError" class="form-error" role="alert">{{ historyError }}</p>
+      <div *ngIf="!historyError && !expandedHistoryRecords.length" class="history-empty">No linked visits or transactions have been recorded for this MR number.</div>
+      <div class="patient-history-list" *ngIf="expandedHistoryRecords.length">
+        <article *ngFor="let entry of expandedHistoryRecords; let index = index" class="patient-history-entry">
+          <span class="history-sequence">{{ index + 1 }}</span><div class="history-entry-main"><strong>{{ entry.module }}<span *ngIf="entry.id" class="history-record-id"> · {{ entry.id }}</span></strong><span>{{ entry.summary }}</span><small>{{ entry.dateTime || 'Date not recorded' }}<span *ngIf="entry.doctor"> · {{ entry.doctor }}</span></small></div>
+          <button mat-stroked-button type="button" (click)="viewHistoryRecord(entry)"><mat-icon>visibility</mat-icon>View</button>
+        </article>
+      </div>
+    </section>
 <div class="list-empty" *ngIf="!loading && !loadFailed && !filteredPatients.length"><mat-icon>inbox</mat-icon><span>No records to display.</span></div>
     </div>
 </div>

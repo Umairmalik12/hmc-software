@@ -42,6 +42,10 @@ This project was generated with [Angular CLI](https://github.com/angular/angular
 
 ## Development server
 
+Business dates and times use the shared `app-date-time-field`: Material calendars and a keyboard-accessible hour/minute/AM–PM dialog. New registrations, prescriptions, laboratory records, OT slips, expenses and payments start with empty date/time fields; users select them explicitly. Edit forms load saved values. Date-only fields retain local `YYYY-MM-DD`; selected timestamps are serialized as ISO instants without silently substituting the current clock. System audit timestamps still record actual changes. Token generation requires a selected date and time and allocates the next sequence for that date in Pakistan time. Run `supabase/migrations/20261122_manual_token_datetime.sql` on existing Supabase installations before using the updated token form; it adds an RPC without changing existing slips or counters.
+
+The admin header includes **HMC assistant** for free local AI chat and existing medicine/patient record lookup. See [local AI setup and usage](LOCAL_AI_SETUP.md) for the one-time Ollama configuration. No new database tables or API keys are required.
+
 Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
 
 ## Code scaffolding
@@ -92,11 +96,14 @@ The SQL is generated from the application constants. Before first deployment,
 alignment. Keep applied migration files unchanged and create a new dated migration
 for future catalogue additions.
 
-If applying individual migrations instead of the complete schema, also run
-[`supabase/migrations/20261117_token_patient_name_update.sql`](./supabase/migrations/20261117_token_patient_name_update.sql)
-if token patient-name editing is not yet enabled. The complete `supabase/schema.sql`
-already includes this permission. Only the patient name can be updated;
-the queue number, sequence, issue date and issue time stay unchanged.
+For existing installations, run
+[`supabase/migrations/20261122_token_admin_mutations.sql`](./supabase/migrations/20261122_token_admin_mutations.sql)
+to restrict token editing and deletion to administrators. Apply it after older token
+migrations; it supersedes the earlier permissive token-name editor policy. The
+complete `supabase/schema.sql` includes these same restrictions. Only the patient
+name can be updated; the queue number, sequence, issue date and issue time stay
+unchanged. The migration changes policies/permissions only and preserves all tokens
+and daily sequences.
 
 The **Procedures** page manages the fourteen default procedure choices plus any
 custom additions. Operation, inpatient and OT forms share this catalog. Removing
@@ -197,12 +204,23 @@ their prior names in catalogue metadata so old assignments cannot recreate remov
 options. Existing assignments remain editable, and active options refresh in the
 staff form and list filter when catalogue changes are saved.
 
-The admin **Expenses** page (`/expenses`) follows the supplied expense workbook:
+The **Expenses** page (`/expenses`) is available to admin and staff accounts and follows the supplied expense workbook:
 date, description/purpose, one expense head and amount, with optional remarks and
 place/location. It supports add, preview, edit, confirmed soft deletion and restore,
 search, year/month/date-range/group/head/status filters and scroll pagination.
 Daily, Monday-week, monthly and head summaries use integer paise for exact totals;
 deleted records are excluded. The date defaults to the local PC date.
+
+Staff can add expenses, view/search/filter records, preview monthly sheets, print
+and export. Only admins can edit saved entries, delete them or restore them into
+totals. Controls and handlers use the shell's existing admin permission; service
+mutations recheck the authenticated role before writing. Existing-database
+enforcement requires
+[`supabase/migrations/20261122_expense_admin_mutations.sql`](./supabase/migrations/20261122_expense_admin_mutations.sql).
+The complete schema includes the same restrictive RLS policies. These policies
+also block direct API/RPC upserts and soft-delete changes by staff, allow staff
+to insert only new recorded entries, and preserve permissions for other modules.
+The migration does not change financial data or create new tables.
 
 **Export workbook** reads all saved, non-deleted expenses across all years, regardless
 of list filters or visible page. It generates formatted annual calendar registers,
@@ -213,8 +231,13 @@ the selectors. Calendar sheets include 2026–2030 plus any additional saved yea
 leap days and multiple entries per day are retained. The app also offers an A4
 landscape monthly print preview with fit-to-width, zoom and actual-size controls.
 The preview and print window share one document, including the existing HAQ mark,
-wrapped descriptions, repeated table headers and complete monthly totals. Long
-months continue across pages. Expense filters align in responsive rows, numeric
+wrapped descriptions, repeated table headers and complete monthly totals. Each
+date has one table row, with compact description/amount entries stacked inside
+their original category cells. Daily totals and category/month totals use the
+individual saved records; grouping does not merge or modify those records.
+Busy dates can continue across printed pages without clipping their entries.
+Preview and print use the same 9px entry typography, padding and printable width.
+Expense filters align in responsive rows, numeric
 columns align to the right, and row actions remain visible while scrolling across
 the table. Shared record previews give notes and nested medicine lists a full row.
 Staff eating/night meals/refreshments share one
@@ -275,7 +298,13 @@ Prescription medicine fields use a themed, searchable autocomplete with keyboard
 selection and manual medicine/dose entry. **Manage medicines** opens the catalogue
 inside the prescription editor without leaving the draft; **Medicine catalogue**
 in the sidebar opens the same add/edit/delete/search/preview/export list. A new name
-can also be added explicitly from a no-match dropdown result. Typing or leaving a
+can also be added explicitly from a no-match dropdown result. Both medicine catalogues
+are visible to user accounts, including search, preview, export and adding new medicines
+or strengths. Only administrators can edit, delete or reactivate existing medicines.
+These permissions apply to embedded dialogs and database writes too. Existing Supabase
+installations must apply `supabase/migrations/20261122_medicine_catalog_admin_mutations.sql`;
+the migration protects both catalogue collections and legacy `customMedicines` data
+without changing patient records or medicine history. Typing or leaving a
 medicine field does not write suggestions automatically. The catalogue preserves
 the existing common medicines and legacy `customMedicines` values, and saves edits
 and removals as individual records in `prescriptionMedicineCatalog`. Removed default
@@ -302,6 +331,15 @@ in the existing JSON record and included in medicine suggestions, selections,
 previews and exports. Different strengths of the same medicine can be registered
 separately. Editing catalogue strength preserves medicine text already saved in
 prescriptions and daily medicine records. No SQL migration is required.
+
+Use the **Add another strength** (+) row action to register another variant of an
+existing medicine, such as **2SUM 1 g** and **2SUM 2 g**. The name is prefilled and
+read-only in this mode; select a required strength and save a separate catalogue
+record. Each variant has its own edit/delete controls and database ID. Duplicate
+checks compare name **and** strength (ignoring spacing/case, without unit
+conversion). Older records storing a bare name plus a separate strength get a
+complete dropdown label without database writes. Adding a typed full label inside
+a prescription automatically fills its name and strength fields.
 
 Payment row **Print** and the optional after-save receipt action open an OPD-style
 thermal preview with 58 mm / 80 mm paper, Close and Print controls. It reloads the
@@ -332,21 +370,32 @@ reprints render the saved record directly, so they cannot clone stale screen tex
 The token page's **Print paper** selector sets the roll size for automatically
 printed new tokens. A history row's **Print** action opens the same paper-size
 preview as OPD, and closing the preview updates the page's selected roll size.
+Token Edit/Delete controls and their handlers are admin-only, using the existing
+authenticated admin role from the application shell. Losing that permission closes
+any inline editor. Both mutation service methods recheck `hmc_is_admin()` before
+writing; the token-admin migration also enforces the restriction through RLS for
+direct API requests. Staff retain token generation, history/search/filter/export,
+preview and printing.
 OPD batch previews show the same continuous job and inter-slip gaps as printing.
 
-The administrator's **OT medicine catalogue** is available in the Pharmacy sidebar,
+The **OT medicine catalogue** is available to all users in the Pharmacy sidebar,
 from **OT medicine records → Manage medicines**, or inside an OT slip. It supports
 name/generic/strength search, category and status filters, scroll pagination, preview,
 export, add, edit and confirmed removal. Only the medicine name is required; generic
 name, category, type, strength, unit and description are optional. Changes are saved
 as individual JSON records in the existing `hmc_records` table under
-`otMedicineCatalog`, so no new table or migration is needed. The original OT medicines
+`otMedicineCatalog`, so no new table is needed. The permissions migration above enforces
+admin-only updates and deletions. The original OT medicines
 and supplies remain starter options; saved overrides, inactive status and removal
 markers persist across reloads. Removal is soft deletion and never rewrites patient
 records. Only active options can be newly selected on OT slips. New slips save the
 catalogue ID and medicine details together; historical slips preserve their original
 names, strength, unit, quantities and amounts even if the master entry changes.
 Managing the catalogue from a slip preserves the patient draft and its selections.
+The OT catalogue also offers **Add another strength**, carrying over the generic
+name, category, type, unit and description while requiring a new strength. Same-name
+strength variants have independent IDs and quantities. Legacy slip items without
+catalogue IDs match by both name and strength, preserving historical snapshots.
 
 Notifications use an app-wide toast stack that survives page navigation and appears
 above dialogs. Success, error, warning and information messages have distinct icons

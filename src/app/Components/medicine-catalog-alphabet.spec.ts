@@ -50,6 +50,29 @@ describe('Matching alphabetical navigation in main and OT medicine catalogues', 
   for (const kind of ['main', 'ot'] as const) {
     const type = kind === 'main' ? MedicineCatalogComponent : OtMedicineCatalogComponent;
     const collection = kind === 'main' ? PRESCRIPTION_MEDICINE_CATALOG : OT_MEDICINE_CATALOG;
+    it('lets staff browse, preview and add while hiding and blocking edit/delete in ' + kind, async () => {
+      (store.db.requireAdministrator as jasmine.Spy).and.rejectWith(new Error('Admin required'));
+      const fixture = TestBed.createComponent(type as typeof MedicineCatalogComponent); await settle(fixture);
+      try {
+        const page = fixture.componentInstance, root: HTMLElement = fixture.nativeElement;
+        expect(page.isSuperAdmin).toBeFalse(); expect(page.visible.length).toBe(20);
+        expect(root.querySelector('[aria-label="' + (kind === 'main' ? 'Edit catalogue medicine' : 'Edit OT medicine') + '"]')).toBeNull();
+        expect(root.querySelector('[aria-label="' + (kind === 'main' ? 'Delete catalogue medicine' : 'Delete OT medicine') + '"]')).toBeNull();
+        const preview = root.querySelector<HTMLButtonElement>('[aria-label="' + (kind === 'main' ? 'Preview catalogue medicine' : 'Preview OT medicine') + '"]')!;
+        preview.click(); await settle(fixture); expect(TestBed.inject(MatDialog).openDialogs.length).toBe(1); TestBed.inject(MatDialog).closeAll(); await settle(fixture);
+        const confirm = spyOn(window, 'confirm'); const dialog = spyOn(TestBed.inject(MatDialog), 'open').and.callThrough();
+        (page as any).edit(page.visible[0]); await (page as any).delete(page.visible[0]);
+        expect(confirm).not.toHaveBeenCalled(); expect(dialog).not.toHaveBeenCalled(); expect(store.db.upsertRecord).not.toHaveBeenCalled();
+        page.edit(); await settle(fixture); expect(dialog).toHaveBeenCalledTimes(1); TestBed.inject(MatDialog).closeAll(); await settle(fixture);
+        (store.db.requireAdministrator as jasmine.Spy).and.resolveTo(); await page.load(); await settle(fixture);
+        expect(page.isSuperAdmin).toBeTrue(); expect(root.querySelector('[aria-label="' + (kind === 'main' ? 'Edit catalogue medicine' : 'Edit OT medicine') + '"]')).not.toBeNull();
+        (store.db.requireAdministrator as jasmine.Spy).and.rejectWith(new Error('Role revoked')); await page.load(); await settle(fixture);
+        expect(page.isSuperAdmin).toBeFalse();
+        page.isSuperAdmin = true;
+        ((kind === 'main' ? main.getAll : ot.getAll) as jasmine.Spy).and.rejectWith(new Error('Offline'));
+        await page.load(); await settle(fixture); expect(page.isSuperAdmin).toBeFalse();
+      } finally { fixture.destroy(); }
+    });
     it('renders all A–Z/# choices, combines search with the selected letter and does not fetch or write on letter changes in ' + kind, async () => {
       const fixture = TestBed.createComponent(type as typeof MedicineCatalogComponent); await settle(fixture);
       try {

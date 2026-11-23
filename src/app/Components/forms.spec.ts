@@ -90,8 +90,7 @@ describe('Patient form requirements', () => {
     component.onSubmit();
     const saved = close.calls.mostRecent().args[0];
     expect(saved.testName).toBe('CBC, Blood Group');
-    expect(saved.dateTime instanceof Date).toBeTrue();
-    expect(Number.isNaN(saved.dateTime.getTime())).toBeFalse();
+    expect(saved.dateTime).toBe('');
     component.c.testName.setValue([]);
     expect(component.labPatientForm.invalid).toBeTrue();
   });
@@ -146,7 +145,7 @@ describe('Patient form requirements', () => {
     const db = { getItem: (collection: string) => Promise.resolve(collection === 'staffDetails' ? [{ id: '1', name: 'Ayesha', active: true, assignments: [] }] : []), changes: new Subject<string>() } as unknown as SupabaseDataService;
     const component = new PaymentComponent(fb, db, { getLoginUser: async () => 'admin', getStaffIdentity: async () => ({ id: 'forms-test-staff', name: 'Ayesha', email: 'ayesha@example.test' }) } as UserLoginService);
     await component.ngOnInit();
-    component.paymentForm.patchValue({ patientName: 'Ali', amount: 100, shiftName: 'Morning' });
+    component.paymentForm.patchValue({ patientName: 'Ali', amount: 100, shiftName: 'Morning', shiftDate: '2026-11-20' });
     expect(component.paymentForm.valid).toBeTrue();
     component.paymentForm.get('cashGiven')!.setValue(150);
     expect(component.cashReturn).toBe(50);

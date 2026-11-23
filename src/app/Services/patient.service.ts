@@ -73,9 +73,6 @@ export class PatientService {
   async addNewPatient(data: PatientDetail): Promise<boolean> {
     try {
       if (!this.validRegistration(data)) return false;
-      if (!data.createdAt) {
-        data.createdAt = new Date().toISOString();
-      }
       const storedPatients = await this.indexedDb.getItem<PatientDetail[]>(STORAGE_KEY) || [];
       if (storedPatients.some(p => p.patientId === data.patientId)) {
         console.error('Duplicate MR number exists');
@@ -143,7 +140,8 @@ export class PatientService {
       city: p.city,
       address: p.address,
       procedure: p.procedure,
-      createdAt: p.createdAt
+      createdAt: p.createdAt,
+      dischargeDate: p.dischargeDate || ''
     }));
   }
 

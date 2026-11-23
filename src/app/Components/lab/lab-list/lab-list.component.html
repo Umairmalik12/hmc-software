@@ -6,7 +6,7 @@
 
         <ng-container matColumnDef="patientId">
             <mat-header-cell *matHeaderCellDef>MR number</mat-header-cell>
-            <mat-cell *matCellDef="let lab">{{ lab.patientId }}</mat-cell>
+            <mat-cell *matCellDef="let lab">{{ lab.mrNumber || lab.patientId || '—' }}</mat-cell>
         </ng-container>
 
         <ng-container matColumnDef="name">
@@ -37,14 +37,14 @@
    <ng-container matColumnDef="action" >
     <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
     <mat-cell *matCellDef="let lab">
-        <div class="action-buttons"><button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Preview lab test" title="Preview" (click)="viewLab(lab.patientId)"><mat-icon>visibility</mat-icon></button>
-            <button *ngIf="isSuperAdmin" mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit lab slip" title="Edit lab slip" (click)="editLabPatient(lab.patientId)">
+        <div class="action-buttons"><button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Preview lab test" title="Preview" (click)="viewLab(labKey(lab))"><mat-icon>visibility</mat-icon></button>
+            <button *ngIf="isSuperAdmin" mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit lab slip" title="Edit lab slip" (click)="editLabPatient(labKey(lab))">
                 <mat-icon>edit_note</mat-icon>
             </button>
-            <button [appBusy]="deletingId === lab.patientId" [disabled]="deletingId !== null" *ngIf="isSuperAdmin" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete lab slip" title="Delete lab slip" (click)="deleteLabPatient(lab.patientId)">
+            <button [appBusy]="deletingId === labKey(lab)" [disabled]="deletingId !== null" *ngIf="isSuperAdmin" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete lab slip" title="Delete lab slip" (click)="deleteLabPatient(labKey(lab))">
                 <mat-icon>delete_outline</mat-icon>
             </button>
-            <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print lab slip" title="Print lab slip" (click)="printLabSlip(lab.patientId)">
+            <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print lab slip" title="Print lab slip" (click)="printLabSlip(labKey(lab))">
                 <mat-icon>print</mat-icon>
             </button>
         </div>

@@ -1,3 +1,4 @@
+import { DateTimeFieldComponent } from '../../Shared/date-time-field.component';
 import { ApplicationRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
@@ -39,7 +40,7 @@ describe('Staff management and duty roster', () => {
   beforeEach(async () => {
     const memory = memoryDb(); db = memory.db; collections = memory.collections; close = jasmine.createSpy('close'); dialogData = {};
     await TestBed.configureTestingModule({
-      imports: [SearchableSelectComponent, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, MatDialogModule, MatInputModule, MatSelectModule, MatAutocompleteModule, MatButtonModule, MatIconModule, FeedbackModule],
+      imports: [DateTimeFieldComponent, SearchableSelectComponent, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, MatDialogModule, MatInputModule, MatSelectModule, MatAutocompleteModule, MatButtonModule, MatIconModule, FeedbackModule],
       declarations: [StaffEditComponent, StaffListComponent, StaffDutyManagerComponent, ScrollPaginationDirective, ScrollListFooterComponent, RecordDetailsComponent, RecordPreviewDirective],
       providers: [{ provide: SupabaseDataService, useValue: db }, { provide: MAT_DIALOG_DATA, useValue: dialogData }, { provide: MatDialogRef, useValue: { close } }],
     }).compileComponents();

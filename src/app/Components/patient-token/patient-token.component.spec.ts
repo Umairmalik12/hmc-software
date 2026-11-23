@@ -50,6 +50,7 @@ describe('PatientTokenComponent', () => {
   });
 
   it('updates the patient name while retaining the token identity, date and time', async () => {
+    component.isSuperAdmin = true;
     const saved = { ...slip, customerName: 'Updated name' };
     supabase.updatePatientTokenName.and.resolveTo(saved);
     component.slips = [slip];
@@ -76,6 +77,7 @@ describe('PatientTokenComponent', () => {
   });
 
   it('automatically prints a successfully generated token', async () => {
+    component.tokenDateTime = '2026-11-10T10:30';
     supabase.createPatientToken.and.returnValue(Promise.resolve(slip));
     supabase.getAllPatientTokens.and.returnValue(Promise.resolve([slip]));
     const printSpy = spyOn<any>(component, 'printSelectedSlip');
@@ -172,6 +174,7 @@ describe('PatientTokenComponent', () => {
   });
 
   it('confirms deletion of an older token and removes only that record from the all-dates list', async () => {
+    component.isSuperAdmin = true;
     const newer = { ...slip, id: 2, date: '2026-11-11' }; component.slips = [slip, newer]; component.showAllTokens();
     const confirm = spyOn(window, 'confirm').and.returnValue(false);
     await component.deleteSlip(slip); expect(supabase.deletePatientToken).not.toHaveBeenCalled();
@@ -181,4 +184,24 @@ describe('PatientTokenComponent', () => {
     expect(component.historicalTotal).toBe(1); expect(component.selectedDate).toBe('');
   });
 
+  it('blocks edit, save and delete handlers for staff before a confirmation or database write', async () => {
+    const confirm = spyOn(window, 'confirm').and.returnValue(true);
+    expect(component.isSuperAdmin).toBeFalse(); component.editSlip(slip); expect(component.editingSlipId).toBeNull();
+    component.editingSlipId = slip.id; component.editedPatientName = 'Unapproved change';
+    await component.saveSlip(slip); await component.deleteSlip(slip);
+    expect(confirm).not.toHaveBeenCalled(); expect(supabase.updatePatientTokenName).not.toHaveBeenCalled(); expect(supabase.deletePatientToken).not.toHaveBeenCalled();
+  });
+  it('continues to allow staff token generation', async () => {
+    component.tokenDateTime = '2026-11-10T10:30';
+    supabase.createPatientToken.and.resolveTo(slip); supabase.getAllPatientTokens.and.resolveTo([slip]);
+    spyOn<any>(component, 'printSelectedSlip').and.stub(); component.customerName = slip.customerName;
+    await component.generateSlip(); expect(supabase.createPatientToken).toHaveBeenCalledWith(slip.customerName, '2026-11-10T10:30'); expect(component.selectedSlip!.tokenNumber).toBe(slip.tokenNumber);
+  });
+  it('requires explicit date/time selection and keeps the selection when saving fails', async () => {
+    expect(component.tokenDateTime).toBe(''); component.customerName = 'Ali';
+    await component.generateSlip(); expect(supabase.createPatientToken).not.toHaveBeenCalled();
+    expect(component.errorMessage).toContain('date and time');
+    component.tokenDateTime = '2020-01-02T00:05'; supabase.createPatientToken.and.rejectWith(new Error('Offline'));
+    await component.generateSlip(); expect(component.tokenDateTime).toBe('2020-01-02T00:05'); expect(component.customerName).toBe('Ali');
+  });
 });

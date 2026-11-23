@@ -17,7 +17,7 @@
     <div class="generate-heading">
       <div>
         <h2 id="generate-heading">Generate a patient token</h2>
-        <p>Enter the patient's name. The next daily token is assigned automatically.</p>
+        <p>Enter the patient’s name and select a date and time. The next token is assigned for that date.</p>
       </div>
       <label class="token-paper-control" for="token-paper-width">Print paper
         <select id="token-paper-width" [ngModel]="paperWidth" (ngModelChange)="changePaperWidth($event)" aria-label="Token print paper size">
@@ -27,6 +27,7 @@
       </label>
     </div>
     <form class="generate-form" (ngSubmit)="generateSlip()">
+      <app-date-time-field class="token-issue-date" kind="datetime" label="Token date and time" name="tokenDateTime" [(ngModel)]="tokenDateTime" [required]="true" [disabled]="generating" min="1900-01-01"></app-date-time-field>
       <label for="patient-name">Patient name</label>
       <div class="form-controls">
         <input
@@ -77,17 +78,10 @@
     <div class="history-heading">
       <div>
         <h2>Patient token list</h2>
-        <p>Preview, print, edit or delete saved tokens across all dates.</p>
+        <p>{{ isSuperAdmin ? 'Preview, print, edit or delete saved tokens across all dates.' : 'Preview or print saved tokens across all dates.' }}</p>
       </div>
       <div class="date-controls">
-        <label for="history-date">Filter date</label>
-        <input
-          id="history-date"
-          type="date"
-          [ngModel]="selectedDate"
-          (ngModelChange)="filterByDate($event)"
-          [ngModelOptions]="{standalone: true}"
-        />
+        <app-date-time-field class="token-date-filter" label="Filter date" [ngModel]="selectedDate" (ngModelChange)="filterByDate($event)"></app-date-time-field>
         <button type="button" class="secondary-button" [class.filter-active]="!selectedDate" [attr.aria-pressed]="!selectedDate" (click)="showAllTokens()">All tokens</button><button type="button" class="secondary-button" [class.filter-active]="selectedDate === today" [attr.aria-pressed]="selectedDate === today" (click)="showToday()">Today</button><button type="button" class="secondary-button" (click)="exportToExcel()">Export</button>
       </div>
     </div>
@@ -108,12 +102,12 @@
           <tbody>
             <tr *ngFor="let slip of group.slips; trackBy: trackRecord">
               <td class="table-token">{{ slip.tokenNumber }}</td>
-              <td><input *ngIf="editingSlipId === slip.id; else savedPatientName" class="token-name-input" [(ngModel)]="editedPatientName" maxlength="120" [readOnly]="updating" aria-label="Patient name"><ng-template #savedPatientName>{{ slip.customerName }}</ng-template></td>
+              <td><input *ngIf="isSuperAdmin && editingSlipId === slip.id; else savedPatientName" class="token-name-input" [(ngModel)]="editedPatientName" maxlength="120" [readOnly]="updating" aria-label="Patient name"><ng-template #savedPatientName>{{ slip.customerName }}</ng-template></td>
               <td>{{ formatDate(slip.date) }}</td>
               <td>{{ slip.time | timeFormat }}</td>
               <td class="actions">
-                <ng-container *ngIf="editingSlipId === slip.id; else tokenActions"><button [appBusy]="updating" type="button" (click)="saveSlip(slip)" [disabled]="updating">Save</button><button type="button" class="secondary-button" (click)="cancelEdit()" [disabled]="updating">Cancel</button></ng-container><ng-template #tokenActions><button type="button" class="secondary-button" (click)="previewSlip(slip)" aria-label="Preview patient token" title="Preview">Preview</button><button type="button" class="secondary-button" (click)="printSlip(slip)">Print</button><button type="button" class="secondary-button" (click)="editSlip(slip)">Edit</button>
-                <button type="button" class="delete-button" (click)="deleteSlip(slip)" [appBusy]="deletingId === slip.id" [disabled]="updating || generating || deletingId !== null">Delete</button></ng-template>
+                <ng-container *ngIf="isSuperAdmin && editingSlipId === slip.id; else tokenActions"><button [appBusy]="updating" type="button" (click)="saveSlip(slip)" [disabled]="updating">Save</button><button type="button" class="secondary-button" (click)="cancelEdit()" [disabled]="updating">Cancel</button></ng-container><ng-template #tokenActions><button type="button" class="secondary-button" (click)="previewSlip(slip)" aria-label="Preview patient token" title="Preview">Preview</button><button type="button" class="secondary-button" (click)="printSlip(slip)">Print</button><button *ngIf="isSuperAdmin" type="button" class="secondary-button" (click)="editSlip(slip)" aria-label="Edit patient token">Edit</button>
+                <button *ngIf="isSuperAdmin" type="button" class="delete-button" (click)="deleteSlip(slip)" aria-label="Delete patient token" [appBusy]="deletingId === slip.id" [disabled]="updating || generating || deletingId !== null">Delete</button></ng-template>
               </td>
             </tr>
           </tbody>

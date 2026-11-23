@@ -5,20 +5,21 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { emptyOtCatalogMedicine, OT_MEDICINE_TYPES, OT_MEDICINE_UNITS } from '../../Models/ot-medicine-catalog.model';
 import { OtMedicineCatalogService } from '../../Services/ot-medicine-catalog.service';
 import { requiredText } from '../../Services/validators.service';
+import { MEDICINE_STRENGTHS, medicineNameParts } from '../../Models/medicine-strength';
 
 @Component({
   selector: 'app-ot-medicine-edit',
-  template: `<h2 mat-dialog-title><mat-icon>vaccines</mat-icon><span>{{ data.id ? 'Edit OT medicine' : 'Add OT medicine' }}<small>Medicine &amp; supply catalogue</small></span></h2>
+  template: `<h2 mat-dialog-title><mat-icon>vaccines</mat-icon><span>{{ data.id ? 'Edit OT medicine' : data.fromId ? 'Add OT medicine strength' : 'Add OT medicine' }}<small>Medicine &amp; supply catalogue</small></span></h2>
     <form [formGroup]="form" (ngSubmit)="save()" novalidate><mat-dialog-content>
-      <p class="form-note">Only the medicine name is required. Saved patient slips keep their original details.</p>
+      <p class="form-note">{{ data.fromId ? 'Choose another strength for this medicine. Each strength is a separate catalogue option.' : 'Only the medicine name is required.' }} Saved patient slips keep their original details.</p>
       <p *ngIf="loading" role="status" class="hmc-loading-state">Loading medicine...</p><p *ngIf="error" class="form-error" role="alert">{{ error }}</p>
       <button *ngIf="loadFailed" mat-stroked-button type="button" (click)="load()">Retry</button>
       <div class="form-grid" [attr.inert]="saving || loading || loadFailed ? '' : null">
-        <mat-form-field appearance="outline"><mat-label>Medicine name</mat-label><input matInput formControlName="name" maxlength="160" required><mat-error>Enter a medicine name</mat-error></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Medicine name</mat-label><input matInput formControlName="name" maxlength="160" [readonly]="!!data.fromId" required><mat-error>Enter a medicine name</mat-error></mat-form-field>
         <mat-form-field appearance="outline"><mat-label>Generic name</mat-label><input matInput formControlName="genericName" maxlength="160"></mat-form-field>
         <mat-form-field appearance="outline"><mat-label>Medicine category</mat-label><input matInput formControlName="category" maxlength="80" [matAutocomplete]="categoryOptions"><mat-autocomplete #categoryOptions="matAutocomplete"><mat-option *ngFor="let category of categories" [value]="category">{{ category }}</mat-option></mat-autocomplete></mat-form-field>
         <mat-form-field appearance="outline"><mat-label>Medicine type</mat-label><mat-select formControlName="type"><mat-option value="">Not specified</mat-option><mat-option *ngIf="form.value.type && !types.includes(form.value.type!)" [value]="form.value.type">{{ form.value.type }}</mat-option><mat-option *ngFor="let type of types" [value]="type">{{ type }}</mat-option></mat-select></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Strength</mat-label><input matInput formControlName="strength" maxlength="80" placeholder="e.g. 500mg, 10mg/ml"></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Strength</mat-label><input matInput formControlName="strength" maxlength="80" placeholder="e.g. 500 mg, 1 g, 2 g" [required]="!!data.fromId" [matAutocomplete]="strengthOptions"><mat-autocomplete #strengthOptions="matAutocomplete"><mat-option *ngFor="let strength of strengths" [value]="strength">{{ strength }}</mat-option></mat-autocomplete><mat-error>Enter a strength, up to 80 characters</mat-error></mat-form-field>
         <mat-form-field appearance="outline"><mat-label>Unit</mat-label><input matInput formControlName="unit" maxlength="40" [matAutocomplete]="unitOptions"><mat-autocomplete #unitOptions="matAutocomplete"><mat-option *ngFor="let unit of units" [value]="unit">{{ unit }}</mat-option></mat-autocomplete></mat-form-field>
         <mat-form-field appearance="outline" class="form-span"><mat-label>Description</mat-label><textarea matInput formControlName="description" maxlength="1500" rows="3"></textarea></mat-form-field>
         <mat-form-field appearance="outline"><mat-label>Status</mat-label><mat-select formControlName="active"><mat-option [value]="true">Active</mat-option><mat-option [value]="false">Inactive</mat-option></mat-select><mat-hint>Only active medicines appear for new selections</mat-hint></mat-form-field>
@@ -27,6 +28,7 @@ import { requiredText } from '../../Services/validators.service';
 })
 export class OtMedicineEditComponent implements OnInit {
   readonly types = OT_MEDICINE_TYPES;
+  readonly strengths = MEDICINE_STRENGTHS;
   readonly units = OT_MEDICINE_UNITS;
   categories: string[] = [];
   form = this.fb.nonNullable.group({ name: ['', [requiredText, Validators.maxLength(160)]], genericName: ['', Validators.maxLength(160)], category: ['', Validators.maxLength(80)], type: ['', Validators.maxLength(60)], strength: ['', Validators.maxLength(80)], unit: ['', Validators.maxLength(40)], description: ['', Validators.maxLength(1500)], active: [true] });
@@ -34,17 +36,20 @@ export class OtMedicineEditComponent implements OnInit {
   loadFailed = false;
   saving = false;
   error = '';
-  constructor(private fb: FormBuilder, private catalog: OtMedicineCatalogService, private ref: MatDialogRef<OtMedicineEditComponent>, @Inject(MAT_DIALOG_DATA) public data: { id?: string }, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
+  constructor(private fb: FormBuilder, private catalog: OtMedicineCatalogService, private ref: MatDialogRef<OtMedicineEditComponent>, @Inject(MAT_DIALOG_DATA) public data: { id?: string; fromId?: string }, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
   ngOnInit(): void { void this.load(); }
   async load(): Promise<void> {
     this.loading = true; this.loadFailed = false; this.error = '';
     try {
       const rows = await this.catalog.getAll(false, true);
       this.categories = Array.from(new Set(rows.map(item => item.category).filter(Boolean))).sort();
-      if (this.data.id) {
-        const existing = rows.find(item => item.id === this.data.id);
+      if (this.data.id || this.data.fromId) {
+        const existing = rows.find(item => item.id === (this.data.id || this.data.fromId));
         if (!existing) throw new Error('This medicine was removed. Close this form and refresh the list.');
-        this.form.patchValue(existing);
+        if (this.data.fromId) {
+          this.form.controls.strength.addValidators(requiredText);
+          this.form.patchValue({ ...existing, name: medicineNameParts(existing.name, existing.strength).name, strength: '', active: true });
+        } else this.form.patchValue(existing);
       }
     } catch (error) { this.loadFailed = true; this.error = error instanceof Error ? error.message : 'Unable to load medicine details.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }
     finally { this.loading = false; }

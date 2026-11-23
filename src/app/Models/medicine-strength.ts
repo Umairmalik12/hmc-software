@@ -13,22 +13,23 @@ export function normalizeMedicineStrength(value: string): string {
 export function medicineNameParts(name: string, strength = ''): { name: string; strength: string } {
   const text = name.trim();
   const normalized = normalizeMedicineStrength(strength);
+  const match = text.match(/^(.*\S)\s+(\d+(?:\.\d+)?\s*(?:mcg|mg|g|ml|iu|units|%)(?:\s*\/\s*(?:\d+(?:\.\d+)?\s*)?(?:ml|l|g|mg))?)$/i);
   if (normalized) {
     const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s*');
-    return { name: text.replace(new RegExp('\\s+' + escaped + '$', 'i'), '').trim(), strength: normalized };
+    const base = text.replace(new RegExp('\\s+' + escaped + '$', 'i'), '').trim();
+    return { name: base !== text ? base : match ? match[1] : text, strength: normalized };
   }
-  const match = text.match(/^(.*\S)\s+(\d+(?:\.\d+)?\s*(?:mcg|mg|g|ml|iu|units|%)(?:\s*\/\s*(?:\d+(?:\.\d+)?\s*)?(?:ml|l|g|mg))?)$/i);
   return match ? { name: match[1], strength: normalizeMedicineStrength(match[2]) } : { name: text, strength: '' };
 }
 
 export function medicineNameWithStrength(name: string, strength: string): string {
   const normalized = normalizeMedicineStrength(strength);
-  return normalized ? medicineNameParts(name).name + ' ' + normalized : name;
+  return normalized ? medicineNameParts(name, normalized).name + ' ' + normalized : name;
 }
 
 /** Match existing "500mg" labels with "500 mg" without changing their IDs or text. */
-export function medicineVariantKey(name: string): string {
-  const parts = medicineNameParts(name);
+export function medicineVariantKey(name: string, strength = ''): string {
+  const parts = medicineNameParts(name, strength);
   return parts.name.trim().replace(/\s+/g, ' ').toLowerCase() + '|' + parts.strength.toLowerCase().replace(/\s+/g, '');
 }
 

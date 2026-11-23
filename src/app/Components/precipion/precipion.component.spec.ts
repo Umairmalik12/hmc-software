@@ -4,6 +4,7 @@ import { BehaviorSubject } from 'rxjs';
 import { PreciptionComponent } from './precipion.component';
 import { PrescriptionService } from 'src/app/Services/prescription.service';
 import { emptyPrescription, PrescriptionRecord } from 'src/app/Models/prescription.model';
+import { SimpleChange } from '@angular/core';
 
 describe('Prescription editor workflow', () => {
   let component: PreciptionComponent;
@@ -22,14 +23,15 @@ describe('Prescription editor workflow', () => {
   });
   afterEach(() => component.ngOnDestroy());
 
-  it('picks up the current PC date/time for a new prescription and advances its clock', () => {
+  it('starts undated and never changes the selected date/time as the clock advances', () => {
     jasmine.clock().install();
     jasmine.clock().mockDate(new Date(2026, 10, 17, 13, 35));
     try {
       component.ngOnInit();
-      expect(component.fieldValue(component.fields[2])).toContain('1:35');
+      expect(component.record.issuedAt).toBe('');
+      component.record.issuedAt = '2025-01-01T13:35';
       jasmine.clock().tick(60000);
-      expect(component.fieldValue(component.fields[2])).toContain('1:36');
+      expect(component.record.issuedAt).toBe('2025-01-01T13:35');
     } finally { jasmine.clock().uninstall(); }
   });
 
@@ -87,5 +89,16 @@ describe('Prescription editor workflow', () => {
     expect(component.record.issuedAt).toBe(record.issuedAt);
     expect(service.getById).toHaveBeenCalledWith('12');
     expect(component.record).not.toBe(record);
+  });
+  it('uses the workspace ID even when the nested editor receives an empty route, and reloads when it changes', async () => {
+    const one = { ...emptyPrescription(), id: '12' }, two = { ...emptyPrescription(), id: '13' };
+    one.patient.name = 'First'; two.patient.name = 'Second';
+    service.getById.and.callFake(async id => id === '12' ? one : two);
+    component.prescriptionId = '12'; component.ngOnInit(); await Promise.resolve(); await Promise.resolve();
+    expect(component.isEditing).toBeTrue(); expect(component.record.patient.name).toBe('First');
+    component.prescriptionId = '13'; component.ngOnChanges({ prescriptionId: new SimpleChange('12', '13', false) }); await Promise.resolve(); await Promise.resolve();
+    expect(component.record.patient.name).toBe('Second');
+    component.prescriptionId = null; component.ngOnChanges({ prescriptionId: new SimpleChange('13', null, false) });
+    expect(component.isEditing).toBeFalse(); expect(component.record.patient.name).toBe(''); expect(component.record.medicines.length).toBe(1);
   });
 });

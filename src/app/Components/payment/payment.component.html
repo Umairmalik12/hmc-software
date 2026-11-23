@@ -8,7 +8,7 @@
   <p *ngIf="successMessage" class="payment-success payment-message" role="status"><mat-icon>check_circle</mat-icon>{{ successMessage }}</p>
 
   <mat-card class="payment-card" id="payment-form">
-    <div class="payment-section-heading"><div><p class="eyebrow">COUNTER DESK</p><h2>{{ editingId ? 'Edit payment #' + editingId : 'Record a payment' }}</h2><p>{{ editingId ? 'Review this receipt and save the corrections.' : 'Payment date and time are recorded automatically when you save.' }}</p></div><span *ngIf="identity" class="account-tag"><mat-icon>verified_user</mat-icon>{{ identity.email || identity.name }}</span><span *ngIf="accountLoading" role="status">Loading staff account...</span></div>
+    <div class="payment-section-heading"><div><p class="eyebrow">COUNTER DESK</p><h2>{{ editingId ? 'Edit payment #' + editingId : 'Record a payment' }}</h2><p>Choose the receipt date, time and shift date before saving.</p></div><span *ngIf="identity" class="account-tag"><mat-icon>verified_user</mat-icon>{{ identity.email || identity.name }}</span><span *ngIf="accountLoading" role="status">Loading staff account...</span></div>
     <form *ngIf="paymentForm" [formGroup]="paymentForm" (ngSubmit)="processPayment()" class="payment-form" novalidate>
       <div class="payment-entry-layout">
         <div class="form-content">
@@ -17,12 +17,14 @@
           <p class="counter-hint form-span" *ngIf="staffLoaded && !staffLoading && !staffLoadError && !activeStaffNames.length">No active staff available. Add or activate a staff member in Staff &amp; duties.</p>
           <mat-form-field appearance="outline"><mat-label>Shift name</mat-label><input matInput formControlName="shiftName" list="payment-shift-names" maxlength="60" placeholder="Morning, Evening, Night..."><mat-error>Enter the shift name</mat-error></mat-form-field>
           <datalist id="payment-shift-names"><option *ngFor="let shift of shiftSuggestions" [value]="shift"></option></datalist>
-          <mat-form-field appearance="outline"><mat-label>Shift date</mat-label><input matInput type="date" formControlName="shiftDate"><mat-hint>For an overnight shift, use the date it started.</mat-hint><mat-error>Enter a valid shift date</mat-error></mat-form-field>
+          <app-date-time-field label="Shift date" formControlName="shiftDate" hint="For an overnight shift, use the date it started."></app-date-time-field>
           <mat-form-field appearance="outline"><mat-label>Counter / desk (optional)</mat-label><input matInput formControlName="counterName" maxlength="60" placeholder="e.g. Reception 1"></mat-form-field>
-          <p class="counter-hint form-span">{{ editingId ? 'Original account and receipt time are retained. Older payments may have no staff or shift recorded.' : 'Staff and shift are required for new payments. These names are remembered for your account on this device.' }}</p>
+          <app-date-time-field class="form-span" kind="datetime" label="Payment date and time" formControlName="createdAt"></app-date-time-field>
+          <p class="counter-hint form-span">{{ editingId ? 'Older payments may have no date, staff or shift recorded.' : 'Staff and shift are required for new payments. These names are remembered for your account on this device.' }}</p>
 
           <h3 class="form-section-title"><mat-icon>person_outline</mat-icon>Patient &amp; payment</h3>
           <mat-form-field appearance="outline"><mat-label>Patient name</mat-label><input matInput formControlName="patientName" maxlength="120"><mat-error>Enter the patient name</mat-error></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>MR Number (optional)</mat-label><input matInput type="number" min="1" formControlName="mrNumber" placeholder="Enter existing MR number"><mat-hint *ngIf="matchedPatient">Existing patient loaded: {{ matchedPatient }}</mat-hint><mat-error>Enter a positive MR number</mat-error></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Patient reference</mat-label><input matInput formControlName="patientId"><mat-hint>Automatically generated payment reference</mat-hint></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Amount</mat-label><span matTextPrefix>Rs&nbsp;</span><input matInput type="number" min="0" step="0.01" formControlName="amount"><mat-error>Enter a non-negative amount with up to 2 decimals</mat-error></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Payment method</mat-label><mat-select formControlName="paymentMethod"><mat-option value="cash">Cash</mat-option><mat-option value="card">Card</mat-option></mat-select></mat-form-field>
@@ -49,8 +51,8 @@
       <mat-form-field appearance="outline"><mat-label>Shift</mat-label><mat-select [(ngModel)]="shiftFilter" (selectionChange)="applyPaymentFilter()"><mat-option value="">All shifts</mat-option><mat-option *ngFor="let shift of shiftOptions" [value]="shift">{{ shift }}</mat-option><mat-option value="__unrecorded__">Not recorded</mat-option></mat-select></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Status</mat-label><mat-select [(ngModel)]="statusFilter" (selectionChange)="applyPaymentFilter()"><mat-option value="">All statuses</mat-option><mat-option value="completed">Completed</mat-option><mat-option value="pending">Pending</mat-option><mat-option value="failed">Failed</mat-option></mat-select></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Method</mat-label><mat-select [(ngModel)]="methodFilter" (selectionChange)="applyPaymentFilter()"><mat-option value="">All methods</mat-option><mat-option value="cash">Cash</mat-option><mat-option value="card">Card</mat-option></mat-select></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Shift date from</mat-label><input matInput type="date" [(ngModel)]="fromDate" (ngModelChange)="applyPaymentFilter()"></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Shift date to</mat-label><input matInput type="date" [(ngModel)]="toDate" (ngModelChange)="applyPaymentFilter()"></mat-form-field>
+      <app-date-time-field label="Shift date from" [(ngModel)]="fromDate" (ngModelChange)="applyPaymentFilter()"></app-date-time-field>
+      <app-date-time-field label="Shift date to" [(ngModel)]="toDate" (ngModelChange)="applyPaymentFilter()" [min]="fromDate"></app-date-time-field>
       <div class="filter-actions"><button mat-button type="button" (click)="todayOnly()">Today</button><button mat-button type="button" (click)="clearFilters()">Clear filters</button></div>
     </div>
     <p *ngIf="dateRangeInvalid" class="form-error" role="alert">The end date must be on or after the start date.</p>

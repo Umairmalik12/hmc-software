@@ -22,6 +22,7 @@ import { Medicine } from 'src/app/Models/medicine.model';
 import { MedicineService } from 'src/app/Services/medicine.service';
 import { MedicineEditComponent } from '../medicine/medicine-edit/medicine-edit.component';
 import { InPatient } from 'src/app/Models/inpatient.model';
+import { AdminAssistantComponent } from '../admin-assistant/admin-assistant.component';
 
 @Component({
   selector: 'app-home',
@@ -33,6 +34,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   currentDateTime: Date = new Date();
 
   otPatientId = '';
+  prescriptionId: string | null = null;
+  opdVisitId: string | null = null;
   isShowDoctors = false;
   isShowStaff = false;
   isShowExpenses = false;
@@ -62,7 +65,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     patientName: '',
     medicines: [],
     doctorName: '',
-    createdAt: new Date().toISOString()
+    createdAt: ''
   };
 
   tempOpd: Opd = {
@@ -89,7 +92,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     patientId: 0,
     price: 0,
     suggestedDr: '',
-    dateTime: new Date(),
+    dateTime: '',
     name: '',
     phone: '',
     testName: '',
@@ -111,9 +114,15 @@ export class HomeComponent implements OnInit, OnDestroy {
   isShowInnPatients = false;
 
   isSuperAdmin: boolean = false;
+  private roleLoaded = false;
   private realtimeSubscription?: Subscription;
   private subscriptions = new Subscription();
   private clockTimer?: ReturnType<typeof setInterval>;
+
+  openAssistant(): void {
+    if (!this.isSuperAdmin || this.dialog.openDialogs.some(dialog => dialog.componentInstance instanceof AdminAssistantComponent)) return;
+    this.dialog.open(AdminAssistantComponent, { width: 'min(720px, calc(100vw - 28px))', maxWidth: '96vw', maxHeight: '92dvh', panelClass: 'hmc-dialog-panel', autoFocus: 'first-heading', closeOnNavigation: true });
+  }
 
   @ViewChild("placeholder", { read: ViewContainerRef }) alertContainer!: ViewContainerRef;
 
@@ -136,7 +145,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
+      this.roleLoaded = true;
       this.userName = this.isSuperAdmin ? 'Administrator' : 'Staff';
+      if (!this.isSuperAdmin && this.route.snapshot.data['dashboardView'] === 'prescription') void this.router.navigate(['/prescriptions']);
     }).catch(error => {
       console.error('Unable to load current user role:', error);
       this.notifyUpdate.alertNotify.next({ msg: 'Unable to load your account permissions.', type: 'error' });
@@ -148,8 +159,14 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.notifyUpdate.notify.next(true);
     });
 
-    this.subscriptions.add(combineLatest([this.route.data, this.route.queryParams]).subscribe(([data, params]) => {
+    this.subscriptions.add(combineLatest([this.route.data, this.route.queryParams, this.route.paramMap]).subscribe(([data, params, routeParams]) => {
       this.otPatientId = String(params['patientId'] || '');
+      this.prescriptionId = routeParams.get('prescriptionId');
+      this.opdVisitId = params['opdVisitId'] ? String(params['opdVisitId']) : null;
+      if (this.roleLoaded && !this.isSuperAdmin && data['dashboardView'] === 'prescription') {
+        void this.router.navigate(['/prescriptions']);
+        return;
+      }
       this.selectDashboardView(this.otPatientId ? 'ot-form' : data['dashboardView'] || 'patients');
     }));
   }
@@ -365,7 +382,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   addLabTestSlip() {
-    this.openDialog(LabEditComponent, { ...this.tempLabPatient, dateTime: new Date() }, (patientData: LabPatient) => {
+    this.openDialog(LabEditComponent, { ...this.tempLabPatient, dateTime: '' }, (patientData: LabPatient) => {
       return this.labService.addNewLabPatient(patientData);
     }, 'lab');
   }

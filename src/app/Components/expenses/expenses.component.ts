@@ -1,5 +1,5 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
+import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { Subscription } from 'rxjs';
 import { EXPENSE_GROUPS, EXPENSE_HEADS, EXPENSE_MONTHS, ExpenseRecord, ExpenseSummaryMode, expenseCents, expenseHead, localExpenseDate, summarizeExpenses } from '../../Models/expense.model';
 import { EXPENSE_COLLECTION, ExpenseService } from '../../Services/expense.service';
@@ -11,7 +11,8 @@ import { buildExpenseWorkbook, downloadExpenseWorkbook } from './expense-workboo
 import { ExpenseMonthPreviewComponent } from './expense-month-preview.component';
 
 @Component({ selector: 'app-expenses', templateUrl: './expenses.component.html', styleUrls: ['./expenses.component.css'] })
-export class ExpensesComponent implements OnInit, OnDestroy {
+export class ExpensesComponent implements OnInit, OnDestroy, OnChanges {
+  @Input() isSuperAdmin = false;
   readonly pagination = new ScrollPagination(); readonly trackRecord = trackRecord;
   readonly groups = EXPENSE_GROUPS; readonly months = EXPENSE_MONTHS; readonly head = expenseHead;
   records: ExpenseRecord[] = [];
@@ -19,9 +20,11 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   query = ''; group = ''; headFilter = ''; from = ''; to = ''; status = 'recorded'; summaryMode: ExpenseSummaryMode = 'monthly';
   loading = false; loadFailed = false; exporting = false; deletingId = ''; error = '';
   private changes?: Subscription; private version = 0; private destroyed = false;
+  private editor?: MatDialogRef<ExpenseEditComponent>;
   constructor(private expenses: ExpenseService, private dialog: MatDialog, private feedback: NotifyUpdateService) {}
   ngOnInit(): void { void this.load(); this.changes = this.expenses.changes.subscribe(collection => { if (collection === EXPENSE_COLLECTION) void this.load(); }); }
-  ngOnDestroy(): void { this.destroyed = true; this.version++; this.changes?.unsubscribe(); }
+  ngOnChanges(changes: SimpleChanges): void { if (changes.isSuperAdmin && !this.isSuperAdmin && this.editor?.componentInstance.data.record) this.editor.close(); }
+  ngOnDestroy(): void { this.destroyed = true; this.version++; this.changes?.unsubscribe(); this.editor?.close(); }
   get years(): number[] { return [...new Set([new Date().getFullYear(), this.year, ...this.records.map(row => +row.date.slice(0, 4))])].sort((a, b) => b - a); }
   get headOptions(): string[] { return EXPENSE_HEADS.filter(head => !this.group || head.group === this.group).map(head => head.name); }
   get filtered(): ExpenseRecord[] {
@@ -48,13 +51,14 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     finally { if (version === this.version) this.loading = false; }
   }
   async edit(record?: ExpenseRecord): Promise<void> {
-    if (this.loading || this.loadFailed || this.deletingId) return;
+    if ((record && !this.isSuperAdmin) || this.loading || this.loadFailed || this.deletingId) return;
     try {
       const current = record ? await this.expenses.getById(record.id) : undefined;
       if (record && (!current || current.deleted)) throw new Error('This expense is unavailable. Refresh or restore it before editing.');
-      if (this.destroyed) return;
-      const ref = this.dialog.open(ExpenseEditComponent, { data: { record: current }, disableClose: true, width: 'min(760px, calc(100vw - 32px))', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
+      if (this.destroyed || (record && !this.isSuperAdmin)) return;
+      const ref = this.editor = this.dialog.open(ExpenseEditComponent, { data: { record: current }, disableClose: true, width: 'min(760px, calc(100vw - 32px))', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
       ref.afterClosed().subscribe((saved?: ExpenseRecord) => {
+        if (this.editor === ref) this.editor = undefined;
         if (saved && !this.destroyed) { this.clear(); this.year = +saved.date.slice(0, 4); this.month = +saved.date.slice(5, 7); void this.load(); }
       });
     } catch (error) { this.fail(error, 'Unable to open the expense.'); }
@@ -65,7 +69,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       amount: record.amount, remarks: record.remarks, location: record.location, status: record.deleted ? 'Deleted' : 'Recorded', createdAt: record.createdAt, updatedAt: record.updatedAt } } });
   }
   async remove(record: ExpenseRecord): Promise<void> {
-    if (this.deletingId || this.loading || this.loadFailed || !window.confirm((record.deleted ? 'Restore' : 'Delete') + ' expense #' + record.id + '? ' + (record.deleted ? 'It will be included in totals again.' : 'It will be excluded from totals and exports. You can restore it from Deleted expenses.'))) return;
+    if (!this.isSuperAdmin || this.deletingId || this.loading || this.loadFailed || !window.confirm((record.deleted ? 'Restore' : 'Delete') + ' expense #' + record.id + '? ' + (record.deleted ? 'It will be included in totals again.' : 'It will be excluded from totals and exports. You can restore it from Deleted expenses.'))) return;
     this.deletingId = record.id;
     try { await this.expenses.setDeleted(record.id, !record.deleted); this.feedback.success(record.deleted ? 'Expense restored successfully.' : 'Expense deleted successfully.', { route: '/expenses' }); await this.load(); }
     catch (error) { this.fail(error, 'Unable to update the expense.'); } finally { this.deletingId = ''; }

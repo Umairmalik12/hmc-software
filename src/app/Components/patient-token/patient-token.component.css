@@ -29,6 +29,11 @@ button:disabled { opacity: .6; cursor: wait; }
 .summary-card strong { font-size: 25px; }
 .history-heading { margin-bottom: 18px; }
 .date-controls label { margin: 0; }
+.token-date-filter { width: 220px; flex: 0 1 220px; }
+.token-issue-date{display:block;width:100%;max-width:540px;margin-bottom:4px}
+.history-heading { flex-wrap: wrap; align-items: flex-start; }
+.date-controls { flex-wrap: wrap; align-items: flex-start; max-width: 100%; }
+.date-controls > .secondary-button { margin-top: 8px; }
 .date-group h3 { font-size: 15px; margin: 0 0 10px; }
 .date-group h3 span { color: #667085; font-size: 12px; font-weight: 500; margin-left: 8px; }
 .table-wrap { overflow-x: auto; }

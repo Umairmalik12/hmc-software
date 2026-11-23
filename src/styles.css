@@ -35,6 +35,8 @@ textarea[matInput] { resize: vertical; line-height: 1.5; }
 .mat-mdc-icon-button { --mdc-icon-button-icon-color: #52717d; border-radius: 9px !important; }
 .mat-mdc-icon-button.mdc-icon-button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; vertical-align: middle; }
 .mat-mdc-icon-button > .mat-icon { margin: 0; }
+app-date-time-field .picker-trigger .mat-mdc-button-touch-target { width: 36px; height: 36px; }
+app-date-time-field .picker-clear .mat-mdc-button-touch-target { width: 30px; height: 36px; }
 .mat-mdc-button > .mat-icon, .mat-mdc-outlined-button > .mat-icon, .mat-mdc-unelevated-button > .mat-icon, .mat-mdc-raised-button > .mat-icon { vertical-align: middle; line-height: 1; }
 .mat-mdc-icon-button.mat-warn { --mdc-icon-button-icon-color: #ba5454; color: #ba5454; }
 .mat-mdc-button.mat-warn, .mat-mdc-outlined-button.mat-warn { color: #a34a4a; }

@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Subject } from 'rxjs';
 import { SupabaseClientService } from './supabase-client.service';
+import { calendarDate, clockValue } from '../Shared/date-time-values';
 
 export interface PatientTokenSlip {
   id: number;
@@ -166,7 +167,12 @@ export class SupabaseDataService {
 
       const values = records
         .filter(record => record.record_id !== SINGLETON_ID)
-        .map(record => record.data);
+        .map(record => key === 'prescriptions' && record.data && typeof record.data === 'object' && !Array.isArray(record.data)
+          ? { ...record.data, id: record.record_id }
+          : key === 'opdDetails' && record.data && typeof record.data === 'object' && !Array.isArray(record.data)
+            ? { ...record.data, visitId: String(record.record_id) }
+            : key === 'labDetails' && record.data && typeof record.data === 'object' && !Array.isArray(record.data)
+              ? { ...record.data, labId: String(record.record_id) } : record.data);
       return values as T;
 
     }, 0);
@@ -190,15 +196,17 @@ export class SupabaseDataService {
     }, 1);
   }
 
-  async createPatientToken(customerName: string): Promise<PatientTokenSlip> {
+  async createPatientToken(customerName: string, dateTime: string): Promise<PatientTokenSlip> {
     return this.loading.track('Generating patient token...', async () => {
       const name = customerName.trim();
       if (!name) {
         throw new Error('Patient name is required.');
       }
 
-      const { data, error } = await this.client.rpc('create_patient_token', {
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(dateTime) || !calendarDate(dateTime.slice(0, 10)) || !clockValue(dateTime.slice(11)) || dateTime.slice(0, 4) < '1900') throw new Error('Select a valid token date and time.');
+      const { data, error } = await this.client.rpc('create_patient_token_at', {
         p_customer_name: name,
+        p_token_date: dateTime.slice(0, 10), p_token_time: dateTime.slice(11),
       });
       this.throwIfError(error);
       if (!data) {
@@ -259,6 +267,7 @@ export class SupabaseDataService {
 
   async deletePatientToken(id: number): Promise<void> {
     return this.loading.track('Deleting patient token...', async () => {
+      await this.requireAdministrator('Only administrators can edit or delete patient tokens.');
       const { data, error } = await this.client
         .from('patient_token_slips')
         .delete()
@@ -274,6 +283,7 @@ export class SupabaseDataService {
 
   async updatePatientTokenName(id: number, customerName: string): Promise<PatientTokenSlip> {
     return this.loading.track('Updating patient token...', async () => {
+      await this.requireAdministrator('Only administrators can edit or delete patient tokens.');
       const name = customerName.trim();
       if (!name) throw new Error('Enter the patient name.');
       const { data, error } = await this.client.from('patient_token_slips')
@@ -286,6 +296,24 @@ export class SupabaseDataService {
     }, 2);
   }
 
+  async requireAdministrator(message = 'Only administrators can perform this action.'): Promise<void> {
+    const { data, error } = await this.client.rpc('hmc_is_admin');
+    this.throwIfError(error);
+    if (data !== true) throw new Error(message);
+  }
+
+  async deletePrescriptionRecord(collection: 'prescriptions' | 'prescription', id: string): Promise<void> {
+    return this.loading.track('Deleting prescription...', async () => {
+      if (!id || !['prescriptions', 'prescription'].includes(collection) || (collection === 'prescription' && id !== SINGLETON_ID)) throw new Error('Invalid prescription record.');
+      await this.requireAdministrator('Only administrators can delete prescriptions.');
+      const { data, error } = await this.client.from('hmc_records').delete()
+        .eq('collection', collection).eq('record_id', id).select('record_id');
+      this.throwIfError(error);
+      if (!Array.isArray(data) || data.length !== 1 || data[0].record_id !== id) throw new Error('The prescription was not deleted. Refresh the list and check your administrator permissions.');
+      this.changes.next(collection);
+    }, 2);
+  }
+
   private getRecordId(collection: string, item: any): string {
     if (collection === 'customMedicines' && typeof item === 'string') {
       return item;
@@ -293,9 +321,9 @@ export class SupabaseDataService {
 
     const fields: { [key: string]: string } = {
       patientDetails: 'patientId',
-      opdDetails: 'patientId',
+      opdDetails: 'visitId',
       medicineDetails: 'medicineId',
-      labDetails: 'patientId',
+      labDetails: 'labId',
       inpatientDetails: 'inpatientId',
       otFormData: 'id',
       payments: 'id',

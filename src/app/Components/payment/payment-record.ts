@@ -5,6 +5,7 @@ export interface PaymentRecord {
   patientName: string;
   amount: number;
   patientId?: string;
+  mrNumber?: number;
   cashGiven?: number | null;
   cashReturn?: number;
   paymentMethod?: string;

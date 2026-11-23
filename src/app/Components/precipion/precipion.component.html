@@ -1,6 +1,6 @@
 <section class="prescription-editor">
   <header class="list-header">
-    <div class="list-intro"><span class="list-icon"><mat-icon>description</mat-icon></span><div><h1>{{ record.id ? 'Edit prescription' : 'New prescription' }}</h1><p>Patient details, medicines and a clear, one-page prescription.</p></div></div>
+    <div class="list-intro"><span class="list-icon"><mat-icon>description</mat-icon></span><div><h1>{{ isEditing ? 'Edit prescription' : 'New prescription' }}</h1><p>Patient details, medicines and a clear, one-page prescription.</p></div></div>
     <a mat-stroked-button routerLink="/prescriptions"><mat-icon>arrow_back</mat-icon>Prescription records</a>
   </header>
   <div *ngIf="loading" class="hmc-loading-state rx-editor-status" role="status">Loading prescription…</div>
@@ -8,15 +8,17 @@
   <p *ngIf="successMessage" class="rx-editor-success" role="status">{{ successMessage }}</p>
   <button *ngIf="loadFailed" mat-stroked-button (click)="load()">Try again</button>
   <ng-container *ngIf="!loading && !loadFailed">
-    <div class="rx-editor-toolbar"><span><mat-icon>schedule</mat-icon>Date and time use this PC’s clock</span><div><button mat-stroked-button type="button" (click)="preview()"><mat-icon>visibility</mat-icon>Preview</button><button mat-stroked-button type="button" (click)="print()"><mat-icon>print</mat-icon>Print</button></div></div>
+    <div class="rx-editor-toolbar"><app-date-time-field kind="datetime" label="Prescription date and time" [(ngModel)]="record.issuedAt" #issueDateTime="ngModel" [ngModelOptions]="{standalone: true}" [disabled]="saving"></app-date-time-field><div><button mat-stroked-button type="button" (click)="preview()"><mat-icon>visibility</mat-icon>Preview</button><button mat-stroked-button type="button" (click)="print()"><mat-icon>print</mat-icon>Print</button></div></div>
     <form class="rx-editor-paper" (ngSubmit)="save()" novalidate>
       <article class="rx-sheet rx-editor">
         <div [innerHTML]="headerHtml"></div>
         <div class="rx-section-title">Patient’s information</div>
+        <p class="rx-editor-success" *ngIf="matchedPatient">Existing patient loaded: {{ matchedPatient }}</p>
         <div class="rx-patient-grid">
           <label *ngFor="let field of fields" class="rx-cell" [class.rx-wide]="(field.span || 1) > 1" [style.grid-column]="'span ' + (field.span || 1)">
             <span class="rx-cell-label">{{ field.label }}</span>
-            <input class="rx-input" [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{ standalone: true }" [readOnly]="saving || field.key === 'date' || field.key === 'time'" [attr.aria-label]="field.label" [attr.aria-required]="field.key === 'name' ? true : null" />
+            <span *ngIf="field.key === 'date' || field.key === 'time'; else patientInput" class="rx-input">{{ fieldValue(field) || '—' }}</span>
+            <ng-template #patientInput><input class="rx-input" [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{ standalone: true }" [readOnly]="saving" [attr.aria-label]="field.label" [attr.aria-required]="field.key === 'name' ? true : null" /></ng-template>
           </label>
         </div>
         <div class="rx-section-title rx-section-actions"><span>Prescription (Rx)</span><div class="rx-medicine-tools"><button mat-button type="button" (click)="manageMedicines()" [disabled]="saving"><mat-icon>settings</mat-icon>Manage medicines</button><button mat-button type="button" (click)="addMedicine()" [disabled]="saving"><mat-icon>add</mat-icon>Add medicine</button></div></div>
@@ -33,11 +35,11 @@
           </tbody>
         </table>
         <section class="rx-instructions"><div class="rx-section-title">Instructions</div><p>{{ instructions }}</p></section>
-        <div class="rx-signature"><div><strong>Doctor’s name and signature</strong>{{ doctor.name }}<small>{{ doctor.designation }}</small></div><div><strong>Date &amp; time</strong>{{ fieldValue(fields[1]) }} · {{ fieldValue(fields[2]) }}</div></div>
+        <div class="rx-signature"><div><strong>Doctor’s name and signature</strong>{{ record.doctorName || doctor.name }}<small *ngIf="!record.doctorName">{{ doctor.designation }}</small></div><div><strong>Date &amp; time</strong>{{ fieldValue(fields[1]) }} · {{ fieldValue(fields[2]) }}</div></div>
         <div class="rx-footer">Haq Medical Center · Multan Institute of Kidney Diseases</div>
       </article>
       <p class="rx-editor-help">Patient name is required to save. All other patient details are optional.</p>
-      <footer class="rx-editor-actions"><a mat-stroked-button routerLink="/prescriptions" [class.rx-disabled-link]="saving">Cancel</a><button [appBusy]="saving" mat-flat-button color="primary" type="submit" [disabled]="saving"><mat-icon>save</mat-icon>{{ saving ? 'Saving…' : (record.id ? 'Save changes' : 'Save prescription') }}</button></footer>
+      <footer class="rx-editor-actions"><a mat-stroked-button routerLink="/prescriptions" [class.rx-disabled-link]="saving">Cancel</a><button mat-stroked-button type="button" (click)="save('draft')" [disabled]="saving"><mat-icon>drafts</mat-icon>Save draft</button><button [appBusy]="saving" mat-flat-button color="primary" type="submit" [disabled]="saving"><mat-icon>save</mat-icon>{{ saving ? 'Saving…' : (isEditing ? 'Complete / update' : 'Complete prescription') }}</button></footer>
     </form>
   </ng-container>
 </section>

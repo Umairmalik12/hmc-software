@@ -1,5 +1,5 @@
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { FormControl, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { ProcedureOption, ProcedureService } from 'src/app/Services/procedure.service';
@@ -23,6 +23,7 @@ import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination'
   styles: ['.procedure-form{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}.procedure-form mat-form-field{flex:1;min-width:220px}.procedure-form button{margin-top:7px}.procedure-table{width:100%;border-collapse:collapse;font-size:13px}.procedure-table th,.procedure-table td{padding:13px 16px;border-bottom:1px solid #e1e9ed;text-align:left}.procedure-table th{background:#f4f7f9}.procedure-table td:last-child{width:120px}'],
 })
 export class ProceduresComponent implements OnInit, OnDestroy {
+  @Input() isSuperAdmin = false;
   readonly pagination = new ScrollPagination();
   readonly trackRecord = trackRecord;
   get visibleOptions(): ProcedureOption[] { return this.pagination.slice(this.filtered); }

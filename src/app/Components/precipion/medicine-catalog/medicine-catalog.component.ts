@@ -21,6 +21,7 @@ export class MedicineCatalogComponent implements OnInit, OnDestroy {
   readonly trackLetter = trackMedicineLetter;
   private readonly alphabet = new MedicineAlphabet<PrescriptionMedicineOption>();
   readonly embedded: boolean;
+  isSuperAdmin = false;
   options: PrescriptionMedicineOption[] = [];
   query = '';
   letterFilter = '';
@@ -42,18 +43,25 @@ export class MedicineCatalogComponent implements OnInit, OnDestroy {
   ngOnInit(): void { void this.load(); this.subscriptions.add(this.catalog.changes.subscribe(() => void this.load())); }
   ngOnDestroy(): void { this.subscriptions.unsubscribe(); this.version++; }
   async load(refresh = false): Promise<void> {
-    const version = ++this.version; this.loading = true;
-    try { const options = await this.catalog.getAll(false, refresh); if (version === this.version) { this.options = options; this.error = ''; } }
+    const version = ++this.version; this.loading = true; this.isSuperAdmin = false;
+    try { const [options, admin] = await Promise.all([this.catalog.getAll(false, refresh), this.catalog.canManage()]); if (version === this.version) { this.options = options; this.isSuperAdmin = admin; this.error = ''; } }
     catch (error) { if (version === this.version) { this.error = error instanceof Error ? error.message : 'Unable to load medicines.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); } }
     finally { if (version === this.version) this.loading = false; }
   }
   edit(option?: PrescriptionMedicineOption): void {
+    if (option && (!this.isSuperAdmin || this.loading)) return;
     this.error = ''; this.success = '';
     const ref = this.dialog.open(MedicineOptionDialogComponent, { data: option ? { id: option.id, name: option.name, strength: option.strength } : {}, width: '560px', maxWidth: '94vw', panelClass: 'hmc-dialog-panel' });
     this.subscriptions.add(ref.afterClosed().subscribe(saved => { if (saved) { this.success = 'Medicine saved.'; void this.load(); } }));
   }
+  addStrength(option: PrescriptionMedicineOption): void {
+    if (this.deletingId) return;
+    this.error = ''; this.success = '';
+    const ref = this.dialog.open(MedicineOptionDialogComponent, { data: { name: medicineNameParts(option.name, option.strength).name, addStrength: true }, width: '560px', maxWidth: '94vw', panelClass: 'hmc-dialog-panel' });
+    this.subscriptions.add(ref.afterClosed().subscribe(saved => { if (saved) { this.success = 'Medicine strength saved.'; void this.load(); } }));
+  }
   async delete(option: PrescriptionMedicineOption): Promise<void> {
-    if (this.deletingId || !window.confirm('Remove ' + option.name + ' from future medicine selections? Saved records will keep their medicine text.')) return;
+    if (!this.isSuperAdmin || this.loading || this.deletingId || !window.confirm('Remove ' + option.name + ' from future medicine selections? Saved records will keep their medicine text.')) return;
     this.deletingId = option.id; this.error = ''; this.success = '';
     try { await this.catalog.delete(option); this.feedback.success('Medicine deleted successfully. Saved records are preserved.', { title: 'Medicine deleted', route: '/prescription-medicines' }); this.success = 'Medicine removed from the catalogue.'; await this.load(); }
     catch (error) { this.error = error instanceof Error ? error.message : 'Unable to remove this medicine.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }

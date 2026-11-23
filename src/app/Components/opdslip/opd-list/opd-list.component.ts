@@ -5,7 +5,7 @@ import { includesText, matchesDateFilter } from 'src/app/Shared/list-filters';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { RecordDetailsComponent } from 'src/app/Components/record-details/record-details.component';
 import { exportRecords } from 'src/app/Shared/export-records';
-import { ChangeDetectorRef, Component, OnInit , OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit , OnDestroy, Optional } from '@angular/core';
 import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
 import { MatPaginatorIntl } from '@angular/material/paginator';
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
@@ -17,6 +17,11 @@ import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
 import { UserLoginService } from 'src/app/Services/user-login.service';
 import { ProcedureOption, ProcedureService } from 'src/app/Services/procedure.service';
 import { OpdSlipComponent } from '../opd-slip/opd-slip.component';
+import { PrescriptionRecord, copyPrescription } from 'src/app/Models/prescription.model';
+import { PrescriptionService } from 'src/app/Services/prescription.service';
+import { PrescriptionPreviewComponent } from 'src/app/Components/precipion/prescription-preview.component';
+import { printPrescription } from 'src/app/Components/precipion/prescription-print';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-opd-list',
@@ -31,7 +36,7 @@ export class OpdListComponent implements OnInit, OnDestroy {
   private loadVersion = 0;
   loading = false;
   loadFailed = false;
-  deletingId: number | null = null;
+  deletingId: string | null = null;
   loadMore(): void { this.pagination.loadMore(this.total); this.updateDisplayedOpds(); }
 
   private refreshSubscription?: Subscription;
@@ -40,8 +45,9 @@ export class OpdListComponent implements OnInit, OnDestroy {
   procedureOptions: ProcedureOption[] = [];
   proceduresLoading = false;
   proceduresFailed = false;
+  linkedPrescriptions = new Map<string, PrescriptionRecord>();
   ngOnDestroy(): void { this.refreshSubscription?.unsubscribe(); this.procedureSubscription?.unsubscribe(); this.loadVersion++; this.procedureVersion++; }
-  async viewOpd(id: number): Promise<void> {
+  async viewOpd(id: number | string): Promise<void> {
     try {
       const record = await firstValueFrom(this.opdService.getOpdDetails(id));
       if (!record) throw new Error('Record not found.');
@@ -76,6 +82,8 @@ export class OpdListComponent implements OnInit, OnDestroy {
     private notifyUpdate: NotifyUpdateService,
     private indexDb: SupabaseDataService,
     private userLogin: UserLoginService,
+    @Optional() private prescriptions: PrescriptionService | null = null,
+    @Optional() private router: Router | null = null,
     private procedures: ProcedureService = new ProcedureService(indexDb)
   ) {
     this.refreshSubscription = this.notifyUpdate.notify.subscribe(() => {
@@ -88,7 +96,7 @@ export class OpdListComponent implements OnInit, OnDestroy {
     this.procedureSubscription = this.indexDb.changes.subscribe(collection => { if (collection === 'procedures') void this.loadProcedures(); });
     this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
-      this.displayedColumns = ['patientId', 'patientName', 'dateTime', 'sex', 'drName', 'procedure', 'followUp', 'createdAt'];
+      this.displayedColumns = ['patientId', 'patientName', 'dateTime', 'sex', 'drName', 'procedure', 'followUp', 'rxStatus', 'createdAt'];
       this.displayedColumns.push('action');
       this.dataActions('', 'asc', 0, 5);
     }).catch(() => { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: 'Account permissions could not be loaded. Please refresh the page.' }); });
@@ -103,7 +111,20 @@ export class OpdListComponent implements OnInit, OnDestroy {
     const version = ++this.loadVersion;
     this.loading = true; this.loadFailed = false;
     this.opdService.getAllOpds().subscribe({
-      next: records => { if (version !== this.loadVersion) return; this.opd = records; this.onDateFilter(false); this.loading = false; },
+      next: records => {
+        if (version !== this.loadVersion) return;
+        this.opd = records;
+        if (!this.prescriptions) { this.onDateFilter(false); this.loading = false; return; }
+        void this.prescriptions.getAll().then(rxRecords => {
+          if (version !== this.loadVersion) return;
+          this.linkedPrescriptions = new Map(rxRecords.filter(record => !!record.opdVisitId).map(record => [String(record.opdVisitId), record]));
+          this.onDateFilter(false); this.loading = false;
+        }).catch(error => {
+          if (version !== this.loadVersion) return;
+          this.onDateFilter(false); this.loading = false;
+          this.notifyUpdate.error(error instanceof Error ? error.message : 'Prescription status could not be loaded.');
+        });
+      },
       error: error => { if (version === this.loadVersion) { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Unable to load records.' }); } }
     });
   }
@@ -139,11 +160,49 @@ export class OpdListComponent implements OnInit, OnDestroy {
 
   onClearSearch(): void { this.searchPatientId = ''; this.searchName = ''; this.searchDrName = ''; this.searchPhone = ''; this.searchCity = ''; this.searchProcedure = ''; this.dateFilter = 'all'; this.onDateFilter(); }
 
+  visitKey(opd: Opd): string { return String(opd.visitId || opd.patientId); }
+  prescriptionFor(opd: Opd): PrescriptionRecord | undefined { return this.linkedPrescriptions.get(this.visitKey(opd)); }
+  prescriptionStatus(opd: Opd): string { const record = this.prescriptionFor(opd); return record ? (record.status === 'draft' ? 'Draft' : 'Completed') : 'Pending'; }
+
+  viewPrescription(opd: Opd): void {
+    const record = this.prescriptionFor(opd);
+    if (!record) {
+      if (this.isSuperAdmin) this.openPrescriptionEditor(opd);
+      else this.notifyUpdate.info('Prescription is pending for this OPD visit.');
+      return;
+    }
+    this.dialog.open(PrescriptionPreviewComponent, { data: { record: copyPrescription(record) }, width: '950px', maxWidth: '96vw', maxHeight: '94dvh', panelClass: 'prescription-preview-panel', autoFocus: false });
+  }
+
+  openPrescriptionEditor(opd: Opd): void {
+    if (!this.isSuperAdmin || !this.router) return;
+    const record = this.prescriptionFor(opd);
+    if (record) void this.router.navigate(['/prescriptions', record.id, 'edit']);
+    else void this.router.navigate(['/prescriptions/new'], { queryParams: { opdVisitId: this.visitKey(opd) } });
+  }
+
+  printLinkedPrescription(opd: Opd): void {
+    const record = this.prescriptionFor(opd);
+    if (!record) { this.notifyUpdate.warning('Prescription is pending for this OPD visit.'); return; }
+    if (!printPrescription(copyPrescription(record))) this.notifyUpdate.error('Allow pop-ups for this site to print the prescription.');
+    else this.notifyUpdate.info('Prescription prepared for printing.');
+  }
+
+  async deleteLinkedPrescription(opd: Opd): Promise<void> {
+    const record = this.prescriptionFor(opd);
+    if (!this.isSuperAdmin || !record || !this.prescriptions || !window.confirm('Delete the prescription for ' + (record.patient.name || opd.patientName) + '? This cannot be undone.')) return;
+    try {
+      await this.prescriptions.delete(record.id);
+      this.linkedPrescriptions.delete(this.visitKey(opd));
+      this.notifyUpdate.success('Prescription deleted successfully.');
+    } catch (error) { this.notifyUpdate.error(error instanceof Error ? error.message : 'Prescription could not be deleted.'); }
+  }
+
   exportToExcel(): void { exportRecords(this.filteredOpds, 'opd-visits.xlsx', 'Records', this.notifyUpdate); }
 
 
   // ✏️ Edit
-  editOpd(id: number): void {
+  editOpd(id: number | string): void {
     this.opdService.getOpdDetails(id).subscribe({ next: (data: Opd) => {
       if (data) {
         this.tempOpd = data;
@@ -170,9 +229,11 @@ export class OpdListComponent implements OnInit, OnDestroy {
   }
 
   // 🗑️ Delete
-  async deleteOpd(id: number): Promise<void> {
+  async deleteOpd(id: number | string): Promise<void> {
     if (this.deletingId !== null || !window.confirm('Delete this opd visit? This action cannot be undone.')) return;
-    this.deletingId = id;
+    const visit = this.opd.find(item => this.visitKey(item) === String(id));
+    if (visit && this.prescriptionFor(visit)) { this.notifyUpdate.warning('Delete the linked prescription before deleting this OPD visit.'); return; }
+    this.deletingId = String(id);
     try {
       const saved = await this.opdService.deleteOpd(id);
       if (!saved) throw new Error('OPD visit could not be deleted. Refresh the list and try again.');
@@ -185,7 +246,7 @@ export class OpdListComponent implements OnInit, OnDestroy {
 
   async printSlip(opd: Opd): Promise<void> {
     try {
-      const record = await firstValueFrom(this.opdService.getOpdDetails(opd.patientId));
+      const record = await firstValueFrom(this.opdService.getOpdDetails(this.visitKey(opd)));
       if (!record) throw new Error('OPD record not found.');
       this.openThermalPreview([record]);
     } catch (error) { this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Unable to load the OPD slip.' }); }

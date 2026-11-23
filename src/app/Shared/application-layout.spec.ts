@@ -1,14 +1,16 @@
-import { Component, NO_ERRORS_SCHEMA } from '@angular/core';
+import { Component, Input, NO_ERRORS_SCHEMA } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterTestingModule } from '@angular/router/testing';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatDialogModule } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { AdminAssistantComponent } from '../Components/admin-assistant/admin-assistant.component';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -29,6 +31,9 @@ class LayoutPatient {
   doctor = 'Dr Roman'; procedure = ''; doctors = ['Dr Roman', 'Dr Sara']; procedures = ['Left nephrectomy', 'Cystoscopy'];
 }
 
+@Component({ selector: 'app-expenses', template: '<p>Expense workspace</p>' })
+class LayoutExpenses { @Input() isSuperAdmin = false; }
+
 describe('Application icons and responsive shell alignment', () => {
   const center = (element: Element) => { const rect = element.getBoundingClientRect(); return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }; };
   const aligned = (icon: Element, container: Element): void => {
@@ -38,7 +43,7 @@ describe('Application icons and responsive shell alignment', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, NoopAnimationsModule, RouterTestingModule, MatSidenavModule, MatToolbarModule, MatListModule, MatMenuModule, MatDialogModule, MatButtonModule, MatIconModule, MatInputModule, SearchableSelectComponent, FeedbackModule],
-      declarations: [HomeComponent, LayoutPatient], schemas: [NO_ERRORS_SCHEMA],
+      declarations: [HomeComponent, LayoutPatient, LayoutExpenses], schemas: [NO_ERRORS_SCHEMA],
       providers: [...[PatientService, OpdService, LabService, InpatientService, MedicineService].map(provide => ({ provide, useValue: {} })),
         { provide: SupabaseDataService, useValue: { changes: new Subject<string>() } }, { provide: UserLoginService, useValue: { getLoginUser: async () => 'admin' } }],
     }).compileComponents();
@@ -58,6 +63,36 @@ describe('Application icons and responsive shell alignment', () => {
           expect(parseFloat(getComputedStyle(icon).fontSize)).toBeGreaterThanOrEqual(selector === '.table-btn' ? 18 : 20);
         }
       }
+    } finally { fixture.destroy(); }
+  });
+  it('keeps the expense sidebar link and page available to staff and forwards the admin permission', async () => {
+    const fixture = await open();
+    try {
+      fixture.componentInstance.isShowPatients = false; fixture.componentInstance.isShowExpenses = true; fixture.componentInstance.isSuperAdmin = false; fixture.detectChanges();
+      const root: HTMLElement = fixture.nativeElement; expect(root.querySelector('a[routerLink="/expenses"]')).not.toBeNull(); expect(root.querySelector('app-expenses')!.textContent).toContain('Expense workspace');
+      const expense = fixture.debugElement.query(By.directive(LayoutExpenses)).componentInstance as LayoutExpenses;
+      expect(expense.isSuperAdmin).toBeFalse(); fixture.componentInstance.isSuperAdmin = true; fixture.detectChanges(); expect(expense.isSuperAdmin).toBeTrue();
+    } finally { fixture.destroy(); }
+  });
+  it('shows a working assistant launcher only for admins', async () => {
+    const fixture = await open();
+    try {
+      const root: HTMLElement = fixture.nativeElement, dialog = TestBed.inject(MatDialog), launch = spyOn(dialog, 'open').and.stub();
+      const button = root.querySelector<HTMLButtonElement>('[aria-label="Open HMC AI assistant"]')!;
+      expect(button).not.toBeNull(); button.click(); expect(launch).toHaveBeenCalledWith(AdminAssistantComponent, jasmine.objectContaining({ panelClass: 'hmc-dialog-panel' }));
+      fixture.componentInstance.isSuperAdmin = false; fixture.detectChanges(); expect(root.querySelector('[aria-label="Open HMC AI assistant"]')).toBeNull(); launch.calls.reset(); fixture.componentInstance.openAssistant(); expect(launch).not.toHaveBeenCalled();
+    } finally { fixture.destroy(); }
+  });
+  it('shows both medicine catalogue links and pages for user accounts', async () => {
+    const fixture = await open();
+    try {
+      const page = fixture.componentInstance; page.isSuperAdmin = false; page.isShowPatients = false; page.isShowMedicineCatalog = true; fixture.detectChanges();
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('a[routerLink="/prescription-medicines"]')).not.toBeNull();
+      expect(root.querySelector('a[routerLink="/ot-medicines"]')).not.toBeNull();
+      expect(root.querySelector('app-prescription-medicine-catalog')).not.toBeNull();
+      page.isShowMedicineCatalog = false; page.isShowOtMedicineCatalog = true; fixture.detectChanges();
+      expect(root.querySelector('app-ot-medicine-catalog')).not.toBeNull();
     } finally { fixture.destroy(); }
   });
   it('keeps dropdown search and suffix controls vertically centered without inherited filter-button margins', async () => {

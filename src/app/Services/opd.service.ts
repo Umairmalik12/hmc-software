@@ -59,10 +59,13 @@ export class OpdService {
     });
   }
 
-  getOpdDetails(id: number): Observable<Opd> {
+  getOpdDetails(id: number | string): Observable<Opd> {
     return defer(async () => {
       await this.loadOpdData();
-      const opd = this.opdDetail.find(o => o.patientId === id);
+      const requested = String(id);
+      // Prefer an encounter ID. Numeric MR lookup remains for older callers and legacy links.
+      const opd = this.opdDetail.find(o => String(o.visitId || '') === requested)
+        || this.opdDetail.find(o => o.patientId === Number(id));
       return opd!;
     });
   }
@@ -70,16 +73,12 @@ export class OpdService {
   async addNewOpd(data: Opd): Promise<boolean> {
     try {
       if (!this.validRegistration(data)) return false;
-      if (!data.createdAt) {
-        data.createdAt = new Date().toISOString();
-      }
       await this.loadOpdData();
-      if (this.opdDetail.some(o => o.patientId === data.patientId)) {
-        console.error('Duplicate MR No (patientId) exists');
-        return false;
-      }
-      await this.dbService.insertRecord('opdDetails', data.patientId, data);
-      this.opdDetail.push(data);
+      const visitId = data.visitId || this.newVisitId();
+      if (this.opdDetail.some(o => String(o.visitId || o.patientId) === visitId)) return false;
+      const saved = { ...data, visitId };
+      await this.dbService.insertRecord('opdDetails', visitId, saved);
+      this.opdDetail.push(saved);
       return true;
     } catch (e) {
       console.error('Error adding new OPD:', e);
@@ -91,24 +90,15 @@ export class OpdService {
     try {
       if (!this.validRegistration(data)) return false;
       await this.loadOpdData();
-      const oldId = data.oldPatientId;
-      const index = oldId ? this.opdDetail.findIndex(o => o.patientId === oldId) : -1;
+      const requestedVisitId = data.visitId || '';
+      const index = requestedVisitId
+        ? this.opdDetail.findIndex(o => String(o.visitId || '') === requestedVisitId)
+        : data.oldPatientId !== undefined ? this.opdDetail.findIndex(o => o.patientId === data.oldPatientId) : -1;
       if (index !== -1) {
-        const newId = data.patientId;
-        if (newId !== oldId && this.opdDetail.some(o => o.patientId === newId)) {
-          console.error('New MR No already exists');
-          return false;
-        }
-        const updated = { ...data } as Opd & { oldPatientId?: number };
+        const oldId = String(this.opdDetail[index].visitId || this.opdDetail[index].patientId);
+        const updated = { ...data, visitId: oldId } as Opd & { oldPatientId?: number };
         delete updated.oldPatientId;
-        if (oldId === undefined) {
-          return false;
-        }
-        if (newId === oldId) {
-          await this.dbService.upsertRecord('opdDetails', newId, updated, index);
-        } else {
-          await this.dbService.moveRecord('opdDetails', oldId, newId, updated);
-        }
+        await this.dbService.upsertRecord('opdDetails', updated.visitId!, updated, index);
         this.opdDetail = this.opdDetail.filter((_, i) => i !== index).concat(updated);
         return true;
       }
@@ -125,14 +115,22 @@ export class OpdService {
       && (data.age == null || (Number.isFinite(data.age) && data.age >= 0 && data.age <= 120));
   }
 
-  async deleteOpd(id: number): Promise<boolean> {
+  private newVisitId(): string {
+    return globalThis.crypto?.randomUUID?.() || 'opd-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
+  async deleteOpd(id: number | string): Promise<boolean> {
     try {
       await this.loadOpdData();
-      if (!this.opdDetail.some(opd => opd.patientId === id)) {
+      const requested = String(id);
+      const target = this.opdDetail.find(opd => String(opd.visitId || '') === requested)
+        || this.opdDetail.find(opd => opd.patientId === Number(id));
+      if (!target) {
         return false;
       }
-      await this.dbService.deleteRecord('opdDetails', id);
-      this.opdDetail = this.opdDetail.filter(opd => opd.patientId !== id);
+      const key = String(target.visitId || target.patientId);
+      await this.dbService.deleteRecord('opdDetails', key);
+      this.opdDetail = this.opdDetail.filter(opd => String(opd.visitId || opd.patientId) !== key);
       this.total = this.opdDetail.length;
       return true;
     } catch (e) {

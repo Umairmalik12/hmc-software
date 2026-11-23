@@ -3,7 +3,8 @@
   <mat-dialog-content>
     <div formGroupName="patientDetail" class="form-grid">
       <mat-form-field appearance="outline"><mat-label>MR Number</mat-label><input matInput type="number" min="1" step="1" formControlName="patientId" [readonly]="edit" placeholder="Enter MR Number" required><mat-error *ngIf="b.patientId.invalid">Enter the patient's MR number as a positive whole number</mat-error></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Registered on</mat-label><input matInput [value]="b.createdAt.value | date:'dd MMM y, h:mm a'" readonly></mat-form-field>
+      <app-date-time-field class="form-span" kind="datetime" label="Registered on" formControlName="createdAt"></app-date-time-field>
+      <mat-form-field appearance="outline"><mat-label>Discharge date</mat-label><input matInput type="date" formControlName="dischargeDate"><mat-hint>Leave blank until the patient is discharged.</mat-hint></mat-form-field>
       <div class="form-section-title"><mat-icon>person_outline</mat-icon>Patient information</div>
       <div formGroupName="fullName" class="form-grid form-span">
         <mat-form-field appearance="outline"><mat-label>Patient name</mat-label><input matInput formControlName="firstName" autocomplete="name"><mat-error *ngIf="c.firstName.hasError('required')">Enter the patient name</mat-error></mat-form-field>

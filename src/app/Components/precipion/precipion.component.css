@@ -1,4 +1,6 @@
 .prescription-editor{max-width:1100px;margin:0 auto}
+.prescription-editor .rx-editor-toolbar>app-date-time-field{flex:1;min-width:0;max-width:540px}
+.prescription-editor .rx-cell>span.rx-input{display:block;min-height:25px;padding-top:5px}
 .prescription-editor .rx-editor-status{padding:40px;text-align:center;color:#71858e}
 .prescription-editor .rx-editor-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
 .prescription-editor .rx-editor-toolbar>span{display:flex;align-items:center;gap:7px;font-size:12px;color:#657f89}

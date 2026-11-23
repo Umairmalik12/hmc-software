@@ -11,8 +11,14 @@ export function memoryDb(): { db: SupabaseDataService; collections: Map<string, 
   const changes = new Subject<string>();
   const db = {
     changes,
+    requireAdministrator: jasmine.createSpy('requireAdministrator').and.resolveTo(),
+    deletePrescriptionRecord: jasmine.createSpy('deletePrescriptionRecord').and.callFake(async (collection: string, id: string) => {
+      await db.requireAdministrator('Only administrators can delete prescriptions.');
+      if (!rows(collection).delete(id)) throw new Error('The prescription was not deleted.');
+      changes.next(collection);
+    }),
     getItem: jasmine.createSpy('getItem').and.callFake(async (collection: string) => rows(collection).size === 1 && rows(collection).has('__singleton__')
-      ? clone(rows(collection).get('__singleton__')) : Array.from(rows(collection).values()).map(value => clone(value))),
+      ? clone(rows(collection).get('__singleton__')) : Array.from(rows(collection), ([id, value]) => collection === 'prescriptions' ? { ...clone(value), id } : clone(value))),
     allocateId: jasmine.createSpy('allocateId').and.callFake(async (collection: string) => Math.max(0, ...Array.from(rows(collection).keys()).map(key => Number(key) || 0)) + 1),
     insertRecord: jasmine.createSpy('insertRecord').and.callFake(async (collection: string, id: string | number, value: any) => {
       if (rows(collection).has(String(id))) throw new Error('This record already exists.');

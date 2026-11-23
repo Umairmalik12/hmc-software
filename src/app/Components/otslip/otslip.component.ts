@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { medicineVariantKey } from '../../Models/medicine-strength';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Optional, Output } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
@@ -12,6 +13,7 @@ import { requiredText } from 'src/app/Services/validators.service';
 import { OtMedicineCatalogComponent } from '../ot-medicine-catalog/ot-medicine-catalog.component';
 import { printOtMedicine } from './ot-medicine-document';
 import { OtMedicinePreviewComponent } from './ot-medicine-preview.component';
+import { PatientLookupService } from 'src/app/Services/patient-lookup.service';
 
 interface ProductRow {
   key: string;
@@ -25,7 +27,7 @@ interface VisibleProduct { name: string; index: number; genericName?: string; st
 
 @Component({ selector: 'app-ot-form', templateUrl: './otslip.html', styleUrls: ['./otslip.component.css'] })
 export class OtFormComponent implements OnInit, OnDestroy {
-  @Input() canManageMedicines = false;
+  @Input() canManageMedicines = true;
   @Output() isCancelForm = new EventEmitter<boolean>();
   isEditMode = false;
   isSaving = false;
@@ -52,16 +54,20 @@ export class OtFormComponent implements OnInit, OnDestroy {
   private catalogueVersion = 0;
   private pendingRefresh = false;
   private subscriptions = new Subscription();
+  private lookupVersion = 0;
+  matchedPatient = '';
   @Input() set selectedPatientId(value: string | number) {
     this.requestedId = String(value || '');
     if (this.ready) void this.load();
   }
   constructor(private fb: FormBuilder, private router: Router, private records: OtMedicineService,
-    private notify: NotifyUpdateService, private dialog: MatDialog, private catalogue: OtMedicineCatalogService) {
+    private notify: NotifyUpdateService, private dialog: MatDialog, private catalogue: OtMedicineCatalogService,
+    @Optional() private patientLookup: PatientLookupService | null = null) {
     const record = this.currentRecord;
-    this.otForm = fb.group({ patientName: ['', [Validators.required, requiredText]], doctorName: [''], roomNumber: [''],
+    this.otForm = fb.group({ mrNumber: [null, Validators.min(1)], patientName: ['', [Validators.required, requiredText]], doctorName: [''], roomNumber: [''],
       procedure: [''], operationDate: [record.operationDate], operationTime: [record.operationTime],
       includeMedicineHeader: ['withMedicine'], products: fb.array([]) });
+    this.subscriptions.add(this.otForm.get('mrNumber')!.valueChanges.subscribe(value => { if (!this.requestedId) void this.lookupPatient(value); }));
   }
   get productControls(): FormArray { return this.otForm.get('products') as FormArray; }
   ngOnInit(): void {
@@ -73,6 +79,17 @@ export class OtFormComponent implements OnInit, OnDestroy {
     void this.load();
   }
   ngOnDestroy(): void { this.version++; this.catalogueVersion++; this.ready = false; this.subscriptions.unsubscribe(); }
+  private async lookupPatient(value: unknown): Promise<void> {
+    const version = ++this.lookupVersion, mr = Number(value); this.matchedPatient = '';
+    if (!this.patientLookup || !Number.isSafeInteger(mr) || mr < 1) return;
+    try {
+      const patient = await this.patientLookup.byMr(mr);
+      if (version !== this.lookupVersion || Number(this.otForm.get('mrNumber')!.value) !== mr || !patient) return;
+      if (!this.otForm.get('patientName')!.value) this.otForm.get('patientName')!.setValue([patient.firstName, patient.lastName].filter(Boolean).join(' '));
+      if (!this.otForm.get('doctorName')!.value && patient.drName) this.otForm.get('doctorName')!.setValue(patient.drName);
+      this.matchedPatient = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
+    } catch { if (version === this.lookupVersion) this.matchedPatient = ''; }
+  }
   private productGroup(): FormGroup {
     return this.fb.group({ selected: [false], quantity: [{ value: '', disabled: true }, [Validators.required, Validators.min(.000001)]] });
   }
@@ -101,7 +118,7 @@ export class OtFormComponent implements OnInit, OnDestroy {
       const catalog = catalogResult.status === 'fulfilled' ? catalogResult.value : [];
       catalog.filter(item => item.active).forEach(item => this.appendRow({ key: item.id, snapshot: this.masterSnapshot(item), master: item, available: true, historical: false }));
       products.forEach((product, order) => {
-        const master = product.catalogueId ? catalog.find(item => item.id === product.catalogueId) : catalog.find(item => otMedicineKey(item.name) === otMedicineKey(product.name));
+        const master = product.catalogueId ? catalog.find(item => item.id === product.catalogueId) : catalog.find(item => medicineVariantKey(item.name, item.strength) === medicineVariantKey(product.name, product.strength));
         let index = master ? this.rows.findIndex((row, i) => row.key === master.id && !this.productControls.at(i).get('selected')!.value) : -1;
         if (index < 0) index = this.appendRow({ key: master?.id || product.catalogueId || 'legacy:' + order, snapshot: { ...product }, master, available: !!master?.active, historical: true });
         this.rows[index] = { ...this.rows[index], snapshot: { ...product, ...(product.catalogueId || !master ? {} : { catalogueId: master.id }) }, master, historical: true, originalOrder: order };
@@ -125,7 +142,7 @@ export class OtFormComponent implements OnInit, OnDestroy {
       if (version !== this.catalogueVersion || recordVersion !== this.version) return;
       // Keep FormArray indexes stable: catalogue changes must never move quantities.
       this.rows.forEach(row => {
-        const master = catalog.find(item => item.id === row.key) || (!row.snapshot.catalogueId && row.historical ? catalog.find(item => otMedicineKey(item.name) === otMedicineKey(row.snapshot.name)) : undefined);
+        const master = catalog.find(item => item.id === row.key) || (!row.snapshot.catalogueId && row.historical ? catalog.find(item => medicineVariantKey(item.name, item.strength) === medicineVariantKey(row.snapshot.name, row.snapshot.strength)) : undefined);
         row.master = master; row.available = !!master?.active;
         if (master && row.key.startsWith('legacy:')) row.key = master.id;
         if (master && !row.historical) row.snapshot = this.masterSnapshot(master);

@@ -5,6 +5,16 @@ import { legacyRpcDb } from '../testing/legacy-rpc-db';
 
 const draft = (overrides: Partial<ExpenseDraft> = {}): ExpenseDraft => ({ date: '2026-11-20', description: ' Generator fuel ', headId: 'fuel', amount: 25.15, remarks: '', location: 'Multan', ...overrides });
 describe('Expense database operations and totals', () => {
+  it('allows staff to create expenses but blocks edits, deletion and restoration before reading or writing saved records', async () => {
+    const { db, collections } = memoryDb(); const service = new ExpenseService(db);
+    (db.requireAdministrator as jasmine.Spy).and.rejectWith(new Error('Only administrators can edit, delete or restore expenses.'));
+    const created = await service.save(draft()); expect(db.requireAdministrator).not.toHaveBeenCalled();
+    const before = JSON.stringify(collections.get(EXPENSE_COLLECTION)!.get(created.id)); (db.getItem as jasmine.Spy).calls.reset();
+    await expectAsync(service.save(draft({ amount: 999 }), created.id)).toBeRejectedWithError(/Only administrators/);
+    await expectAsync(service.setDeleted(created.id, true)).toBeRejectedWithError(/Only administrators/);
+    await expectAsync(service.setDeleted(created.id, false)).toBeRejectedWithError(/Only administrators/);
+    expect(db.getItem).not.toHaveBeenCalled(); expect(db.upsertRecord).not.toHaveBeenCalled(); expect(JSON.stringify(collections.get(EXPENSE_COLLECTION)!.get(created.id))).toBe(before);
+  });
   for (const [backend, create] of [['memory', memoryDb], ['legacy RPC', legacyRpcDb]] as const) {
     it('creates, updates, deletes and restores a single expense without changing other records via ' + backend, async () => {
       const { db, collections } = create(); const service = new ExpenseService(db);

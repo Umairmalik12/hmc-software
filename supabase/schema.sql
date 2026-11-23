@@ -15,6 +15,18 @@ create table if not exists public.hmc_records (
 alter table public.hmc_records
   add column if not exists sort_order integer not null default 0;
 
+create index if not exists hmc_records_opd_patient_mr_idx
+  on public.hmc_records ((data ->> 'patientId'))
+  where collection = 'opdDetails';
+
+create index if not exists hmc_records_mr_number_idx
+  on public.hmc_records (collection, (data ->> 'mrNumber'))
+  where collection in ('otFormData', 'medicineDetails', 'labDetails', 'inpatientDetails', 'payments');
+
+create index if not exists hmc_records_prescription_patient_mr_idx
+  on public.hmc_records ((data #>> '{patient,refId}'))
+  where collection in ('prescriptions', 'prescription');
+
 create table if not exists public.hmc_id_sequences (
   collection text primary key,
   next_id bigint not null check (next_id > 0)
@@ -91,6 +103,73 @@ create policy "Admins can delete HMC records"
   to authenticated
   using (public.hmc_is_admin());
 
+
+drop policy if exists "Expense creation must start recorded" on public.hmc_records;
+create policy "Expense creation must start recorded"
+  on public.hmc_records as restrictive for insert to authenticated
+  with check (
+    collection <> 'expenseDetails' or public.hmc_is_admin() or (
+      data ->> 'id' = record_id
+      and coalesce(data -> 'deleted', 'false'::jsonb) = 'false'::jsonb
+      and coalesce(data ->> 'deletedAt', '') = ''
+    )
+  );
+
+drop policy if exists "Only admins can update expenses" on public.hmc_records;
+create policy "Only admins can update expenses"
+  on public.hmc_records as restrictive for update to authenticated
+  using (collection <> 'expenseDetails' or public.hmc_is_admin())
+  with check (collection <> 'expenseDetails' or public.hmc_is_admin());
+
+drop policy if exists "Only admins can delete expenses" on public.hmc_records;
+create policy "Only admins can delete expenses"
+  on public.hmc_records as restrictive for delete to authenticated
+  using (collection <> 'expenseDetails' or public.hmc_is_admin());
+
+
+drop policy if exists "Medicine catalogue creation permissions" on public.hmc_records;
+create policy "Medicine catalogue creation permissions"
+  on public.hmc_records as restrictive for insert to authenticated
+  with check (
+    collection not in ('prescriptionMedicineCatalog', 'otMedicineCatalog', 'customMedicines')
+    or public.hmc_is_admin()
+    or (
+      collection in ('prescriptionMedicineCatalog', 'otMedicineCatalog')
+      and record_id ~ '^[1-9][0-9]*$'
+      and jsonb_typeof(data) = 'object' and data ->> 'id' = record_id
+      and coalesce(data -> 'deleted', 'false'::jsonb) = 'false'::jsonb
+      and (collection <> 'prescriptionMedicineCatalog' or coalesce(data -> 'active', 'true'::jsonb) = 'true'::jsonb)
+    )
+  );
+
+drop policy if exists "Only admins can update medicine catalogues" on public.hmc_records;
+create policy "Only admins can update medicine catalogues"
+  on public.hmc_records as restrictive for update to authenticated
+  using (collection not in ('prescriptionMedicineCatalog', 'otMedicineCatalog', 'customMedicines') or public.hmc_is_admin())
+  with check (collection not in ('prescriptionMedicineCatalog', 'otMedicineCatalog', 'customMedicines') or public.hmc_is_admin());
+
+drop policy if exists "Only admins can delete medicine catalogues" on public.hmc_records;
+create policy "Only admins can delete medicine catalogues"
+  on public.hmc_records as restrictive for delete to authenticated
+  using (collection not in ('prescriptionMedicineCatalog', 'otMedicineCatalog', 'customMedicines') or public.hmc_is_admin());
+
+drop policy if exists "Only admins can create prescriptions" on public.hmc_records;
+create policy "Only admins can create prescriptions"
+  on public.hmc_records as restrictive for insert to authenticated
+  with check (collection not in ('prescriptions', 'prescription') or public.hmc_is_admin());
+
+drop policy if exists "Only admins can update prescriptions" on public.hmc_records;
+create policy "Only admins can update prescriptions"
+  on public.hmc_records as restrictive for update to authenticated
+  using (collection not in ('prescriptions', 'prescription') or public.hmc_is_admin())
+  with check (collection not in ('prescriptions', 'prescription') or public.hmc_is_admin());
+
+drop policy if exists "Only admins can delete prescriptions" on public.hmc_records;
+create policy "Only admins can delete prescriptions"
+  on public.hmc_records as restrictive for delete to authenticated
+  using (collection not in ('prescriptions', 'prescription') or public.hmc_is_admin());
+
+
 drop policy if exists "Authenticated users can read patient tokens" on public.patient_token_slips;
 create policy "Authenticated users can read patient tokens"
   on public.patient_token_slips for select
@@ -98,19 +177,23 @@ create policy "Authenticated users can read patient tokens"
   using (true);
 
 drop policy if exists "Authenticated users can delete patient tokens" on public.patient_token_slips;
-create policy "Authenticated users can delete patient tokens"
+drop policy if exists "Admins can delete patient tokens" on public.patient_token_slips;
+create policy "Admins can delete patient tokens"
   on public.patient_token_slips for delete
   to authenticated
-  using (true);
+  using (public.hmc_is_admin());
 
 revoke all on public.hmc_user_roles, public.hmc_id_sequences, public.patient_token_daily_sequences from anon, authenticated;
 grant select on public.hmc_user_roles to authenticated;
 grant select, insert, update, delete on public.hmc_records to authenticated;
 grant select, delete on public.patient_token_slips to authenticated;
 drop policy if exists "Authenticated users can update token patient names" on public.patient_token_slips;
-create policy "Authenticated users can update token patient names"
+drop policy if exists "Admins can update token patient names" on public.patient_token_slips;
+create policy "Admins can update token patient names"
   on public.patient_token_slips for update to authenticated
-  using (true) with check (length(trim(customer_name)) > 0);
+  using (public.hmc_is_admin())
+  with check (public.hmc_is_admin() and length(trim(customer_name)) > 0);
+revoke update on public.patient_token_slips from authenticated;
 grant update (customer_name) on public.patient_token_slips to authenticated;
 grant usage, select on sequence public.patient_token_slips_id_seq to authenticated;
 
@@ -269,9 +352,6 @@ begin
     if mr_number < 1 or mr_number > 9007199254740991 or trunc(mr_number) <> mr_number then
       raise exception 'Enter the patient MR number as a positive whole number.';
     end if;
-    if new.record_id is distinct from trunc(mr_number)::text then
-      raise exception 'The OPD patient record must use the entered MR number.';
-    end if;
   end if;
   return new;
 end;
@@ -281,6 +361,12 @@ drop trigger if exists hmc_opd_patient_manual_mr on public.hmc_records;
 create trigger hmc_opd_patient_manual_mr
 before insert or update of collection, record_id, data on public.hmc_records
 for each row execute function public.validate_opd_patient_mr();
+
+create unique index if not exists hmc_prescription_one_per_opd_visit
+  on public.hmc_records ((data ->> 'opdVisitId'))
+  where collection = 'prescriptions'
+    and jsonb_typeof(data) = 'object'
+    and nullif(btrim(data ->> 'opdVisitId'), '') is not null;
 
 create or replace function public.validate_inpatient_patient_id()
 returns trigger
@@ -360,6 +446,46 @@ begin
   );
 end;
 $$;
+
+create or replace function public.create_patient_token_at(p_customer_name text, p_token_date date, p_token_time text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  issued_at timestamptz;
+  sequence_number integer;
+  token_text text;
+  local_time text;
+  token_id bigint;
+begin
+  if auth.uid() is null then raise exception 'Authentication required'; end if;
+  if p_customer_name is null or length(trim(p_customer_name)) = 0 then raise exception 'Patient name is required'; end if;
+  if p_token_date is null or p_token_date < date '1900-01-01' or p_token_date > date '9999-12-31'
+    or p_token_time is null or p_token_time !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+  then raise exception 'Select a valid token date and time'; end if;
+
+  issued_at := (p_token_date + p_token_time::time) at time zone 'Asia/Karachi';
+  insert into public.patient_token_daily_sequences (token_date, next_sequence)
+  values (p_token_date, 2)
+  on conflict (token_date)
+  do update set next_sequence = public.patient_token_daily_sequences.next_sequence + 1
+  returning next_sequence - 1 into sequence_number;
+
+  token_text := 'A' || repeat('0', greatest(3 - length(sequence_number::text), 0)) || sequence_number::text;
+  local_time := to_char(issued_at at time zone 'Asia/Karachi', 'HH12:MI AM');
+  insert into public.patient_token_slips (token_number, sequence, customer_name, token_date, token_time, created_at)
+  values (token_text, sequence_number, trim(p_customer_name), p_token_date, local_time, issued_at)
+  returning id into token_id;
+
+  return jsonb_build_object('id', token_id, 'token_number', token_text, 'sequence', sequence_number,
+    'customer_name', trim(p_customer_name), 'token_date', to_char(p_token_date, 'YYYY-MM-DD'),
+    'token_time', local_time, 'created_at', issued_at);
+end;
+$$;
+revoke all on function public.create_patient_token_at(text, date, text) from public, anon;
+grant execute on function public.create_patient_token_at(text, date, text) to authenticated;
 
 revoke all on function public.hmc_is_admin() from public, anon;
 revoke all on function public.apply_hmc_record_changes(text, jsonb, jsonb, text[]) from public, anon;

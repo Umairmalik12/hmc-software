@@ -12,6 +12,8 @@ import { collectionTotals, localPaymentDate, moneyCents, PaymentRecord, paymentD
 import { PaymentSlipPreviewComponent } from './payment-slip-preview.component';
 import { StaffService, STAFF_COLLECTION } from 'src/app/Services/staff.service';
 import { StaffRecord, STAFF_SHIFTS, staffKey, uniqueStaffValues } from 'src/app/Models/staff.model';
+import { selectedDateTime, validSelectedDateTime } from 'src/app/Shared/date-time-values';
+import { PatientLookupService } from 'src/app/Services/patient-lookup.service';
 
 @Component({ selector: 'app-payment', templateUrl: './payment.component.html', styleUrls: ['./payment.component.css'] })
 export class PaymentComponent implements OnInit, OnDestroy {
@@ -50,19 +52,21 @@ export class PaymentComponent implements OnInit, OnDestroy {
   currentTime = new Date();
   identity?: StaffIdentity;
   private context = { staffName: '', shiftName: '', counterName: '' };
-  private counterDate = localPaymentDate();
   private pendingCreateId = '';
   private loadVersion = 0;
   private destroyed = false;
   private subscriptions = new Subscription();
+  matchedPatient = '';
+  private patientLookupVersion = 0;
   private clock?: ReturnType<typeof setInterval>;
 
   constructor(private fb: FormBuilder, private indexedDbService: SupabaseDataService, private user: UserLoginService, private feedback: NotifyUpdateService = new NotifyUpdateService(), @Optional() @Inject(MatDialog) private dialog: MatDialog | null = null,
-    private staff: StaffService = new StaffService(indexedDbService)) {}
+    private staff: StaffService = new StaffService(indexedDbService), @Optional() private patientLookup: PatientLookupService | null = null) {}
 
   async ngOnInit(): Promise<void> {
     this.paymentForm = this.fb.group({
       patientName: ['', [requiredText, Validators.maxLength(120)]],
+      mrNumber: [null, [Validators.min(1)]],
       patientId: [{ value: this.generatePatientId(), disabled: true }],
       amount: [null, [Validators.required, validMoney]],
       cashGiven: [null, validMoney],
@@ -70,10 +74,12 @@ export class PaymentComponent implements OnInit, OnDestroy {
       paymentStatus: ['completed', [Validators.required, Validators.pattern(/^(completed|pending|failed)$/)]],
       staffName: ['', [requiredText, Validators.maxLength(120), this.validStaffSelection]],
       shiftName: ['', [requiredText, Validators.maxLength(60)]],
-      shiftDate: [localPaymentDate(), [Validators.required, validShiftDate]],
+      shiftDate: ['', [Validators.required, validShiftDate]],
+      createdAt: ['', validSelectedDateTime],
       counterName: ['', Validators.maxLength(60)],
     });
     this.subscriptions.add(this.paymentForm.valueChanges.subscribe(() => this.calculateCashReturn()));
+    this.subscriptions.add(this.paymentForm.get('mrNumber')!.valueChanges.subscribe(value => { if (!this.editingId) void this.lookupPatient(value); }));
     this.subscriptions.add(this.paymentForm.get('paymentMethod')!.valueChanges.subscribe(method => {
       this.paymentForm.get('cashGiven')!.setValidators(method === 'cash' ? [validMoney] : []);
       this.paymentForm.get('cashGiven')!.updateValueAndValidity({ emitEvent: false });
@@ -143,6 +149,16 @@ export class PaymentComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void { this.destroyed = true; this.loadVersion++; this.staffVersion++; this.subscriptions.unsubscribe(); if (this.clock) clearInterval(this.clock); }
   private message(error: unknown, fallback: string): string { return error instanceof Error ? error.message : fallback; }
+  private async lookupPatient(value: unknown): Promise<void> {
+    const version = ++this.patientLookupVersion, mr = Number(value); this.matchedPatient = '';
+    if (!this.patientLookup || !Number.isSafeInteger(mr) || mr < 1) return;
+    try {
+      const patient = await this.patientLookup.byMr(mr);
+      if (version !== this.patientLookupVersion || Number(this.paymentForm.get('mrNumber')!.value) !== mr || !patient) return;
+      if (!this.paymentForm.get('patientName')!.value) this.paymentForm.get('patientName')!.setValue([patient.firstName, patient.lastName].filter(Boolean).join(' '));
+      this.matchedPatient = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
+    } catch { if (version === this.patientLookupVersion) this.matchedPatient = ''; }
+  }
   generatePatientId(): string { return this.patientId = 'P-' + Math.random().toString(36).slice(2, 11); }
   loadMore(): void { this.pagination.loadMore(this.filteredPayments.length); this.applyPaymentFilter(false); }
 
@@ -198,10 +214,10 @@ export class PaymentComponent implements OnInit, OnDestroy {
       const now = new Date().toISOString();
       const amount = moneyCents(raw.amount)! / 100;
       const cashGiven = raw.paymentMethod === 'cash' ? (moneyCents(raw.cashGiven) ?? (raw.paymentStatus === 'completed' ? moneyCents(raw.amount)! : 0)) / 100 : 0;
-      const payment: PaymentRecord = { ...existing, ...raw, id: existing?.id || this.pendingCreateId, patientName: raw.patientName.trim(),
+      const payment: PaymentRecord = { ...existing, ...raw, mrNumber: raw.mrNumber ? Number(raw.mrNumber) : undefined, id: existing?.id || this.pendingCreateId, patientName: raw.patientName.trim(),
         amount, cashGiven, cashReturn: raw.paymentMethod === 'cash' ? Math.max(0, Math.round(cashGiven * 100) - Math.round(amount * 100)) / 100 : 0,
         staffName: raw.staffName.trim(), shiftName: raw.shiftName.trim(), counterName: raw.counterName.trim(),
-        createdAt: existing?.createdAt || (!wasEditing ? now : undefined), updatedAt: now,
+        createdAt: selectedDateTime(raw.createdAt) || (wasEditing && existing?.createdAt == null ? existing?.createdAt : ''), updatedAt: now,
         updatedById: this.identity.id, updatedByEmail: this.identity.email };
       this.validateCompletedCash(payment);
       if (!wasEditing) {
@@ -223,7 +239,6 @@ export class PaymentComponent implements OnInit, OnDestroy {
 
   private rememberCounter(payment: PaymentRecord): void {
     this.context = { staffName: payment.staffName || '', shiftName: payment.shiftName || '', counterName: payment.counterName || '' };
-    this.counterDate = payment.shiftDate || localPaymentDate();
     try { localStorage.setItem('hmc.paymentCounter.' + this.identity!.id, JSON.stringify(this.context)); } catch { /* Continue without saved defaults. */ }
   }
   async refreshPaymentList(): Promise<void> { await this.loadPayments(); }
@@ -274,7 +289,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
   get shiftOptions(): string[] { return [...new Set(this.payments.map(item => item.shiftName?.trim()).filter((value): value is string => !!value))].sort(); }
   get filteredPayments(): PaymentRecord[] {
     const query = this.paymentSearch.trim().toLocaleLowerCase();
-    return this.payments.filter(payment => (!query || [payment.patientName, payment.patientId, payment.id, payment.paymentMethod, payment.paymentStatus, payment.staffName, payment.counterName, payment.shiftName, payment.shiftDate]
+    return this.payments.filter(payment => (!query || [payment.patientName, payment.patientId, payment.mrNumber, payment.id, payment.paymentMethod, payment.paymentStatus, payment.staffName, payment.counterName, payment.shiftName, payment.shiftDate]
       .some(value => String(value || '').toLocaleLowerCase().includes(query)))
       && (!this.staffFilter || (this.staffFilter === '__unrecorded__' ? !staffKey(payment.staffName) : staffKey(payment.staffName) === staffKey(this.staffFilter)))
       && (!this.shiftFilter || (this.shiftFilter === '__unrecorded__' ? !payment.shiftName : payment.shiftName === this.shiftFilter))
@@ -287,7 +302,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
   todayOnly(): void { this.fromDate = this.toDate = localPaymentDate(); this.applyPaymentFilter(); }
   get dateRangeInvalid(): boolean { return !!this.fromDate && !!this.toDate && this.fromDate > this.toDate; }
   exportToExcel(): void {
-    exportRecords(this.filteredPayments.map(payment => ({ 'Receipt #': payment.id, 'Patient': payment.patientName, 'Patient ID': payment.patientId || '',
+    exportRecords(this.filteredPayments.map(payment => ({ 'Receipt #': payment.id, 'Patient': payment.patientName, 'MR Number': payment.mrNumber || '', 'Patient ID': payment.patientId || '',
       'Date / time': payment.createdAt ? new Date(payment.createdAt).toLocaleString('en-PK', { hour12: true }) : 'Not recorded', 'Counter staff': payment.staffName || 'Not recorded',
       'Shift': payment.shiftName || 'Not recorded', 'Shift date': payment.shiftDate || 'Not recorded', 'Counter': payment.counterName || '',
       'Amount (Rs)': payment.amount, 'Cash tendered (Rs)': payment.cashGiven ?? '', 'Change (Rs)': payment.cashReturn ?? '', 'Method': payment.paymentMethod || '', 'Status': payment.paymentStatus || '',
@@ -297,9 +312,9 @@ export class PaymentComponent implements OnInit, OnDestroy {
     if (this.saving || this.deletingId) return;
     this.editingId = payment.id; this.editingStaffName = payment.staffName || ''; this.patientId = payment.patientId || '';
     this.attributionValidators(true);
-    this.paymentForm.reset({ patientName: payment.patientName, patientId: this.patientId, amount: payment.amount, cashGiven: payment.cashGiven ?? null,
+    this.paymentForm.reset({ patientName: payment.patientName, mrNumber: payment.mrNumber ?? null, patientId: this.patientId, amount: payment.amount, cashGiven: payment.cashGiven ?? null,
       paymentMethod: payment.paymentMethod || 'cash', paymentStatus: payment.paymentStatus || 'pending', staffName: payment.staffName || '',
-      shiftName: payment.shiftName || '', shiftDate: payment.shiftDate || '', counterName: payment.counterName || '' });
+      shiftName: payment.shiftName || '', shiftDate: payment.shiftDate || '', createdAt: payment.createdAt || '', counterName: payment.counterName || '' });
     this.errorMessage = ''; this.successMessage = ''; this.calculateCashReturn();
     document.getElementById('payment-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -317,11 +332,10 @@ export class PaymentComponent implements OnInit, OnDestroy {
     if (!this.editingId) {
       const raw = this.paymentForm.getRawValue();
       this.context = { staffName: raw.staffName || '', shiftName: raw.shiftName || '', counterName: raw.counterName || '' };
-      this.counterDate = raw.shiftDate || localPaymentDate();
     }
     this.editingId = ''; this.editingStaffName = ''; this.pendingCreateId = ''; this.attributionValidators(false);
-    this.paymentForm.reset({ patientName: '', patientId: this.generatePatientId(), amount: null, cashGiven: null, paymentMethod: 'cash', paymentStatus: 'completed',
-      ...this.context, shiftDate: this.counterDate });
+    this.matchedPatient = ''; this.paymentForm.reset({ patientName: '', mrNumber: null, patientId: this.generatePatientId(), amount: null, cashGiven: null, paymentMethod: 'cash', paymentStatus: 'completed',
+      ...this.context, shiftDate: '', createdAt: '' });
     this.restoreStaffDefault();
     this.cashReturn = 0;
   }

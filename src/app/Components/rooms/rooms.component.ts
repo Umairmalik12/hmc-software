@@ -1,5 +1,5 @@
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { FormControl, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { RoomOption, RoomService } from 'src/app/Services/room.service';
@@ -24,6 +24,7 @@ import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination'
   styles: ['.room-form{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}.room-form mat-form-field{flex:1;min-width:200px}.room-form button{margin-top:7px}.room-table{width:100%;border-collapse:collapse;font-size:13px}.room-table th,.room-table td{padding:13px 16px;text-align:left;border-bottom:1px solid #e1e9ed;overflow-wrap:anywhere}.room-table th{background:#f4f7f9}.room-table td:last-child{width:130px}.room-success{color:#267d6b;font-size:13px}'],
 })
 export class RoomsComponent implements OnInit, OnDestroy {
+  @Input() isSuperAdmin = false;
   readonly pagination = new ScrollPagination();
   readonly trackRecord = trackRecord;
   options: RoomOption[] = [];

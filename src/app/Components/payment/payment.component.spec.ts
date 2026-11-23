@@ -15,7 +15,7 @@ describe('Payment counter and CRUD', () => {
     component = new PaymentComponent(new FormBuilder(), store.db, { getLoginUser: async () => 'admin', getStaffIdentity: async () => identity } as UserLoginService);
     await component.ngOnInit(); component.printAfterSave = false;
   }
-  const fill = (values: object = {}): void => component.paymentForm.patchValue({ patientName: 'Ali', amount: 100, shiftName: 'Night', ...values });
+  const fill = (values: object = {}): void => component.paymentForm.patchValue({ patientName: 'Ali', amount: 100, shiftName: 'Night', shiftDate: '2026-11-20', createdAt: '2026-11-20T09:15', ...values });
   const stored = (): PaymentRecord[] => Array.from(store.collections.get('payments')?.values() || []);
   beforeEach(() => localStorage.removeItem('hmc.paymentCounter.' + identity.id));
   afterEach(() => { component?.ngOnDestroy(); localStorage.removeItem('hmc.paymentCounter.' + identity.id); });
@@ -41,7 +41,7 @@ describe('Payment counter and CRUD', () => {
     expect(saved.shiftDate).toBe('2026-11-16'); expect(saved.counterName).toBe('Reception 1');
     expect(saved.recordedById).toBe(identity.id); expect(saved.recordedByEmail).toBe(identity.email);
     expect(Number.isNaN(new Date(saved.createdAt!).getTime())).toBeFalse();
-    expect(component.paymentForm.get('shiftDate')!.value).toBe('2026-11-16'); // Overnight context survives the next patient.
+    expect(component.paymentForm.get('shiftDate')!.value).toBe(''); // The next payment requires an explicit date selection.
     component.identity = { id: 'second-staff', name: 'Bilal', email: 'bilal@example.test' };
     component.editPayment(saved); component.paymentForm.get('amount')!.setValue(125);
     await component.processPayment();

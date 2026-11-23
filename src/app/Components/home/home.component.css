@@ -1,4 +1,5 @@
 :host { display: block; }
+.assistant-launcher { color: #147e72; background: #eaf5f2; border: 1px solid #d8eae4; border-radius: 12px; }
 .sidenav-container { height: 100dvh; background: var(--hmc-background); }
 mat-sidenav { width: 260px; border: 0; background: #122e37; color: #dbe7e9; }
 .sidebar-brand { display: flex; align-items: center; gap: 12px; padding: 28px 22px; text-decoration: none; color: #fff; }

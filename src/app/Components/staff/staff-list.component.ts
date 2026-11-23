@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { Subscription } from 'rxjs';
 import { StaffRecord, STAFF_SHIFTS, employmentLabel, formatDutyTiming, staffKey, uniqueStaffValues } from '../../Models/staff.model';
@@ -13,6 +13,7 @@ import { StaffDutyManagerComponent } from './staff-duty-manager.component';
 
 @Component({ selector: 'app-staff-list', templateUrl: './staff-list.component.html', styleUrls: ['./staff-list.component.css'] })
 export class StaffListComponent implements OnInit, OnDestroy {
+  @Input() isSuperAdmin = false;
   readonly pagination = new ScrollPagination();
   readonly trackRecord = trackRecord;
   readonly timing = formatDutyTiming;

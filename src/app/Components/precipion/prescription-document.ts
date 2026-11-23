@@ -79,16 +79,22 @@ export function prescriptionDateTime(issuedAt: string, part: 'date' | 'time'): s
     : date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
-export function prescriptionHeader(baseUrl: string): string {
+export function prescriptionHeader(baseUrl: string, doctorName = ''): string {
   const logo = escapeHtml(new URL('assets/images/urocare-logo.svg', baseUrl).href);
   const doctor = PRESCRIPTION_DOCTOR;
+  const doctorInformation = doctorName
+    ? `<span>Consulting doctor</span><strong>${escapeHtml(doctorName)}</strong>`
+    : `<span>${escapeHtml(doctor.title)}</span><strong>${escapeHtml(doctor.name)}</strong><span>${escapeHtml(doctor.qualifications)}</span><span>${escapeHtml(doctor.designation)}</span><span>${escapeHtml(doctor.previousRole)}</span><span>${escapeHtml(doctor.institution)}</span>`;
+  const doctorDetails = doctorName
+    ? `<div style="grid-column:1/-1"><b>Doctor’s name:</b> ${escapeHtml(doctorName)}</div>`
+    : `<div><b>PHC Reg #:</b> ${escapeHtml(doctor.phcRegistration)}</div><div><b>Phone:</b> ${escapeHtml(doctor.phone)}</div>`;
   return `<header class="rx-masthead">
-    <div class="rx-doctor"><span>${escapeHtml(doctor.title)}</span><strong>${escapeHtml(doctor.name)}</strong><span>${escapeHtml(doctor.qualifications)}</span><span>${escapeHtml(doctor.designation)}</span><span>${escapeHtml(doctor.previousRole)}</span><span>${escapeHtml(doctor.institution)}</span></div>
+    <div class="rx-doctor">${doctorInformation}</div>
     <img class="rx-logo" src="${logo}" alt="UROCARE kidney emblem" width="82" height="82">
     <div class="rx-clinic"><div class="rx-bismillah" lang="ar">بسم الله الرحمن الرحيم</div><strong>Haq Medical Center</strong><span>Patient care &amp; urology</span></div>
   </header><h1 class="rx-title">Prescription</h1>
   <div class="rx-section-title">Doctor’s information</div>
-  <div class="rx-doctor-details"><div><b>PHC Reg #:</b> ${escapeHtml(doctor.phcRegistration)}</div><div><b>Phone:</b> ${escapeHtml(doctor.phone)}</div></div>`;
+  <div class="rx-doctor-details">${doctorDetails}</div>`;
 }
 
 /** The preview and print use this same escaped, read-only document. */
@@ -100,11 +106,11 @@ export function buildPrescriptionDocument(record: PrescriptionRecord, baseUrl: s
   }).join('');
   const medicines = record.medicines.map(medicine => `<tr><td>${escapeHtml(medicine.name)}</td><td class="rx-dose">${medicine.morning ? '✓' : ''}</td><td class="rx-dose">${medicine.afternoon ? '✓' : ''}</td><td class="rx-dose">${medicine.evening ? '✓' : ''}</td></tr>`).join('');
   const blanks = '<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>'.repeat(Math.max(0, 8 - record.medicines.length));
-  return `<article class="rx-sheet">${prescriptionHeader(baseUrl)}
+  return `<article class="rx-sheet">${prescriptionHeader(baseUrl, record.doctorName)}
     <div class="rx-section-title">Patient’s information</div><div class="rx-patient-grid">${fields}</div>
     <div class="rx-section-title">Prescription (Rx)</div><table class="rx-medicines"><thead><tr><th>Medicine / dose</th><th>Morning</th><th>Afternoon</th><th>Evening</th></tr></thead><tbody>${medicines}${blanks}</tbody></table>
     <section class="rx-instructions"><div class="rx-section-title">Instructions</div><p>${PRESCRIPTION_INSTRUCTIONS}</p></section>
-    <div class="rx-signature"><div><strong>Doctor’s name and signature</strong>${escapeHtml(PRESCRIPTION_DOCTOR.name)}<small>${escapeHtml(PRESCRIPTION_DOCTOR.designation)}</small></div><div><strong>Date &amp; time</strong>${escapeHtml(prescriptionDateTime(record.issuedAt, 'date'))} · ${escapeHtml(prescriptionDateTime(record.issuedAt, 'time'))}</div></div>
+    <div class="rx-signature"><div><strong>Doctor’s name and signature</strong>${escapeHtml(record.doctorName || PRESCRIPTION_DOCTOR.name)}${record.doctorName ? '' : `<small>${escapeHtml(PRESCRIPTION_DOCTOR.designation)}</small>`}</div><div><strong>Date &amp; time</strong>${escapeHtml(prescriptionDateTime(record.issuedAt, 'date'))} · ${escapeHtml(prescriptionDateTime(record.issuedAt, 'time'))}</div></div>
     <div class="rx-footer">Haq Medical Center · Multan Institute of Kidney Diseases</div>
   </article>`;
 }

@@ -1,4 +1,5 @@
 import { SearchableSelectComponent } from 'src/app/Shared/searchable-select.component';
+import { DateTimeFieldComponent } from 'src/app/Shared/date-time-field.component';
 import { ClinicalCatalogSelectComponent } from 'src/app/Components/clinical-catalog/clinical-catalog-select.component';
 import { ClinicalCatalogService, DEFAULT_LAB_TESTS } from 'src/app/Services/clinical-catalog.service';
 import { Subject as ClinicalChanges } from 'rxjs';
@@ -53,13 +54,23 @@ describe('Daily medicine form using the shared medicine catalogue', () => {
   beforeEach(async () => {
     store = memoryDb();
     await TestBed.configureTestingModule({
-      imports: [SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatAutocompleteModule, MatDialogModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule],
+      imports: [DateTimeFieldComponent, SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatAutocompleteModule, MatDialogModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule],
       declarations: [MedicineEditComponent, RoomSelectComponent, PrescriptionMedicineSelectComponent, MedicineCatalogComponent, MedicineOptionDialogComponent, ScrollPaginationDirective, ScrollListFooterComponent, RecordPreviewDirective],
       providers: [{ provide: ClinicalCatalogService, useValue: { changes: new ClinicalChanges<string>(), getAll: async (kind: string) => kind === 'lab-tests' ? DEFAULT_LAB_TESTS : [] } }, { provide: SupabaseDataService, useValue: store.db }],
     }).compileComponents();
   });
   afterEach(() => TestBed.inject(MatDialog).closeAll());
 
+  it('keeps strengths of the same medicine distinct in daily medicine selections and quantities', async () => {
+    const catalog = TestBed.inject(PrescriptionMedicineCatalogService);
+    await catalog.save('Variant daily', undefined, '1g'); await catalog.save('Variant daily', undefined, '2g');
+    const ref = await open(), component = ref.componentInstance, parent = document.querySelector<HTMLElement>('app-medicine-edit')!;
+    component.medicineForm.patchValue({ patientName: 'Existing patient' });
+    await choose(parent, 0, 'Variant daily', 'Variant daily 1 g'); component.medicines.at(0).get('quantity')!.setValue(2);
+    component.addMedicine(); await settle(); await choose(parent, 1, 'Variant daily', 'Variant daily 2 g'); component.medicines.at(1).get('quantity')!.setValue(3);
+    await component.onSubmit(); await settle();
+    const saved = Array.from(store.collections.get('medicineDetails')!.values())[0]; expect(saved.medicines).toEqual([{ medicineName: 'Variant daily 1 g', quantity: 2 }, { medicineName: 'Variant daily 2 g', quantity: 3 }]);
+  });
   it('validates empty medicine names, selects catalogue values in separate rows and saves their quantities', async () => {
     const ref = await open(); const component = ref.componentInstance;
     const parent = document.querySelector<HTMLElement>('app-medicine-edit')!;

@@ -2,6 +2,22 @@ import { memoryDb } from '../testing/memory-db';
 import { DEFAULT_PRESCRIPTION_MEDICINES, medicineKey, PRESCRIPTION_MEDICINE_CATALOG, PrescriptionMedicineCatalogService } from './prescription-medicine-catalog.service';
 
 describe('Prescription medicine catalogue persistence', () => {
+  it('labels stored base-name/strength variants distinctly without rewriting records and rejects only the same variant', async () => {
+    const { db, collections } = memoryDb();
+    const one = { id: 'one', name: 'Variant medicine', strength: '1g', active: true }, two = { id: 'two', name: 'Variant medicine', strength: '2g', active: true };
+    collections.set(PRESCRIPTION_MEDICINE_CATALOG, new Map([['one', one], ['two', two]]));
+    const historical = { id: 'p', medicines: [{ name: 'Variant medicine 1g' }] }; collections.set('prescriptions', new Map([['p', historical]]));
+    const service = new PrescriptionMedicineCatalogService(db);
+    try {
+      const options = await service.getAll(); expect(options.find(item => item.id === 'one')!.name).toBe('Variant medicine 1 g'); expect(options.find(item => item.id === 'two')!.name).toBe('Variant medicine 2 g');
+      expect(db.upsertRecord).not.toHaveBeenCalled(); expect(collections.get(PRESCRIPTION_MEDICINE_CATALOG)!.get('one')).toEqual(one);
+      await expectAsync(service.save('Variant medicine', undefined, '1 g')).toBeRejectedWithError('This medicine already exists.');
+      await expectAsync(service.save('Variant medicine', 'one', '2g')).toBeRejectedWithError('This medicine already exists.');
+      const third = await service.save('Variant medicine 1g', undefined, '500 mg'); expect(third.name).toBe('Variant medicine 500 mg');
+      await service.delete(options.find(item => item.id === 'one')!); expect((await service.getAll()).some(item => item.id === 'two')).toBeTrue();
+      expect((await service.save('Variant medicine', undefined, '1g')).id).toBe('one'); expect(collections.get('prescriptions')!.get('p')).toEqual(historical);
+    } finally { service.ngOnDestroy(); }
+  });
   it('persists separate strength variants, edits their strength and preserves medicine text in historical records', async () => {
     const { db, collections } = memoryDb(); const service = new PrescriptionMedicineCatalogService(db);
     try {

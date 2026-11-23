@@ -28,7 +28,7 @@ export class LabService {
       const timeA = (a as any).createdAt || a.dateTime ? new Date(((a as any).createdAt || a.dateTime)).getTime() : 0;
       const timeB = (b as any).createdAt || b.dateTime ? new Date(((b as any).createdAt || b.dateTime)).getTime() : 0;
       if (timeA && timeB && timeA !== timeB) return timeB - timeA;
-      return (Number(b.patientId) || 0) - (Number(a.patientId) || 0);
+      return String(b.labId || b.patientId || '').localeCompare(String(a.labId || a.patientId || ''), undefined, { numeric: true });
     });
   }
 
@@ -59,12 +59,12 @@ export class LabService {
     });
   }
 
-  getLabPatientDetails(id: number): Observable<LabPatient> {
-    return new Observable<LabPatient>(observer => {
+  getLabPatientDetails(id: number | string): Observable<LabPatient | undefined> {
+    return new Observable<LabPatient | undefined>(observer => {
       this.indexedDbService.getItem<LabPatient[]>('labDetails').then(data => {
         this.labDetail = data ?? [];
-        const patient = this.labDetail.find(o => o.patientId === id);
-        observer.next(patient as LabPatient);
+        const patient = this.labDetail.find(o => String(o.labId || '') === String(id)) || this.labDetail.find(o => o.patientId === Number(id));
+        observer.next(patient);
         observer.complete();
       }).catch(err => observer.error(err));
     });
@@ -74,16 +74,11 @@ export class LabService {
     try {
       const stored = await this.indexedDbService.getItem<LabPatient[]>('labDetails');
       this.labDetail = stored ?? [];
-
-      if (!data.patientId) {
-        data.patientId = await this.indexedDbService.allocateId('labDetails');
-      } else if (this.labDetail.some(o => o.patientId === data.patientId)) {
-        console.error('Duplicate MR No (patientId) exists');
-        return false;
-      }
-
-      await this.indexedDbService.upsertRecord('labDetails', data.patientId!, data);
-      this.labDetail.push(data);
+      if (data.mrNumber !== undefined && (!Number.isSafeInteger(data.mrNumber) || data.mrNumber < 1)) return false;
+      const labId = data.labId || String(await this.indexedDbService.allocateId('labDetails'));
+      const saved = { ...data, labId, patientId: data.mrNumber ?? data.patientId };
+      await this.indexedDbService.insertRecord('labDetails', labId, saved);
+      this.labDetail.push(saved);
       return true;
     } catch (err) {
       console.error('Error adding lab patient:', err);
@@ -96,10 +91,11 @@ export class LabService {
       const stored = await this.indexedDbService.getItem<LabPatient[]>('labDetails');
       this.labDetail = stored ?? [];
 
-      const index = this.labDetail.findIndex(o => o.patientId === data.patientId);
+      const index = this.labDetail.findIndex(o => data.labId ? String(o.labId) === String(data.labId) : o.patientId === data.patientId);
       if (index !== -1) {
-        await this.indexedDbService.upsertRecord('labDetails', data.patientId!, data, index);
-        this.labDetail[index] = data;
+        const updated = { ...data, labId: this.labDetail[index].labId || String(this.labDetail[index].patientId) };
+        await this.indexedDbService.upsertRecord('labDetails', updated.labId!, updated, index);
+        this.labDetail[index] = updated;
         return true;
       }
       return false;
@@ -113,7 +109,9 @@ export class LabService {
     return new Observable<LabPatient[]>(observer => {
       this.indexedDbService.getItem<LabPatient[]>('labDetails').then(data => {
         const list: LabPatient[] = (data ?? []).map(p => ({
-          patientId: p.patientId,
+          patientId: p.mrNumber ?? p.patientId,
+          mrNumber: p.mrNumber,
+          labId: p.labId,
           name: p.name,
           phone: p.phone,
           testName: p.testName,
@@ -128,14 +126,15 @@ export class LabService {
     });
   }
 
-  async deleteLabPatient(id: number): Promise<boolean> {
+  async deleteLabPatient(id: number | string): Promise<boolean> {
     try {
       const data = await this.indexedDbService.getItem<LabPatient[]>('labDetails');
       this.labDetail = data ?? [];
 
-      const index = this.labDetail.findIndex(p => p.patientId === id);
+      let index = this.labDetail.findIndex(p => String(p.labId || '') === String(id));
+      if (index < 0) index = this.labDetail.findIndex(p => p.patientId === Number(id));
       if (index !== -1) {
-        await this.indexedDbService.deleteRecord('labDetails', id);
+        await this.indexedDbService.deleteRecord('labDetails', this.labDetail[index].labId || id);
         this.labDetail.splice(index, 1);
         return true;
       }

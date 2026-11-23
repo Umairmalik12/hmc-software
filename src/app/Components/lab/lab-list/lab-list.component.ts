@@ -31,7 +31,7 @@ export class LabListComponent implements OnInit, OnDestroy {
   private loadVersion = 0;
   loading = false;
   loadFailed = false;
-  deletingId: number | null = null;
+  deletingId: string | null = null;
   searchQuery = '';
   searchDoctorName = '';
   searchTestName = '';
@@ -41,16 +41,17 @@ export class LabListComponent implements OnInit, OnDestroy {
   loadMore(): void { this.pagination.loadMore(this.total); this.updateDisplayedPatients(); }
 
   onDateFilter(reset = true): void {
-    this.filteredPatients = this.patient.filter(record => includesText([record.patientId,record.name,record.phone,record.testName,record.suggestedDr].join(' '), this.searchQuery) && (!this.searchDoctorName || sameClinicalName(record.suggestedDr, this.searchDoctorName)) && (!this.searchTestName || labTestNames(record.testName).some(name => sameClinicalName(name, this.searchTestName))));
+    this.filteredPatients = this.patient.filter(record => includesText([record.mrNumber ?? record.patientId,record.name,record.phone,record.testName,record.suggestedDr].join(' '), this.searchQuery) && (!this.searchDoctorName || sameClinicalName(record.suggestedDr, this.searchDoctorName)) && (!this.searchTestName || labTestNames(record.testName).some(name => sameClinicalName(name, this.searchTestName))));
     if (reset) this.pagination.reset();
     this.updateDisplayedPatients();
   }
   onSearch(): void { this.onDateFilter(); }
+  labKey(lab: LabPatient): string { return String(lab.labId || lab.patientId || ''); }
   onClearSearch(): void { this.searchQuery = ''; this.searchDoctorName = ''; this.searchTestName = ''; this.onSearch(); }
 
   private refreshSubscription?: Subscription;
   ngOnDestroy(): void { this.refreshSubscription?.unsubscribe(); this.loadVersion++; }
-  async viewLab(id: number): Promise<void> {
+  async viewLab(id: number | string): Promise<void> {
     try {
       const record = await firstValueFrom(this.labService.getLabPatientDetails(id));
       if (!record) throw new Error('Record not found.');
@@ -70,7 +71,7 @@ export class LabListComponent implements OnInit, OnDestroy {
     patientId: 0,
     price: 0,
     suggestedDr: '',
-    dateTime: new Date(),
+    dateTime: '',
     name: '',
     phone: '',
     testName: '',
@@ -118,7 +119,7 @@ ngOnInit(): void {
   }
 
 
- editLabPatient(id: number) {
+ editLabPatient(id: number | string) {
   this.labService.getLabPatientDetails(id).subscribe({ next: data => {
     if (!data) { this.notifyUpdate.alertNotify.next({type: 'error', msg: 'This lab test is no longer available. Refresh the list.'}); return; }
     this.tempLabPatient = data;
@@ -145,9 +146,9 @@ ngOnInit(): void {
   }, error: () => this.notifyUpdate.alertNotify.next({ type: 'error', msg: 'Lab test details could not be loaded. Refresh the list and try again.' }) });
 }
 
-  async deleteLabPatient(id: number): Promise<void> {
+  async deleteLabPatient(id: number | string): Promise<void> {
     if (this.deletingId !== null || !window.confirm('Delete this lab test? This action cannot be undone.')) return;
-    this.deletingId = id;
+    this.deletingId = String(id);
     try {
       const saved = await this.labService.deleteLabPatient(id);
       if (!saved) throw new Error('Lab test could not be deleted. Refresh the list and try again.');
@@ -157,7 +158,7 @@ ngOnInit(): void {
     finally { this.deletingId = null; }
   }
 
-  async printLabSlip(patientId: number): Promise<void> {
+  async printLabSlip(patientId: number | string): Promise<void> {
     try {
       const record = await firstValueFrom(this.labService.getLabPatientDetails(patientId));
       if (!record) throw new Error('Lab data not found for printing. Refresh the list and try again.');

@@ -1,3 +1,4 @@
+import { DateTimeFieldComponent } from 'src/app/Shared/date-time-field.component';
 import { SearchableSelectComponent } from 'src/app/Shared/searchable-select.component';
 import { ClinicalCatalogSelectComponent } from 'src/app/Components/clinical-catalog/clinical-catalog-select.component';
 import { ClinicalCatalogService, DEFAULT_LAB_TESTS } from 'src/app/Services/clinical-catalog.service';
@@ -7,7 +8,7 @@ import { By } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelect, MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
@@ -40,7 +41,7 @@ describe('Operation patient registration and filters', () => {
     procedures = jasmine.createSpyObj<ProcedureService>('procedures', ['getAll']);
     procedures.getAll.and.resolveTo([{ id: '1', name: 'Cystoscopy', active: true }, { id: '2', name: 'Right nephrectomy', active: true }, { id: '3', name: 'Database procedure', active: true }]);
     await TestBed.configureTestingModule({
-      imports: [SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, MatDialogModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, MatTableModule, MatPaginatorModule],
+      imports: [DateTimeFieldComponent, SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, MatDialogModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, MatTableModule, MatPaginatorModule],
       declarations: [PatientEditComponent, PatientListComponent, ProcedureSelectComponent, ScrollPaginationDirective, ScrollListFooterComponent],
       providers: [{ provide: ClinicalCatalogService, useValue: { changes: new ClinicalChanges<string>(), getAll: async (kind: string) => kind === 'lab-tests' ? DEFAULT_LAB_TESTS : [] } }, { provide: MAT_DIALOG_DATA, useValue: {} }, { provide: MatDialogRef, useValue: { close } }, { provide: ProcedureService, useValue: procedures }, { provide: SupabaseDataService, useValue: db },
         { provide: PatientService, useValue: { getAllPatient: () => of(rows) } }, { provide: UserLoginService, useValue: { getLoginUser: async () => 'admin' } }],
@@ -68,6 +69,24 @@ describe('Operation patient registration and filters', () => {
       age.value = '30'; age.dispatchEvent(new Event('input', { bubbles: true }));
       fixture.componentInstance.onSubmit();
       expect(close).toHaveBeenCalledWith(jasmine.objectContaining({ patientId: 8123, firstName: 'Ali', gender: 'Female', age: 30 }));
+    } finally { fixture.destroy(); }
+  });
+
+  it('edits Registered on through date and time pickers and saves the selected timestamp', async () => {
+    const fixture = TestBed.createComponent(PatientEditComponent);
+    try {
+      await settle(fixture); const editor = fixture.componentInstance;
+      const field = fixture.debugElement.query(By.directive(DateTimeFieldComponent)).componentInstance as DateTimeFieldComponent;
+      expect(editor.b.createdAt.value).toBe(''); expect(field.date).toBeNull(); expect(field.time).toBe('');
+      editor.b.patientId.setValue(8123); editor.c.firstName.setValue('Ali');
+      (fixture.nativeElement.querySelector('[aria-label="Registered on date"]') as HTMLInputElement).click(); await settle(fixture);
+      expect(document.querySelector('mat-calendar')).not.toBeNull();
+      field.calendar?.close(); field.selectDate(new Date(2020, 0, 2)); await settle(fixture);
+      editor.onSubmit(); expect(close).not.toHaveBeenCalled(); expect(editor.patientForm.invalid).toBeTrue();
+      field.openTime(); await settle(fixture); TestBed.inject(MatDialog).openDialogs[0].close('00:05'); await settle(fixture);
+      expect(editor.b.createdAt.value).toBe('2020-01-02T00:05'); editor.onSubmit();
+      expect(close).toHaveBeenCalledWith(jasmine.objectContaining({ createdAt: new Date('2020-01-02T00:05').toISOString() }));
+      expect(fixture.nativeElement.scrollWidth).toBeLessThanOrEqual(fixture.nativeElement.clientWidth + 1);
     } finally { fixture.destroy(); }
   });
 

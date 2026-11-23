@@ -3,6 +3,7 @@ import { Subject, Subscription } from 'rxjs';
 import { OT_MEDICINES } from '../Components/otslip/ot-medicines';
 import { emptyOtCatalogMedicine, OtCatalogMedicine, otMedicineKey } from '../Models/ot-medicine-catalog.model';
 import { SupabaseDataService } from './supabase-data.service';
+import { medicineVariantKey } from '../Models/medicine-strength';
 
 export const OT_MEDICINE_CATALOG = 'otMedicineCatalog';
 export const DEFAULT_OT_CATALOG: readonly OtCatalogMedicine[] = OT_MEDICINES.map(name => ({
@@ -20,6 +21,9 @@ export class OtMedicineCatalogService implements OnDestroy {
   }
   ngOnDestroy(): void { this.subscription.unsubscribe(); this.changes.complete(); }
   private invalidate(): void { this.cache = undefined; this.changes.next(); }
+  async canManage(): Promise<boolean> {
+    try { await this.db.requireAdministrator(); return true; } catch { return false; }
+  }
 
   async getAll(includeDeleted = false, refresh = false): Promise<OtCatalogMedicine[]> {
     if (refresh) this.cache = undefined;
@@ -39,6 +43,7 @@ export class OtMedicineCatalogService implements OnDestroy {
   }
 
   async save(draft: OtCatalogMedicine): Promise<OtCatalogMedicine> {
+    if (draft.id) await this.db.requireAdministrator('Only administrators can edit OT catalogue medicines.');
     const text = (value: unknown): string => typeof value === 'string' ? value.trim() : '';
     const name = text(draft.name).replace(/\s+/g, ' ');
     if (!name) throw new Error('Enter the medicine name.');
@@ -48,8 +53,10 @@ export class OtMedicineCatalogService implements OnDestroy {
     const all = await this.read();
     const existing = draft.id ? all.find(item => item.id === draft.id) : undefined;
     if (draft.id && (!existing || existing.deleted)) throw new Error('This OT medicine has been removed. Refresh the medicine list.');
-    const duplicate = all.find(item => item.id !== draft.id && otMedicineKey(item.name) === otMedicineKey(name));
-    if (duplicate && !duplicate.deleted) throw new Error('An OT medicine with this name already exists. Edit or reactivate that entry.');
+    const matches = all.filter(item => item.id !== draft.id && medicineVariantKey(item.name, item.strength) === medicineVariantKey(name, text(draft.strength)));
+    const duplicate = matches.find(item => !item.deleted) || matches[0];
+    if (duplicate && !duplicate.deleted) throw new Error('An OT medicine with this name and strength already exists. Edit or reactivate that entry.');
+    if (!draft.id && duplicate) await this.db.requireAdministrator('Only administrators can restore OT catalogue medicines.');
     const now = new Date().toISOString();
     const record: OtCatalogMedicine = { ...emptyOtCatalogMedicine(), ...(existing || duplicate), id: draft.id || duplicate?.id || String(await this.db.allocateId(OT_MEDICINE_CATALOG)), name,
       genericName: text(draft.genericName), category: text(draft.category), type: text(draft.type), strength: text(draft.strength), unit: text(draft.unit), description: text(draft.description),
@@ -59,6 +66,7 @@ export class OtMedicineCatalogService implements OnDestroy {
   }
 
   async delete(id: string): Promise<void> {
+    await this.db.requireAdministrator('Only administrators can delete OT catalogue medicines.');
     const current = (await this.read()).find(item => item.id === id);
     if (!current || current.deleted) throw new Error('This OT medicine is no longer available. Refresh the list.');
     await this.db.upsertRecord(OT_MEDICINE_CATALOG, id, { ...current, active: false, deleted: true, updatedAt: new Date().toISOString() });

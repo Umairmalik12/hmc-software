@@ -1,4 +1,5 @@
 import { SearchableSelectComponent } from './Shared/searchable-select.component';
+import { DateTimeFieldComponent } from './Shared/date-time-field.component';
 import { ClinicalCatalogComponent } from './Components/clinical-catalog/clinical-catalog.component';
 import { ClinicalCatalogSelectComponent } from './Components/clinical-catalog/clinical-catalog-select.component';
 import { ThermalReceiptPreviewComponent } from './Shared/thermal-receipt-preview.component';
@@ -22,6 +23,7 @@ import { HomeComponent } from './Components/home/home.component';
 import { StaffListComponent } from './Components/staff/staff-list.component';
 import { StaffEditComponent } from './Components/staff/staff-edit.component';
 import { StaffDutyManagerComponent } from './Components/staff/staff-duty-manager.component';
+import { AdminAssistantComponent } from './Components/admin-assistant/admin-assistant.component';
 import { ExpensesComponent } from './Components/expenses/expenses.component';
 import { ExpenseEditComponent } from './Components/expenses/expense-edit.component';
 import { ExpenseMonthPreviewComponent } from './Components/expenses/expense-month-preview.component';
@@ -96,6 +98,7 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
     StaffListComponent,
     StaffEditComponent,
     StaffDutyManagerComponent,
+    AdminAssistantComponent,
     ExpensesComponent,
     ExpenseEditComponent,
     ExpenseMonthPreviewComponent,
@@ -151,6 +154,7 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
     BrowserModule,
     ClinicalCatalogSelectComponent,
     SearchableSelectComponent,
+    DateTimeFieldComponent,
     FeedbackModule,
     AppRoutingModule,
     BrowserAnimationsModule,

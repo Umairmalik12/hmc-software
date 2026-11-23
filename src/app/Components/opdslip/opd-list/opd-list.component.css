@@ -11,3 +11,4 @@
 .action-buttons { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .table-btn { min-width: 36px; width: 36px; height: 36px; padding: 0; border-radius: 8px; }
 @media (max-width: 840px) { .body { padding: 14px; } .patient-table { min-width: 680px; } }
+.rx-status{display:inline-flex;align-items:center;padding:4px 9px;border-radius:999px;background:#e7f6f0;color:#137663;font-size:11px;font-weight:600;white-space:nowrap}.rx-status-pending{background:#fff4e2;color:#8b5a10}.rx-status-draft{background:#eef2ff;color:#4e5d9a}

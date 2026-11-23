@@ -18,6 +18,22 @@ describe('Dynamic OT catalogue and patient slip integration', () => {
     const component = new OtFormComponent(new FormBuilder(), router, records, new NotifyUpdateService(), {} as MatDialog, catalog);
     return { ...memory, catalog, component, router };
   };
+  it('matches legacy patient items by name and strength and keeps same-name variant quantities separate', async () => {
+    const { catalog, component, collections } = setup(); spyOn(window, 'open').and.returnValue(null);
+    try {
+      const one = await catalog.save({ ...emptyOtCatalogMedicine(), name: '2SUM', strength: '1g' });
+      const two = await catalog.save({ ...emptyOtCatalogMedicine(), name: '2SUM', strength: '2g' });
+      collections.set('otFormData', new Map([['41', { ...emptyOtRecord(), id: '41', patientName: 'Existing patient', products: [{ name: '2SUM', strength: '2g', quantity: 3, amount: 40 }] }]]));
+      component.selectedPatientId = '41'; component.ngOnInit(); await settle();
+      const oneRow = component.visibleProducts.find(item => item.name === one.name && item.strength === one.strength)!, twoRow = component.visibleProducts.find(item => item.name === two.name && item.strength === two.strength)!;
+      expect(component.productControls.at(twoRow.index).get('quantity')!.value).toBe(3); expect(component.productControls.at(oneRow.index).get('selected')!.value).toBeFalse();
+      component.onProductSelectionChange(oneRow.index, true); component.productControls.at(oneRow.index).get('quantity')!.setValue(2);
+      await component.submitForm(); const saved = collections.get('otFormData')!.get('41');
+      expect(saved.products.length).toBe(2); expect(saved.products.find((item: any) => item.catalogueId === two.id)).toEqual(jasmine.objectContaining({ strength: '2g', quantity: 3, amount: 40 }));
+      expect(saved.products.find((item: any) => item.catalogueId === one.id)).toEqual(jasmine.objectContaining({ strength: '1g', quantity: 2 }));
+      const printed = buildOtMedicineDocument(saved); expect(printed).toContain('1g'); expect(printed).toContain('2g');
+    } finally { component.ngOnDestroy(); catalog.ngOnDestroy(); }
+  });
   it('loads new active medicines live, preserves draft patient values and quantities, and saves catalogue snapshots to the database', async () => {
     const { catalog, component, collections, router } = setup();
     spyOn(window, 'open').and.returnValue(null);

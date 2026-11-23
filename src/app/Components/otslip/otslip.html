@@ -10,7 +10,7 @@
         </div>
       </header>
 
-      <p *ngIf="loading" role="status" class="hmc-loading-state">Loading OT record...</p><p *ngIf="loadFailed" class="ot-validation" role="alert">{{ validationMessage }} <button mat-stroked-button type="button" (click)="load()">Retry</button></p><mat-card-content [attr.inert]="loadFailed ? '' : null"><div class="full-width" style="grid-column:1 / -1"><app-procedure-select formControlName="procedure"></app-procedure-select></div>
+      <p *ngIf="loading" role="status" class="hmc-loading-state">Loading OT record...</p><p *ngIf="loadFailed" class="ot-validation" role="alert">{{ validationMessage }} <button mat-stroked-button type="button" (click)="load()">Retry</button></p><mat-card-content [attr.inert]="loadFailed ? '' : null"><mat-form-field appearance="outline" class="full-width"><mat-label>MR Number (optional)</mat-label><input matInput type="number" min="1" formControlName="mrNumber" placeholder="Enter existing MR number"><mat-hint *ngIf="matchedPatient">Existing patient loaded: {{ matchedPatient }}</mat-hint></mat-form-field><div class="full-width" style="grid-column:1 / -1"><app-procedure-select formControlName="procedure"></app-procedure-select></div>
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Patient Name</mat-label>
           <input matInput formControlName="patientName" /><mat-error>Enter the patient name</mat-error>
@@ -23,15 +23,9 @@
           <input matInput formControlName="roomNumber" />
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Operation Date</mat-label>
-          <input matInput type="date" formControlName="operationDate" />
-        </mat-form-field>
+        <app-date-time-field label="Operation date" formControlName="operationDate"></app-date-time-field>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Operation Time</mat-label>
-          <input matInput type="time" formControlName="operationTime" />
-        </mat-form-field>
+        <app-date-time-field kind="time" label="Operation time" formControlName="operationTime"></app-date-time-field>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Slip heading</mat-label>

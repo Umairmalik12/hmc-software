@@ -1,5 +1,6 @@
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
-import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit, Optional, SimpleChanges, ViewChild, ViewEncapsulation } from '@angular/core';
+import { NgModel } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { Subscription } from 'rxjs';
@@ -10,6 +11,10 @@ import { PRESCRIPTION_DOCUMENT_CSS, PRESCRIPTION_FIELDS, PRESCRIPTION_INSTRUCTIO
   PrescriptionField, prescriptionDateTime, prescriptionHeader } from './prescription-document';
 import { PrescriptionPreviewComponent } from './prescription-preview.component';
 import { printPrescription } from './prescription-print';
+import { OpdService } from 'src/app/Services/opd.service';
+import { firstValueFrom } from 'rxjs';
+import { PatientLookupService } from 'src/app/Services/patient-lookup.service';
+import { PatientDetail } from 'src/app/Models/patientDetail.model';
 
 @Component({
   selector: 'app-preciption',
@@ -18,40 +23,57 @@ import { printPrescription } from './prescription-print';
   styles: [PRESCRIPTION_DOCUMENT_CSS],
   encapsulation: ViewEncapsulation.None,
 })
-export class PreciptionComponent implements OnInit, OnDestroy {
+export class PreciptionComponent implements OnInit, OnDestroy, OnChanges {
+  @Input() prescriptionId: string | null | undefined = undefined;
+  @Input() opdVisitId: string | null = null;
   record = emptyPrescription();
   readonly fields = PRESCRIPTION_FIELDS;
   readonly instructions = PRESCRIPTION_INSTRUCTIONS;
   readonly doctor = PRESCRIPTION_DOCTOR;
-  readonly headerHtml = prescriptionHeader(document.baseURI);
+  get headerHtml(): string { return prescriptionHeader(document.baseURI, this.record.doctorName); }
   loading = true;
   saving = false;
   loadFailed = false;
   storageError = '';
   successMessage = '';
   private routeSubscription?: Subscription;
-  private clock?: ReturnType<typeof setInterval>;
+  @ViewChild('issueDateTime') issueDateTime?: NgModel;
   private loadVersion = 0;
   private editingId: string | null = null;
+  private patientLookupVersion = 0;
+  matchedPatient = '';
+  private lastMatchedPatient?: PatientDetail;
 
   constructor(private prescriptions: PrescriptionService,
-    private route: ActivatedRoute, private router: Router, private dialog: MatDialog, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
+    private route: ActivatedRoute, private router: Router, private dialog: MatDialog, @Optional() private opdService: OpdService | null = null,
+    private feedback: NotifyUpdateService = new NotifyUpdateService(), @Optional() private patientLookup: PatientLookupService | null = null) {}
 
   ngOnInit(): void {
+    if (this.prescriptionId !== undefined) {
+      this.editingId = this.prescriptionId;
+      void this.load();
+      return;
+    }
     this.routeSubscription = this.route.paramMap.subscribe(params => {
       this.editingId = params.get('prescriptionId');
       void this.load();
     });
-    this.clock = setInterval(() => {
-      if (!this.record.id && !this.loading && !this.saving) this.record.issuedAt = new Date().toISOString();
-    }, 1000);
   }
 
   ngOnDestroy(): void {
     this.routeSubscription?.unsubscribe();
-    if (this.clock) clearInterval(this.clock);
     this.loadVersion++;
   }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if ((changes.prescriptionId && !changes.prescriptionId.firstChange) || (changes.opdVisitId && !changes.opdVisitId.firstChange)) {
+      this.routeSubscription?.unsubscribe();
+      this.editingId = this.prescriptionId || null;
+      void this.load();
+    }
+  }
+
+  get isEditing(): boolean { return !!this.editingId || !!this.record.id; }
 
   get blankRows(): number[] { return Array.from({ length: Math.max(0, 8 - this.record.medicines.length) }, (_, index) => index); }
 
@@ -61,10 +83,35 @@ export class PreciptionComponent implements OnInit, OnDestroy {
     this.loadFailed = false;
     this.storageError = '';
     try {
-      const record = this.editingId ? await this.prescriptions.getById(this.editingId) : emptyPrescription();
+      let record = this.editingId ? await this.prescriptions.getById(this.editingId) : emptyPrescription();
+      if (!this.editingId && this.opdVisitId) {
+        const linked = await this.prescriptions.getByOpdVisitId(this.opdVisitId);
+        if (linked) record = linked;
+      }
       if (version !== this.loadVersion) return;
       if (!record) throw new Error('This prescription could not be found. Return to the prescription list.');
       this.record = copyPrescription(record);
+      if (!this.editingId && this.opdVisitId) {
+        if (!this.opdService) throw new Error('OPD visit information is unavailable. Return to OPD visits and try again.');
+        const opd = await firstValueFrom(this.opdService.getOpdDetails(this.opdVisitId));
+        if (version !== this.loadVersion) return;
+        if (!opd) throw new Error('The linked OPD visit could not be found. Return to OPD visits and refresh.');
+        this.record.opdVisitId = String(opd.visitId || this.opdVisitId);
+        // Only map supplied OPD values into blank fields. Clinical fields remain for the doctor to complete.
+        this.record.patient.refId ||= String(opd.patientId || '');
+        this.record.patient.visit ||= String(opd.visitId || this.opdVisitId);
+        this.record.patient.name ||= opd.patientName || '';
+        this.record.patient.age ||= opd.age !== null && opd.age !== undefined && Number.isFinite(opd.age) ? String(opd.age) : '';
+        this.record.patient.sex ||= opd.sex || '';
+        this.record.patient.contact ||= opd.phone || '';
+        this.record.patient.symptoms ||= opd.history || '';
+        this.record.doctorName ||= opd.drName || '';
+        if (!this.record.issuedAt && opd.date) {
+          const time = /^\d{1,2}:\d{2}/.test(opd.time || '') ? opd.time : '00:00';
+          const local = new Date(opd.date + 'T' + time);
+          if (Number.isFinite(local.getTime())) this.record.issuedAt = local.toISOString();
+        }
+      }
     } catch (error) {
       if (version === this.loadVersion) {
         this.loadFailed = true;
@@ -82,7 +129,26 @@ export class PreciptionComponent implements OnInit, OnDestroy {
 
   setField(field: PrescriptionField, value: string): void {
     if (field.key !== 'date' && field.key !== 'time') this.record.patient[field.key] = value;
+    if (field.key === 'refId' && !this.record.id) void this.lookupPatient(value);
   }
+
+  private async lookupPatient(value: unknown): Promise<void> {
+    const version = ++this.patientLookupVersion, mr = Number(value); this.matchedPatient = '';
+    if (!this.patientLookup || !Number.isSafeInteger(mr) || mr < 1) return;
+    try {
+      const patient = await this.patientLookup.byMr(mr);
+      if (version !== this.patientLookupVersion || Number(this.record.patient.refId) !== mr || !patient) return;
+      const name = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
+      this.record.patient.name ||= name;
+      this.record.patient.age ||= patient.age != null ? String(patient.age) : '';
+      this.record.patient.sex ||= patient.gender || '';
+      this.record.patient.contact ||= patient.phone || '';
+      this.doctorNameFromMaster(patient.drName);
+      this.lastMatchedPatient = patient; this.matchedPatient = name;
+    } catch { if (version === this.patientLookupVersion) this.matchedPatient = ''; }
+  }
+
+  private doctorNameFromMaster(name: string): void { if (!this.record.doctorName) this.record.doctorName = name || ''; }
 
   addMedicine(): void {
     if (!this.saving) this.record.medicines.push({ name: '', morning: false, afternoon: false, evening: false });
@@ -97,10 +163,16 @@ export class PreciptionComponent implements OnInit, OnDestroy {
     this.dialog.open(MedicineCatalogComponent, { data: { embedded: true }, width: '900px', maxWidth: '96vw', maxHeight: '90vh', panelClass: 'hmc-dialog-panel' });
   }
 
-  async save(): Promise<boolean> {
+  async save(status: 'draft' | 'completed' = 'completed'): Promise<boolean> {
     if (this.saving || this.loading || this.loadFailed) return false;
     this.storageError = '';
     this.successMessage = '';
+    if (this.issueDateTime?.invalid) {
+      this.issueDateTime.control.markAsTouched();
+      this.storageError = 'Select both the prescription date and time, or clear both.';
+      this.feedback.warning(this.storageError);
+      return false;
+    }
     if (!this.record.patient.name.trim()) {
       this.storageError = 'Enter the patient name before saving.'; if (this.storageError) this.feedback.alertNotify.next({ msg: this.storageError, type: 'error' });
       return false;
@@ -108,8 +180,9 @@ export class PreciptionComponent implements OnInit, OnDestroy {
     this.saving = true;
     try {
       const editing = !!this.record.id;
+      this.record.status = status;
       this.record = await this.prescriptions.save(this.record);
-      this.successMessage = editing ? 'Prescription updated successfully.' : 'Prescription saved successfully.';
+      this.successMessage = status === 'draft' ? 'Prescription draft saved successfully.' : editing ? 'Prescription updated successfully.' : 'Prescription completed and saved successfully.';
       this.feedback.success(this.successMessage, { route: '/prescriptions' });
       await this.router.navigate(['/prescriptions']);
       return true;
@@ -133,7 +206,6 @@ export class PreciptionComponent implements OnInit, OnDestroy {
 
   private snapshot(): PrescriptionRecord {
     const record = copyPrescription(this.record);
-    if (!record.id) record.issuedAt = new Date().toISOString();
     return record;
   }
 

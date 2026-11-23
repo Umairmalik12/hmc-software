@@ -18,6 +18,8 @@ import { PatientEditComponent } from '../patient-edit/patient-edit.component';
 import { SupabaseDataService } from 'src/app/Services/supabase-data.service';
 import { UserLoginService } from 'src/app/Services/user-login.service';
 import { ProcedureOption, ProcedureService } from 'src/app/Services/procedure.service';
+import { PatientHistoryEntry, PatientHistoryService } from 'src/app/Services/patient-history.service';
+import { Optional } from '@angular/core';
 
 @Component({
   selector: 'app-patient-list',
@@ -56,6 +58,11 @@ export class PatientListComponent implements OnInit, OnDestroy {
   displayedPatients: Patient[] = [];
   dataSource: PatientDataService = new PatientDataService(this.patientService);
   displayedColumns: string[] = [];
+  historyByPatient = new Map<number, PatientHistoryEntry[]>();
+  expandedHistoryFor: number | null = null;
+  historyError = '';
+  get expandedPatient(): Patient | undefined { return this.patient.find(item => item.patientId === this.expandedHistoryFor); }
+  get expandedHistoryRecords(): PatientHistoryEntry[] { return this.expandedHistoryFor === null ? [] : this.historyByPatient.get(this.expandedHistoryFor) || []; }
 
   // 🔍 Search fields
   searchPatientId: string = '';
@@ -92,7 +99,8 @@ export class PatientListComponent implements OnInit, OnDestroy {
     private notifyUpdate: NotifyUpdateService,
     private indexedDbService: SupabaseDataService,
     private userLogin: UserLoginService,
-    private procedures: ProcedureService = new ProcedureService(indexedDbService)
+    private procedures: ProcedureService = new ProcedureService(indexedDbService),
+    @Optional() private patientHistory: PatientHistoryService | null = null
   ) {
     this.refreshSubscription = this.notifyUpdate.notify.subscribe(() => {
       this.dataActions('', 'asc', 0, 5);
@@ -105,7 +113,7 @@ export class PatientListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
-      this.displayedColumns = ['patientId', 'name', 'drName', 'gender', 'phone', 'procedure', 'city' , 'createdAt'];
+      this.displayedColumns = ['patientId', 'name', 'drName', 'gender', 'phone', 'procedure', 'city', 'createdAt', 'dischargeDate'];
       this.displayedColumns.push('action');
       this.dataActions('', 'asc', 0, 5);
     }).catch(() => { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: 'Account permissions could not be loaded. Please refresh the page.' }); });
@@ -120,7 +128,19 @@ export class PatientListComponent implements OnInit, OnDestroy {
     const version = ++this.loadVersion;
     this.loading = true; this.loadFailed = false;
     this.patientService.getAllPatient().subscribe({
-      next: records => { if (version !== this.loadVersion) return; this.patient = records; this.onDateFilter(false); this.loading = false; },
+      next: records => {
+        if (version !== this.loadVersion) return;
+        this.patient = records; this.onDateFilter(false);
+        if (!this.patientHistory) { this.loading = false; return; }
+        void this.patientHistory.forPatients(records.map(patient => patient.patientId)).then(history => {
+          if (version !== this.loadVersion) return;
+          this.historyByPatient = history; this.historyError = ''; this.loading = false;
+        }).catch(error => {
+          if (version !== this.loadVersion) return;
+          this.historyError = error instanceof Error ? error.message : 'Patient history could not be loaded.';
+          this.historyByPatient.clear(); this.loading = false; this.notifyUpdate.error(this.historyError);
+        });
+      },
       error: error => { if (version === this.loadVersion) { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Unable to load records.' }); } }
     });
   }
@@ -132,6 +152,9 @@ export class PatientListComponent implements OnInit, OnDestroy {
   }
 
   onSearch(): void { this.onDateFilter(); }
+  toggleHistory(patient: Patient): void { this.expandedHistoryFor = this.expandedHistoryFor === patient.patientId ? null : patient.patientId; }
+  historyCount(patient: Patient): number { return this.historyByPatient.get(patient.patientId)?.length || 0; }
+  viewHistoryRecord(entry: PatientHistoryEntry): void { this.dialog.open(RecordDetailsComponent, { data: { title: entry.module, record: entry.record } }); }
 
   readonly sameProcedure = (left: string, right: string): boolean => this.procedureKey(left) === this.procedureKey(right);
   private procedureKey(value: string): string { return String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase(); }

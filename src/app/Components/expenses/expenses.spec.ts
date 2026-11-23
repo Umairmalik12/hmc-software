@@ -1,3 +1,4 @@
+import { DateTimeFieldComponent } from '../../Shared/date-time-field.component';
 import { ApplicationRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
@@ -29,7 +30,7 @@ describe('Expense management interface', () => {
   beforeEach(async () => {
     const memory = memoryDb(); db = memory.db; collections = memory.collections; close = jasmine.createSpy('close'); data = {};
     await TestBed.configureTestingModule({
-      imports: [SearchableSelectComponent, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, MatDialogModule, MatInputModule, MatSelectModule, MatButtonModule, MatIconModule, FeedbackModule],
+      imports: [DateTimeFieldComponent, SearchableSelectComponent, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, MatDialogModule, MatInputModule, MatSelectModule, MatButtonModule, MatIconModule, FeedbackModule],
       declarations: [ExpensesComponent, ExpenseEditComponent, ExpenseMonthPreviewComponent, ScrollPaginationDirective, ScrollListFooterComponent, RecordDetailsComponent],
       providers: [{ provide: SupabaseDataService, useValue: db }, { provide: MAT_DIALOG_DATA, useValue: data }, { provide: MatDialogRef, useValue: { close } }],
     }).compileComponents(); service = TestBed.inject(ExpenseService);
@@ -70,6 +71,7 @@ describe('Expense management interface', () => {
   it('previews, edits and confirms deleting/restoring expenses with notifications and fresh print data', async () => {
     const existing = await service.save(row(1)); const fixture = TestBed.createComponent(ExpensesComponent);
     try {
+      fixture.componentRef.setInput('isSuperAdmin', true);
       await settle(fixture); const list = fixture.componentInstance; list.year = 2026; list.month = 11;
       list.view(existing); await settle(fixture); expect(document.body.textContent).toContain('Expense details'); TestBed.inject(MatDialog).closeAll(); await settle(fixture);
       await list.edit(existing); await settle(fixture); const editor = TestBed.inject(MatDialog).openDialogs[0].componentInstance as ExpenseEditComponent; expect(editor.form.get('amount')!.value).toBe(10.25); TestBed.inject(MatDialog).closeAll(); await settle(fixture);
@@ -80,6 +82,30 @@ describe('Expense management interface', () => {
       const preview = TestBed.inject(MatDialog).openDialogs[0].componentInstance as ExpenseMonthPreviewComponent; expect(preview.html).toContain('50.00');
       let notifications: readonly any[] = []; const sub = TestBed.inject(NotifyUpdateService).notifications$.subscribe(items => notifications = items);
       expect(notifications.some(item => item.description === 'Expense deleted successfully.')).toBeTrue(); sub.unsubscribe();
+    } finally { fixture.destroy(); }
+  });
+  it('lets staff view, add, filter and preview expenses while hiding and blocking edit/delete/restore', async () => {
+    const existing = await service.save(row(1)); const removed = await service.save(row(2)); await service.setDeleted(removed.id, true);
+    const fixture = TestBed.createComponent(ExpensesComponent);
+    try {
+      await settle(fixture); const list = fixture.componentInstance; list.year = 2026; list.month = 11; await settle(fixture); const root: HTMLElement = fixture.nativeElement;
+      expect(list.isSuperAdmin).toBeFalse(); expect(root.querySelector('[aria-label="Preview expense"]')).not.toBeNull(); expect(root.querySelector('[aria-label="Edit expense"]')).toBeNull(); expect(root.querySelector('[aria-label="Delete expense"]')).toBeNull();
+      list.status = 'deleted'; await settle(fixture); expect(root.querySelector('[aria-label="Restore expense"]')).toBeNull();
+      const confirm = spyOn(window, 'confirm'); const setDeleted = spyOn(service, 'setDeleted').and.callThrough(); await list.edit(existing); await list.remove(existing); await list.remove({ ...removed, deleted: true });
+      expect(TestBed.inject(MatDialog).openDialogs.length).toBe(0); expect(confirm).not.toHaveBeenCalled(); expect(setDeleted).not.toHaveBeenCalled();
+      await list.edit(); await settle(fixture); const editor = TestBed.inject(MatDialog).openDialogs[0].componentInstance as ExpenseEditComponent;
+      editor.form.patchValue({ date: '2026-11-20', description: 'Staff expense', headId: 'fuel', amount: 30 }); await editor.save(); await settle(fixture);
+      expect((await service.getAll()).some(record => record.description === 'Staff expense')).toBeTrue(); expect(list.status).toBe('recorded');
+      list.view(existing); await settle(fixture); expect(document.body.textContent).toContain('Expense details'); TestBed.inject(MatDialog).closeAll(); await settle(fixture);
+      list.query = 'Staff expense'; list.onSearch(); expect(list.filtered.length).toBe(1); await list.printMonth(); await settle(fixture); expect(TestBed.inject(MatDialog).openDialogs[0].componentInstance).toEqual(jasmine.any(ExpenseMonthPreviewComponent));
+    } finally { fixture.destroy(); }
+  });
+  it('closes an existing-expense editor if admin access is removed, while leaving new expense creation available', async () => {
+    const existing = await service.save(row(1)); const fixture = TestBed.createComponent(ExpensesComponent);
+    try {
+      fixture.componentRef.setInput('isSuperAdmin', true); await settle(fixture); await fixture.componentInstance.edit(existing); await settle(fixture); expect(TestBed.inject(MatDialog).openDialogs.length).toBe(1);
+      fixture.componentRef.setInput('isSuperAdmin', false); await settle(fixture); expect(TestBed.inject(MatDialog).openDialogs.length).toBe(0);
+      await fixture.componentInstance.edit(); await settle(fixture); expect(TestBed.inject(MatDialog).openDialogs.length).toBe(1);
     } finally { fixture.destroy(); }
   });
   it('keeps the editor inside the viewport and save actions reachable', async () => {
@@ -114,7 +140,8 @@ describe('Expense management interface', () => {
     const viewport = panel.querySelector<HTMLElement>('.preview-viewport')!;
     expect(viewport.scrollWidth).toBeLessThanOrEqual(viewport.clientWidth + 1);
     expect(preview.scale).toBeLessThan(1); expect(preview.scale).toBeGreaterThan(0);
-    expect(panel.querySelectorAll('.expense-print tbody tr').length).toBe(65);
+    expect(panel.querySelectorAll('.expense-print tbody tr').length).toBe(1);
+    expect(panel.querySelectorAll('.expense-print td[data-head-id="fuel"] .expense-cell-entry').length).toBe(65);
     expect(panel.querySelector('.expense-print tfoot')!.textContent).toContain('6,500,016.25');
     const actions = panel.querySelector('mat-dialog-actions')!.getBoundingClientRect();
     expect(actions.bottom).toBeLessThanOrEqual(window.innerHeight); expect(actions.height).toBeGreaterThan(0);
@@ -125,6 +152,15 @@ describe('Expense management interface', () => {
     preview.fit(); await settle(); expect(viewport.scrollWidth).toBeLessThanOrEqual(viewport.clientWidth + 1);
     expect(paper.querySelector('script')).toBeNull(); expect(document.body.style.fontFamily).toBe(headerBefore);
     ref.close();
+  });
+  it('prints the exact grouped document shown in the preview', async () => {
+    const ref = TestBed.inject(MatDialog).open(ExpenseMonthPreviewComponent, { data: { records: [row(1), row(2)], year: 2026, month: 11 }, panelClass: 'hmc-dialog-panel' });
+    await settle();
+    const write = jasmine.createSpy('write'), print = jasmine.createSpy('print');
+    const popup = { closed: false, document: { open: jasmine.createSpy(), write, close: jasmine.createSpy(), fonts: { ready: Promise.resolve() } }, focus: jasmine.createSpy(), print, close: jasmine.createSpy() } as unknown as Window;
+    spyOn(window, 'open').and.returnValue(popup); ref.componentInstance.print(); await settle();
+    expect(write).toHaveBeenCalledWith(jasmine.stringContaining(ref.componentInstance.html)); expect(print).toHaveBeenCalledTimes(1);
+    expect(ref.componentInstance.count).toBe(2); expect(ref.componentInstance.total).toBe(20.5); ref.close();
   });
   it('shows loading failures with retry and prevents adding or exporting an incomplete list', async () => {
     const load = spyOn(service, 'getAll').and.rejectWith(new Error('Offline')); const fixture = TestBed.createComponent(ExpensesComponent);

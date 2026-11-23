@@ -76,9 +76,6 @@ export class MedicineService {
       const storedMedicines = await this.indexedDb.getItem<Medicine[]>(STORAGE_KEY) || [];
       data.medicineId = await this.indexedDb.allocateId(STORAGE_KEY);
 
-      if (!data.createdAt) {
-        data.createdAt = new Date().toISOString();
-      }
 
 
       storedMedicines.push(data);
@@ -96,9 +93,6 @@ export class MedicineService {
       const storedMedicines = await this.indexedDb.getItem<Medicine[]>(STORAGE_KEY) || [];
       for (const data of medicines) {
         data.medicineId = await this.indexedDb.allocateId(STORAGE_KEY);
-        if (!data.createdAt) {
-          data.createdAt = new Date().toISOString();
-        }
         await this.indexedDb.upsertRecord(STORAGE_KEY, data.medicineId, data);
         storedMedicines.push(data);
       }
@@ -138,7 +132,6 @@ export class MedicineService {
         } else {
           // If not found, add as new
           data.medicineId = await this.indexedDb.allocateId(STORAGE_KEY);
-          if (!data.createdAt) data.createdAt = new Date().toISOString();
           await this.indexedDb.upsertRecord(STORAGE_KEY, data.medicineId, data);
           storedMedicines.push(data);
         }

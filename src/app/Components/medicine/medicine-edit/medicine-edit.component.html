@@ -4,9 +4,10 @@
     <p class="form-note">Patient name, medicine name and quantity are required. Room and doctor are optional.</p>
     <div class="form-grid">
       <mat-form-field appearance="outline"><mat-label>Patient name</mat-label><input matInput formControlName="patientName" autocomplete="name"><mat-error>Enter the patient name</mat-error></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>MR Number (optional)</mat-label><input matInput type="number" min="1" formControlName="mrNumber" placeholder="Enter existing MR number"><mat-hint *ngIf="matchedPatient">Existing patient loaded: {{ matchedPatient }}</mat-hint><mat-error>Enter a positive MR number</mat-error></mat-form-field>
       <app-room-select formControlName="roomNo"></app-room-select>
       <app-clinical-select kind="doctors" label="Doctor name" formControlName="doctorName"></app-clinical-select>
-      <mat-form-field appearance="outline"><mat-label>Registered on</mat-label><input matInput [value]="f.get('createdAt')?.value | date:'dd MMM y, h:mm a'" readonly></mat-form-field>
+      <app-date-time-field class="form-span" kind="datetime" label="Registered on" formControlName="createdAt"></app-date-time-field>
       <div class="medicines-section form-span">
         <div class="medicine-section-heading"><div class="form-section-title"><mat-icon>medication</mat-icon>Medicines</div><button mat-button type="button" (click)="manageMedicines()" [disabled]="saving"><mat-icon>settings</mat-icon>Manage catalogue</button></div>
         <div formArrayName="medicines">

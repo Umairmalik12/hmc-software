@@ -41,7 +41,7 @@ describe('Expense workbook export and monthly printing', () => {
   it('escapes untrusted text and prints every monthly entry and complete totals without fixed height clipping', () => {
     const html = expenseMonthHtml({ records: [...rows, expenseFixture(66, { description: '<script>alert(1)</script>', location: '<img onerror=bad>' }), expenseFixture(67, { date: '2026-10-01' }), expenseFixture(68, { deleted: true })], year: 2026, month: 11 });
     const parsed = new DOMParser().parseFromString(html, 'text/html'); expect(parsed.querySelector('script')).toBeNull(); expect(parsed.querySelector('img')).toBeNull();
-    expect(parsed.querySelectorAll('tbody tr').length).toBe(66); expect(parsed.body.textContent).toContain('676.50'); expect(parsed.body.textContent).toContain('Expense 65'); expect(html).toContain('A4 landscape'); expect(html).toContain('table-header-group');
+    expect(parsed.querySelectorAll('tbody tr').length).toBe(1); expect(parsed.querySelectorAll('td[data-head-id="fuel"] .expense-cell-entry').length).toBe(66); expect(parsed.body.textContent).toContain('676.50'); expect(parsed.body.textContent).toContain('Expense 65'); expect(html).toContain('A4 landscape'); expect(html).toContain('table-header-group');
   });
   it('supports an empty month without dropping the total row or limiting future year selection', () => {
     const empty = XLSX.read(buildExpenseWorkbook([], 2031, 1), { type: 'array' });

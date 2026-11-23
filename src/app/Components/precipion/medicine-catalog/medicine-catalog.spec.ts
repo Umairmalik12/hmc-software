@@ -1,3 +1,4 @@
+import { DateTimeFieldComponent } from 'src/app/Shared/date-time-field.component';
 import { FeedbackModule } from 'src/app/Shared/feedback.module';
 import { ApplicationRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -33,7 +34,7 @@ describe('Searchable prescription medicine selector and catalogue', () => {
   beforeEach(async () => {
     store = memoryDb();
     await TestBed.configureTestingModule({
-      imports: [FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatAutocompleteModule, MatDialogModule, MatInputModule, MatButtonModule, MatIconModule, MatSelectModule],
+      imports: [DateTimeFieldComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatAutocompleteModule, MatDialogModule, MatInputModule, MatButtonModule, MatIconModule, MatSelectModule],
       declarations: [CatalogHost, PreciptionComponent, PrescriptionMedicineSelectComponent, MedicineCatalogComponent, MedicineOptionDialogComponent, ScrollPaginationDirective, ScrollListFooterComponent, RecordPreviewDirective],
       providers: [{ provide: SupabaseDataService, useValue: store.db }, { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({})) } }],
     }).compileComponents();
@@ -57,6 +58,38 @@ describe('Searchable prescription medicine selector and catalogue', () => {
     expect(option).withContext(value).toBeDefined(); option.click(); await settle();
   }
 
+  it('adds another strength from a medicine row without editing the first variant and offers both in the picker', async () => {
+    const catalogService = TestBed.inject(PrescriptionMedicineCatalogService);
+    const original = await catalogService.save('Variant example', undefined, '1g');
+    const fixture = TestBed.createComponent(CatalogHost);
+    try {
+      fixture.detectChanges(); await settle(); fixture.detectChanges();
+      const catalog = fixture.debugElement.query(By.directive(MedicineCatalogComponent)).componentInstance as MedicineCatalogComponent;
+      catalog.query = 'Variant example'; fixture.detectChanges();
+      fixture.nativeElement.querySelector('button[aria-label="Add medicine strength"]').click(); await settle();
+      const editor = TestBed.inject(MatDialog).openDialogs[0].componentInstance as MedicineOptionDialogComponent;
+      expect(editor.data.id).toBeUndefined(); expect(editor.name.value).toBe('Variant example'); expect(document.querySelector<HTMLInputElement>('app-medicine-option-dialog input')!.readOnly).toBeTrue();
+      await editor.save(); expect(editor.strength.touched).toBeTrue(); expect(TestBed.inject(MatDialog).openDialogs.length).toBe(1);
+      await chooseStrength('2 g'); await editor.save(); await settle(); fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('tr.medicine-row').length).toBe(2);
+      const all = (await catalogService.getAll()).filter(item => item.name.startsWith('Variant example'));
+      expect(all.map(item => item.name)).toEqual(['Variant example 1 g', 'Variant example 2 g']); expect(all.find(item => item.id === original.id)!.strength).toBe('1 g');
+      const selector = fixture.debugElement.query(By.directive(PrescriptionMedicineSelectComponent)).componentInstance as PrescriptionMedicineSelectComponent;
+      const input = fixture.nativeElement.querySelector('app-prescription-medicine-select input') as HTMLInputElement; input.focus(); type(input, 'Variant example'); fixture.detectChanges(); await settle();
+      const options = Array.from(document.querySelectorAll<HTMLElement>('.rx-medicine-options mat-option'));
+      expect(options.map(item => item.textContent)).toEqual([jasmine.stringContaining('Variant example 1 g'), jasmine.stringContaining('Variant example 2 g')]);
+      options[1].click(); await settle(); expect(fixture.componentInstance.value).toBe('Variant example 2 g');
+      await catalogService.delete(all.find(item => item.name.endsWith('2 g'))!); await settle(); expect(selector.options.some(item => item.id === original.id)).toBeTrue(); expect(fixture.componentInstance.value).toBe('Variant example 2 g');
+    } finally { fixture.destroy(); }
+  });
+  it('preselects the strength when adding a full typed medicine label from inside a prescription', async () => {
+    const fixture = TestBed.createComponent(CatalogHost);
+    try {
+      fixture.detectChanges(); await settle(); await openAdd(fixture, 'Typed variant 2g');
+      const editor = TestBed.inject(MatDialog).openDialogs[0].componentInstance as MedicineOptionDialogComponent;
+      expect(editor.name.value).toBe('Typed variant'); expect(editor.strength.value).toBe('2 g'); await editor.save(); await settle(); expect(fixture.componentInstance.value).toBe('Typed variant 2 g');
+    } finally { fixture.destroy(); }
+  });
   it('adds a strength in the inner medicine dialog, selects the full label and restores it when editing', async () => {
     const fixture = TestBed.createComponent(CatalogHost);
     try {
@@ -123,11 +156,12 @@ describe('Searchable prescription medicine selector and catalogue', () => {
       fixture.detectChanges(); await settle(); fixture.detectChanges();
       await openAdd(fixture, 'Brand New Medicine 250mg');
       const dialog = TestBed.inject(MatDialog).openDialogs[0]; expect(dialog.componentInstance instanceof MedicineOptionDialogComponent).toBeTrue();
-      expect((dialog.componentInstance as MedicineOptionDialogComponent).name.value).toBe('Brand New Medicine 250mg');
+      expect((dialog.componentInstance as MedicineOptionDialogComponent).name.value).toBe('Brand New Medicine');
+      expect((dialog.componentInstance as MedicineOptionDialogComponent).strength.value).toBe('250 mg');
       const save = Array.from(document.querySelectorAll<HTMLButtonElement>('.hmc-dialog-panel mat-dialog-actions button')).find(button => button.textContent?.includes('Save medicine'))!;
       save.click(); await settle(); fixture.detectChanges();
-      expect(fixture.componentInstance.value).toBe('Brand New Medicine 250mg');
-      expect((await TestBed.inject(PrescriptionMedicineCatalogService).getAll()).some(option => option.name === 'Brand New Medicine 250mg')).toBeTrue();
+      expect(fixture.componentInstance.value).toBe('Brand New Medicine 250 mg');
+      expect((await TestBed.inject(PrescriptionMedicineCatalogService).getAll()).some(option => option.name === 'Brand New Medicine 250 mg' && option.strength === '250 mg')).toBeTrue();
       expect(store.db.upsertRecord).toHaveBeenCalledTimes(1); expect(store.db.setItem).not.toHaveBeenCalled(); expect(fixture.componentInstance.submits).toBe(0);
     } finally { fixture.destroy(); }
   });

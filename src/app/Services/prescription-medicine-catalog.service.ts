@@ -24,6 +24,9 @@ export class PrescriptionMedicineCatalogService implements OnDestroy {
   }
   ngOnDestroy(): void { this.subscription.unsubscribe(); this.changes.complete(); }
   private invalidate(): void { this.cache = undefined; this.changes.next(); }
+  async canManage(): Promise<boolean> {
+    try { await this.db.requireAdministrator(); return true; } catch { return false; }
+  }
 
   async getAll(includeInactive = false, refresh = false): Promise<PrescriptionMedicineOption[]> {
     if (refresh) this.cache = undefined;
@@ -43,12 +46,16 @@ export class PrescriptionMedicineCatalogService implements OnDestroy {
       if (!names.has(key)) { options.set('legacy:' + encodeURIComponent(key), { id: 'legacy:' + encodeURIComponent(key), name: name.trim().replace(/\s+/g, ' '), active: true }); names.add(key); }
     });
     if (Array.isArray(stored)) stored.forEach(option => {
-      if (option && typeof option.name === 'string' && option.name.trim() && option.id) options.set(String(option.id), { ...option, id: String(option.id), name: option.name, active: option.active !== false, ...(typeof option.strength === 'string' ? { strength: normalizeMedicineStrength(option.strength) } : {}) });
+      if (option && typeof option.name === 'string' && option.name.trim() && option.id) {
+        const strength = typeof option.strength === 'string' ? normalizeMedicineStrength(option.strength) : '';
+        options.set(String(option.id), { ...option, id: String(option.id), name: strength ? medicineNameWithStrength(option.name, strength) : option.name, active: option.active !== false, ...(typeof option.strength === 'string' ? { strength } : { strength: undefined }) });
+      }
     });
     return Array.from(options.values()).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
   }
 
   async save(name: string, id?: string, strength?: string): Promise<PrescriptionMedicineOption> {
+    if (id) await this.db.requireAdministrator('Only administrators can edit catalogue medicines.');
     const trimmed = name.trim().replace(/\s+/g, ' ');
     if (!trimmed) throw new Error('Enter a medicine name.');
     if (trimmed.length > 160) throw new Error('Use 160 characters or fewer for the medicine name.');
@@ -59,9 +66,10 @@ export class PrescriptionMedicineCatalogService implements OnDestroy {
     const selectedStrength = strength === undefined ? existing?.strength : normalizeMedicineStrength(strength);
     const displayName = medicineNameWithStrength(trimmed, selectedStrength || '');
     if (displayName.length > 160) throw new Error('Use 160 characters or fewer for the medicine name and strength together.');
-    const matches = all.filter(option => option.id !== id && medicineVariantKey(option.name) === medicineVariantKey(displayName));
+    const matches = all.filter(option => option.id !== id && medicineVariantKey(option.name, option.strength) === medicineVariantKey(displayName, selectedStrength));
     const duplicate = matches.find(option => option.active) || matches[0];
     if (duplicate?.active) throw new Error('This medicine already exists.');
+    if (!id && duplicate) await this.db.requireAdministrator('Only administrators can restore catalogue medicines.');
     const option: PrescriptionMedicineOption = { ...(existing || duplicate), id: id || duplicate?.id || String(await this.db.allocateId(PRESCRIPTION_MEDICINE_CATALOG)), name: displayName, active: true, ...(selectedStrength !== undefined ? { strength: selectedStrength } : {}) };
     await this.db.upsertRecord(PRESCRIPTION_MEDICINE_CATALOG, option.id, option);
     this.invalidate();
@@ -69,6 +77,7 @@ export class PrescriptionMedicineCatalogService implements OnDestroy {
   }
 
   async delete(option: PrescriptionMedicineOption): Promise<void> {
+    await this.db.requireAdministrator('Only administrators can delete catalogue medicines.');
     // Tombstones keep removed built-in and legacy suggestions from reappearing.
     // Saved prescriptions retain the original name and dose text.
     await this.db.upsertRecord(PRESCRIPTION_MEDICINE_CATALOG, option.id, { ...option, active: false });

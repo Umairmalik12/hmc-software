@@ -1,3 +1,4 @@
+import { DateTimeFieldComponent } from '../../Shared/date-time-field.component';
 import { SearchableSelectComponent } from 'src/app/Shared/searchable-select.component';
 import { ClinicalCatalogSelectComponent } from 'src/app/Components/clinical-catalog/clinical-catalog-select.component';
 import { ClinicalCatalogService, DEFAULT_LAB_TESTS } from 'src/app/Services/clinical-catalog.service';
@@ -39,13 +40,27 @@ describe('OT medicine catalogue interface', () => {
   beforeEach(async () => {
     store = memoryDb();
     await TestBed.configureTestingModule({
-      imports: [SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatAutocompleteModule, MatDialogModule, MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, MatCheckboxModule, MatCardModule],
+      imports: [DateTimeFieldComponent, SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatAutocompleteModule, MatDialogModule, MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, MatCheckboxModule, MatCardModule],
       declarations: [OtMedicineCatalogComponent, OtMedicineEditComponent, OtMedicineDeleteComponent, ScrollPaginationDirective, ScrollListFooterComponent, RecordPreviewDirective, RecordDetailsComponent, OtFormComponent, ProcedureSelectComponent],
       providers: [{ provide: ClinicalCatalogService, useValue: { changes: new ClinicalChanges<string>(), getAll: async (kind: string) => kind === 'lab-tests' ? DEFAULT_LAB_TESTS : [] } }, { provide: SupabaseDataService, useValue: store.db }, { provide: ProcedureService, useValue: { getAll: async () => [] } }],
     }).compileComponents();
   });
   afterEach(() => TestBed.inject(MatDialog).closeAll());
 
+  it('adds a strength through the row action while keeping the source medicine and details intact', async () => {
+    const catalog = TestBed.inject(OtMedicineCatalogService);
+    const original = await catalog.save({ ...emptyOtCatalogMedicine(), name: '2SUM', strength: '1g', genericName: 'Saved generic', category: 'Saved category', type: 'Injection', unit: 'Vial' });
+    const fixture = TestBed.createComponent(OtMedicineCatalogComponent);
+    try {
+      fixture.detectChanges(); await settle(); fixture.componentInstance.query = '2SUM'; fixture.detectChanges();
+      fixture.nativeElement.querySelector('button[aria-label="Add OT medicine strength"]').click(); await settle();
+      const editor = TestBed.inject(MatDialog).openDialogs[0].componentInstance as OtMedicineEditComponent;
+      expect(editor.data.id).toBeUndefined(); expect(editor.form.value.name).toBe('2SUM'); expect(editor.form.value.genericName).toBe('Saved generic'); expect(editor.form.value.strength).toBe('');
+      await editor.save(); expect(TestBed.inject(MatDialog).openDialogs.length).toBe(1); editor.form.controls.strength.setValue('2 g'); await editor.save(); await settle();
+      expect((await catalog.getById(original.id))!.strength).toBe('1g');
+      const variants = (await catalog.getAll()).filter(item => item.name === '2SUM'); expect(variants.length).toBe(2); expect(variants.find(item => item.id !== original.id)!.unit).toBe('Vial');
+    } finally { fixture.destroy(); }
+  });
   it('adds and edits medicine details through the form, keeps only name required and fits the dialog on screen', async () => {
     const fixture = TestBed.createComponent(OtMedicineCatalogComponent);
     try {
@@ -130,5 +145,18 @@ describe('OT medicine catalogue interface', () => {
       expect(form.otForm.get('patientName')!.value).toBe('Ali draft'); expect(form.productControls.at(index).get('quantity')!.value).toBe(6);
       expect(form.products).toContain('Added while filling slip');
     } finally { fixture.destroy(); }
+  });
+  it('lets staff open the catalogue from an OT slip while keeping catalogue edit/delete unavailable', async () => {
+    (store.db.requireAdministrator as jasmine.Spy).and.rejectWith(new Error('Admin required'));
+    const fixture = TestBed.createComponent(OtFormComponent);
+    try {
+      fixture.detectChanges(); await settle(); fixture.detectChanges();
+      expect(fixture.componentInstance.canManageMedicines).toBeTrue();
+      fixture.componentInstance.manageMedicines(); await settle();
+      const catalog = TestBed.inject(MatDialog).openDialogs[0].componentInstance as OtMedicineCatalogComponent;
+      expect(catalog.embedded).toBeTrue(); expect(catalog.isSuperAdmin).toBeFalse();
+      expect(document.querySelector('[aria-label="Edit OT medicine"]')).toBeNull();
+      expect(document.querySelector('[aria-label="Delete OT medicine"]')).toBeNull();
+    } finally { TestBed.inject(MatDialog).closeAll(); fixture.destroy(); }
   });
 });

@@ -36,7 +36,7 @@ describe('OPD thermal receipt content and selection', () => {
     const dialog = jasmine.createSpyObj<MatDialog>('dialog', ['open']); const dependency: any = new NotifyUpdateService();
     const list = new OpdListComponent(service, dialog, dependency, dependency, dependency, dependency, dependency);
     try {
-      await list.printSlip(visit); expect(service.getOpdDetails).toHaveBeenCalledWith(42);
+      await list.printSlip(visit); expect(service.getOpdDetails).toHaveBeenCalledWith('42');
       expect((dialog.open.calls.mostRecent().args[1]!.data as any).opds[0].drName).toBe('Updated doctor');
       list.filteredOpds = Array.from({ length: 45 }, (_, index) => ({ ...visit, patientId: index + 1 })); list.displayedOpds = list.filteredOpds.slice(0, 20);
       list.printAllSlips(); const records: Opd[] = (dialog.open.calls.mostRecent().args[1]!.data as any).opds;

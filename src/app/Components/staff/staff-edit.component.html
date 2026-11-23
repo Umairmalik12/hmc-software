@@ -14,8 +14,8 @@
         <div class="form-grid">
           <app-searchable-select label="Duty" emptyLabel="Select duty" [options]="dutyOptions(assignment)" [value]="assignment.get('duty')?.value" [required]="true" [invalid]="!!assignment.get('duty')?.touched && !!assignment.get('duty')?.invalid" [disabled]="saving" [loading]="dutiesLoading" [error]="dutiesError" errorMessage="Select a duty from the list" (valueChange)="selectDuty(assignment, $event)" (touched)="assignment.get('duty')?.markAsTouched()" (retry)="loadDuties()"></app-searchable-select>
           <mat-form-field appearance="outline"><mat-label>Shift</mat-label><input matInput formControlName="shift" maxlength="60" [matAutocomplete]="shifts" placeholder="Morning, Evening, Night..."><mat-autocomplete #shifts="matAutocomplete" class="hmc-catalog-options"><mat-option *ngFor="let shift of shiftOptions(assignment)" [value]="shift">{{ shift }}</mat-option></mat-autocomplete><mat-error>Use 60 characters or fewer</mat-error></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Duty starts</mat-label><input matInput type="time" step="60" formControlName="startTime" [required]="!!assignment.get('endTime')?.value"></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Duty ends</mat-label><input matInput type="time" step="60" formControlName="endTime" [required]="!!assignment.get('startTime')?.value"></mat-form-field>
+          <app-date-time-field kind="time" label="Duty starts" formControlName="startTime" [required]="!!assignment.get('endTime')?.value"></app-date-time-field>
+          <app-date-time-field kind="time" label="Duty ends" formControlName="endTime" [required]="!!assignment.get('startTime')?.value"></app-date-time-field>
         </div>
         <p class="form-error duty-message" role="alert" *ngIf="(assignment.touched || submitted) && timing(assignment)">{{ timing(assignment) }}</p>
         <p class="overnight-note" *ngIf="overnight(assignment)"><mat-icon>nights_stay</mat-icon>Ends the following day</p>

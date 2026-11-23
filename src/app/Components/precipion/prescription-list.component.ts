@@ -1,6 +1,6 @@
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
 import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { Subscription } from 'rxjs';
 import { PrescriptionRecord, copyPrescription } from 'src/app/Models/prescription.model';
@@ -16,6 +16,7 @@ import { exportRecords } from 'src/app/Shared/export-records';
   styleUrls: ['./prescription-list.component.css'],
 })
 export class PrescriptionListComponent implements OnInit, OnDestroy {
+  @Input() isSuperAdmin = false;
   exportToExcel(): void { exportRecords(this.filteredRecords, 'prescriptions.xlsx', 'Prescriptions', this.feedback); }
   records: PrescriptionRecord[] = [];
   query = '';

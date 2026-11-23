@@ -17,7 +17,7 @@ export class MedicineComponent {
     patientName: '',
     medicines: [],
     doctorName: '',
-    createdAt: new Date().toISOString()
+    createdAt: ''
   };
 
   constructor(

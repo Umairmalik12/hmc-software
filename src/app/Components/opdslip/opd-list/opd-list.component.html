@@ -83,14 +83,25 @@
       <mat-cell *matCellDef="let opd">{{opd.createdAt | date:'dd/MM/yy h:mm a'}}</mat-cell>
     </ng-container>
 
+    <ng-container matColumnDef="rxStatus">
+      <mat-header-cell *matHeaderCellDef>Prescription</mat-header-cell>
+      <mat-cell *matCellDef="let opd"><span class="rx-status" [class.rx-status-pending]="prescriptionStatus(opd) === 'Pending'" [class.rx-status-draft]="prescriptionStatus(opd) === 'Draft'">{{ prescriptionStatus(opd) }}</span></mat-cell>
+    </ng-container>
+
     <ng-container matColumnDef="action">
       <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
       <mat-cell *matCellDef="let opd">
-        <div class="action-buttons"><button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Preview opd visit" title="Preview" (click)="viewOpd(opd.patientId)"><mat-icon>visibility</mat-icon></button>
-          <button *ngIf="isSuperAdmin" mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit OPD slip" title="Edit OPD slip" (click)="editOpd(opd.patientId)">
+        <div class="action-buttons"><button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Preview opd visit" title="Preview" (click)="viewOpd(visitKey(opd))"><mat-icon>visibility</mat-icon></button>
+          <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="View prescription" title="View prescription" (click)="viewPrescription(opd)"><mat-icon>description</mat-icon></button>
+          <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print prescription" title="Print prescription" (click)="printLinkedPrescription(opd)" [disabled]="!prescriptionFor(opd)"><mat-icon>print</mat-icon></button>
+          <button *ngIf="isSuperAdmin" mat-icon-button color="primary" class="table-btn" type="button" [attr.aria-label]="prescriptionFor(opd) ? 'Edit prescription' : 'Create prescription'" [title]="prescriptionFor(opd) ? 'Edit prescription' : 'Create prescription'" (click)="openPrescriptionEditor(opd)">
+            <mat-icon>{{ prescriptionFor(opd) ? 'edit_note' : 'note_add' }}</mat-icon>
+          </button>
+          <button *ngIf="isSuperAdmin && prescriptionFor(opd)" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete prescription" title="Delete prescription" (click)="deleteLinkedPrescription(opd)"><mat-icon>delete_outline</mat-icon></button>
+          <button *ngIf="isSuperAdmin" mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit OPD slip" title="Edit OPD slip" (click)="editOpd(visitKey(opd))">
             <mat-icon>edit_note</mat-icon>
           </button>
-          <button [appBusy]="deletingId === opd.patientId" [disabled]="deletingId !== null" *ngIf="isSuperAdmin" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete OPD slip" title="Delete OPD slip" (click)="deleteOpd(opd.patientId)">
+          <button [appBusy]="deletingId === visitKey(opd)" [disabled]="deletingId !== null" *ngIf="isSuperAdmin" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete OPD slip" title="Delete OPD slip" (click)="deleteOpd(visitKey(opd))">
             <mat-icon>delete_outline</mat-icon>
           </button>
           <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print OPD slip" title="Print OPD slip" (click)="printSlip(opd)">

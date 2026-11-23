@@ -1,4 +1,6 @@
 export interface Opd {
+    /** Stable identifier for this encounter. Legacy visits use their stored record key. */
+    visitId?: string;
     patientId: number;
     date: string;
     time: string;

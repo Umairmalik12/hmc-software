@@ -4,6 +4,7 @@ import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { PatientDetail } from 'src/app/Models/patientDetail.model';
+import { selectedDateTime, validSelectedDateTime } from 'src/app/Shared/date-time-values';
 import { finiteNumber, requiredText, ValidatorsService, wholeNumber } from 'src/app/Services/validators.service';
 
 @Component({
@@ -30,14 +31,15 @@ export class PatientEditComponent {
       this.tempAge = this.patientDetails.age;
     }
     else {
-      this.patientDetails.createdAt = new Date().toISOString();
+      this.patientDetails.createdAt = '';
       this.patientDetails.procedure = '';
     }
 
     this.patientForm = this.fb.group({
       patientDetail: this.fb.group({
            patientId: [this.patientDetails.patientId || null, [Validators.required, Validators.min(1), wholeNumber]],
-           createdAt: [this.patientDetails.createdAt || '', []],
+           createdAt: [this.patientDetails.createdAt || '', validSelectedDateTime],
+           dischargeDate: [this.patientDetails.dischargeDate || ''],
         fullName: this.fb.group({
           firstName: [this.patientDetails.firstName, [Validators.required, requiredText]],
           lastName: [this.patientDetails.lastName || ''],
@@ -96,7 +98,8 @@ export class PatientEditComponent {
   ResultRefactoring(): PatientDetail {
     let tempPatient: PatientDetail = {
       patientId: this.b['patientId'].value,
-      createdAt: this.b['createdAt'].value,
+      createdAt: selectedDateTime(this.b['createdAt'].value),
+      dischargeDate: this.b['dischargeDate'].value || '',
       firstName: this.c['firstName'].value.trim(), lastName: this.c['lastName'].value, drName: this.c['drName'].value,
       gender: this.d['gender'].value, age: this.d['age'].value,
       // Preserve existing data without collecting marital status in the form.

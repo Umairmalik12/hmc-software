@@ -1,3 +1,4 @@
+import { DateTimeFieldComponent } from '../../Shared/date-time-field.component';
 import { SearchableSelectComponent } from 'src/app/Shared/searchable-select.component';
 import { ClinicalCatalogSelectComponent } from 'src/app/Components/clinical-catalog/clinical-catalog-select.component';
 import { ClinicalCatalogService, DEFAULT_LAB_TESTS } from 'src/app/Services/clinical-catalog.service';
@@ -42,7 +43,7 @@ describe('Inpatient registration and filters', () => {
     procedures = jasmine.createSpyObj<ProcedureService>('procedures', ['getAll']);
     procedures.getAll.and.resolveTo([{ id: '1', name: 'Cystoscopy', active: true }, { id: '2', name: 'Right nephrectomy', active: true }, { id: '3', name: 'Database procedure', active: true }]);
     await TestBed.configureTestingModule({
-      imports: [SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, MatDialogModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, MatTableModule, MatPaginatorModule, MatDatepickerModule, MatNativeDateModule],
+      imports: [DateTimeFieldComponent, SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, MatDialogModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, MatTableModule, MatPaginatorModule, MatDatepickerModule, MatNativeDateModule],
       declarations: [InpatientEditComponent, InpatientListComponent, ProcedureSelectComponent, ScrollPaginationDirective, ScrollListFooterComponent],
       providers: [{ provide: ClinicalCatalogService, useValue: { changes: new ClinicalChanges<string>(), getAll: async (kind: string) => kind === 'lab-tests' ? DEFAULT_LAB_TESTS : [] } }, { provide: MAT_DIALOG_DATA, useValue: {} }, { provide: MatDialogRef, useValue: { close } }, { provide: ProcedureService, useValue: procedures }, { provide: SupabaseDataService, useValue: db },
         { provide: InpatientService, useValue: { getAllInpatient: () => of(rows) } }, { provide: UserLoginService, useValue: { getLoginUser: async () => 'admin' } }],

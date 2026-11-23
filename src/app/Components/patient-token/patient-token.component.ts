@@ -1,5 +1,5 @@
 import { NotifyUpdateService } from 'src/app/Services/notify-update.service';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { SupabaseDataService, PatientTokenSlip } from 'src/app/Services/supabase-data.service';
 import { printThermal } from './thermal-print';
@@ -8,6 +8,7 @@ import { exportRecords } from 'src/app/Shared/export-records';
 import { ScrollPagination, trackRecord } from 'src/app/Shared/scroll-pagination';
 import { buildPatientTokenReceipt } from './patient-token-receipt';
 import { PatientTokenPreviewComponent } from './patient-token-preview.component';
+import { calendarDate, clockValue } from 'src/app/Shared/date-time-values';
 
 interface TokenDateGroup {
   date: string;
@@ -19,13 +20,15 @@ interface TokenDateGroup {
   templateUrl: './patient-token.component.html',
   styleUrls: ['./patient-token.component.css'],
 })
-export class PatientTokenComponent implements OnInit, OnDestroy {
+export class PatientTokenComponent implements OnInit, OnDestroy, OnChanges {
+  @Input() isSuperAdmin = false;
   readonly pagination = new ScrollPagination();
   readonly trackRecord = trackRecord;
   trackGroup(_index: number, group: TokenDateGroup): string { return group.date; }
   loadMore(): void { this.pagination.loadMore(this.filteredSlips.length); this.updateHistory(); }
   private loadVersion = 0;
   customerName = '';
+  tokenDateTime = '';
   today = '';
   selectedDate = '';
   currentTime = '';
@@ -48,6 +51,10 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
   private realtimeSubscription?: Subscription;
 
   constructor(private indexedDb: SupabaseDataService, private dialog: MatDialog, private feedback: NotifyUpdateService = new NotifyUpdateService()) {}
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes.isSuperAdmin && !this.isSuperAdmin) { this.editingSlipId = null; this.editedPatientName = ''; }
+  }
 
   get todayTotal(): number {
     return this.slips.filter(slip => slip.date === this.today).length;
@@ -107,12 +114,19 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(this.tokenDateTime) || !calendarDate(this.tokenDateTime.slice(0, 10)) || !clockValue(this.tokenDateTime.slice(11))) {
+      this.errorMessage = 'Select the token date and time before generating a slip.';
+      this.successMessage = '';
+      this.feedback.warning(this.errorMessage);
+      return;
+    }
     this.generating = true;
     this.errorMessage = '';
     this.successMessage = '';
     try {
-      const slip = await this.indexedDb.createPatientToken(name);
+      const slip = await this.indexedDb.createPatientToken(name, this.tokenDateTime);
       this.customerName = '';
+      this.tokenDateTime = '';
       if (this.selectedDate) this.selectedDate = slip.date;
       this.search = '';
       this.selectedSlip = slip;
@@ -138,7 +152,7 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
   }
 
   async deleteSlip(slip: PatientTokenSlip): Promise<void> {
-    if (this.deletingId !== null || this.generating || this.updating) return;
+    if (!this.isSuperAdmin || this.deletingId !== null || this.generating || this.updating) return;
     if (!window.confirm('Delete token ' + slip.tokenNumber + ' for ' + slip.customerName + '?')) {
       return;
     }
@@ -190,10 +204,10 @@ export class PatientTokenComponent implements OnInit, OnDestroy {
     this.savePaperWidth();
   }
 
-  editSlip(slip: PatientTokenSlip): void { this.editingSlipId = slip.id; this.editedPatientName = slip.customerName; }
+  editSlip(slip: PatientTokenSlip): void { if (!this.isSuperAdmin || this.updating || this.generating || this.deletingId !== null) return; this.editingSlipId = slip.id; this.editedPatientName = slip.customerName; }
   cancelEdit(): void { if (!this.updating) { this.editingSlipId = null; this.editedPatientName = ''; } }
   async saveSlip(slip: PatientTokenSlip): Promise<void> {
-    if (this.updating || this.generating || this.deletingId !== null) return;
+    if (!this.isSuperAdmin || this.updating || this.generating || this.deletingId !== null) return;
     if (!this.editedPatientName.trim()) { this.errorMessage = 'Enter the patient name.'; if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' }); return; }
     this.updating = true;
     this.errorMessage = '';

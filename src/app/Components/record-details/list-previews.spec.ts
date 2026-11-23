@@ -1,3 +1,4 @@
+import { DateTimeFieldComponent } from '../../Shared/date-time-field.component';
 import { SearchableSelectComponent } from 'src/app/Shared/searchable-select.component';
 import { ClinicalCatalogSelectComponent } from 'src/app/Components/clinical-catalog/clinical-catalog-select.component';
 import { ClinicalCatalogService, DEFAULT_LAB_TESTS } from 'src/app/Services/clinical-catalog.service';
@@ -76,7 +77,7 @@ describe('Preview actions in every record list', () => {
     dialog = jasmine.createSpyObj<MatDialog>('dialog', ['open']);
     dialog.open.and.returnValue({ beforeClosed: () => EMPTY } as unknown as MatDialogRef<unknown>);
     await TestBed.configureTestingModule({
-      imports: [SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatDialogModule,
+      imports: [DateTimeFieldComponent, SearchableSelectComponent, ClinicalCatalogSelectComponent, FeedbackModule, CommonModule, FormsModule, ReactiveFormsModule, NoopAnimationsModule, RouterTestingModule, MatDialogModule,
         MatTableModule, MatCardModule, MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, MatPaginatorModule],
       declarations: [...clinical, ...others, ScrollPaginationDirective, ScrollListFooterComponent, TimeFormatPipe, RecordPreviewDirective, RoomSelectComponent],
       providers: [{ provide: ClinicalCatalogService, useValue: { changes: new ClinicalChanges<string>(), getAll: async (kind: string) => kind === 'lab-tests' ? DEFAULT_LAB_TESTS : [] } },
