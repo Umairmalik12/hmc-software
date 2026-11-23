@@ -1,6 +1,7 @@
 import { memoryDb } from '../testing/memory-db';
 import { PatientHistoryService } from './patient-history.service';
 import { PatientLookupService } from './patient-lookup.service';
+import { LabService } from './lab.service';
 
 describe('patient MR lookup and history', () => {
   it('looks up only the existing master patient with the exact MR', async () => {
@@ -33,5 +34,17 @@ describe('patient MR lookup and history', () => {
     expect(history.get(8123)!.map(entry => entry.module)).toEqual(['OPD visit', 'Laboratory', 'OPD visit', 'Inpatient admission']);
     expect(history.get(8123)!.filter(entry => entry.module === 'OPD visit').length).toBe(2);
     expect(history.has(9999)).toBeFalse();
+  });
+
+  it('allows separate lab transactions for one MR while keeping unique lab keys', async () => {
+    const { db, collections } = memoryDb();
+    const labs = new LabService(db);
+    const create = (testName: string) => labs.addNewLabPatient({ mrNumber: 8123, patientId: 8123, name: 'Ali Khan', phone: '', testName, price: 500, suggestedDr: '', dateTime: '2026-11-24T10:00:00Z' });
+    expect(await create('CBC')).toBeTrue();
+    expect(await create('Urine')).toBeTrue();
+    const records = Array.from(collections.get('labDetails')!.values());
+    expect(records.length).toBe(2);
+    expect(new Set(records.map(record => record.labId)).size).toBe(2);
+    expect(records.every(record => record.mrNumber === 8123)).toBeTrue();
   });
 });
