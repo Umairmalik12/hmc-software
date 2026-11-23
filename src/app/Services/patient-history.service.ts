@@ -45,7 +45,7 @@ export class PatientHistoryService {
       [record.operationDate, record.operationTime].filter(Boolean).join(' '), record.doctorName, record.procedure || 'OT medicine record'));
     (Array.isArray(medicines) ? medicines : []).filter(record => knownMrs.has(Number(record.mrNumber))).forEach(record => add(Number(record.mrNumber), 'Daily medicine', record.medicineId, record,
       record.createdAt, record.doctorName, (record.medicines || []).map((item: any) => item.medicineName).filter(Boolean).join(', ') || 'Daily medicine record'));
-    (Array.isArray(labs) ? labs : []).filter(record => knownMrs.has(Number(record.mrNumber))).forEach(record => add(Number(record.mrNumber), 'Laboratory', record.labId || record.patientId, record,
+    (Array.isArray(labs) ? labs : []).filter(record => knownMrs.has(Number(record.mrNumber ?? record.patientId))).forEach(record => add(Number(record.mrNumber ?? record.patientId), 'Laboratory', record.labId || record.patientId, record,
       record.dateTime, record.suggestedDr, record.testName || 'Laboratory tests'));
     (Array.isArray(inpatients) ? inpatients : []).filter(record => knownMrs.has(Number(record.mrNumber))).forEach(record => add(Number(record.mrNumber), 'Inpatient admission', record.inpatientId, record,
       record.admissionDate || record.createdAt, record.surgeonName, record.procedure || 'Admission'));

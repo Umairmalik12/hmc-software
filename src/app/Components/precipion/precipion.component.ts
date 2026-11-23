@@ -14,7 +14,6 @@ import { printPrescription } from './prescription-print';
 import { OpdService } from 'src/app/Services/opd.service';
 import { firstValueFrom } from 'rxjs';
 import { PatientLookupService } from 'src/app/Services/patient-lookup.service';
-import { PatientDetail } from 'src/app/Models/patientDetail.model';
 
 @Component({
   selector: 'app-preciption',
@@ -42,7 +41,6 @@ export class PreciptionComponent implements OnInit, OnDestroy, OnChanges {
   private editingId: string | null = null;
   private patientLookupVersion = 0;
   matchedPatient = '';
-  private lastMatchedPatient?: PatientDetail;
   private patientPrefill: Record<string, string> = {};
 
   constructor(private prescriptions: PrescriptionService,
@@ -137,7 +135,7 @@ export class PreciptionComponent implements OnInit, OnDestroy, OnChanges {
   private async lookupPatient(value: unknown): Promise<void> {
     const version = ++this.patientLookupVersion, mr = Number(value); this.matchedPatient = '';
     Object.entries(this.patientPrefill).forEach(([field, previous]) => {
-      const current = field === 'doctorName' ? this.record.doctorName : this.record.patient[field as keyof typeof this.record.patient];
+      const current = field === 'doctorName' ? this.record.doctorName : this.record.patient[field as keyof PrescriptionRecord['patient']];
       if (current === previous) {
         if (field === 'doctorName') this.record.doctorName = '';
         else (this.record.patient as any)[field] = '';
@@ -151,14 +149,14 @@ export class PreciptionComponent implements OnInit, OnDestroy, OnChanges {
       const name = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
       const fields: Record<string, string> = { name, age: patient.age != null ? String(patient.age) : '', sex: patient.gender || '', contact: patient.phone || '', doctorName: patient.drName || '' };
       Object.entries(fields).forEach(([field, value]) => {
-        const current = field === 'doctorName' ? this.record.doctorName : this.record.patient[field as keyof typeof this.record.patient];
+        const current = field === 'doctorName' ? this.record.doctorName : this.record.patient[field as keyof PrescriptionRecord['patient']];
         if (!current && value) {
           if (field === 'doctorName') this.record.doctorName = value;
           else (this.record.patient as any)[field] = value;
           this.patientPrefill[field] = value;
         }
       });
-      this.lastMatchedPatient = patient; this.matchedPatient = name;
+      this.matchedPatient = name;
     } catch { if (version === this.patientLookupVersion) this.matchedPatient = ''; }
   }
 

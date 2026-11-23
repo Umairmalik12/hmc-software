@@ -3,7 +3,7 @@ import { replacePatientPrefill } from './patient-lookup-form';
 
 describe('patient MR form prefill', () => {
   it('replaces only previous auto-filled values and preserves user edits', () => {
-    const form = new FormGroup({ patientName: new FormControl(''), age: new FormControl('') });
+    const form = new FormGroup({ patientName: new FormControl<any>(''), age: new FormControl<any>('') });
     let applied = replacePatientPrefill(form, {}, { patientName: 'Ali Khan', age: 30 });
     form.get('patientName')!.setValue('Ali K.');
     applied = replacePatientPrefill(form, applied, {});
