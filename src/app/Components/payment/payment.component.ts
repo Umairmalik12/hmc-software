@@ -14,6 +14,7 @@ import { StaffService, STAFF_COLLECTION } from 'src/app/Services/staff.service';
 import { StaffRecord, STAFF_SHIFTS, staffKey, uniqueStaffValues } from 'src/app/Models/staff.model';
 import { selectedDateTime, validSelectedDateTime } from 'src/app/Shared/date-time-values';
 import { PatientLookupService } from 'src/app/Services/patient-lookup.service';
+import { replacePatientPrefill } from 'src/app/Shared/patient-lookup-form';
 
 @Component({ selector: 'app-payment', templateUrl: './payment.component.html', styleUrls: ['./payment.component.css'] })
 export class PaymentComponent implements OnInit, OnDestroy {
@@ -57,6 +58,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
   private destroyed = false;
   private subscriptions = new Subscription();
   matchedPatient = '';
+  private patientPrefill: Record<string, unknown> = {};
   private patientLookupVersion = 0;
   private clock?: ReturnType<typeof setInterval>;
 
@@ -151,12 +153,14 @@ export class PaymentComponent implements OnInit, OnDestroy {
   private message(error: unknown, fallback: string): string { return error instanceof Error ? error.message : fallback; }
   private async lookupPatient(value: unknown): Promise<void> {
     const version = ++this.patientLookupVersion, mr = Number(value); this.matchedPatient = '';
+    this.patientPrefill = replacePatientPrefill(this.paymentForm, this.patientPrefill, {});
     if (!this.patientLookup || !Number.isSafeInteger(mr) || mr < 1) return;
     try {
       const patient = await this.patientLookup.byMr(mr);
       if (version !== this.patientLookupVersion || Number(this.paymentForm.get('mrNumber')!.value) !== mr || !patient) return;
-      if (!this.paymentForm.get('patientName')!.value) this.paymentForm.get('patientName')!.setValue([patient.firstName, patient.lastName].filter(Boolean).join(' '));
-      this.matchedPatient = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
+      const name = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
+      this.patientPrefill = replacePatientPrefill(this.paymentForm, {}, { patientName: name });
+      this.matchedPatient = name;
     } catch { if (version === this.patientLookupVersion) this.matchedPatient = ''; }
   }
   generatePatientId(): string { return this.patientId = 'P-' + Math.random().toString(36).slice(2, 11); }
@@ -334,7 +338,7 @@ export class PaymentComponent implements OnInit, OnDestroy {
       this.context = { staffName: raw.staffName || '', shiftName: raw.shiftName || '', counterName: raw.counterName || '' };
     }
     this.editingId = ''; this.editingStaffName = ''; this.pendingCreateId = ''; this.attributionValidators(false);
-    this.matchedPatient = ''; this.paymentForm.reset({ patientName: '', mrNumber: null, patientId: this.generatePatientId(), amount: null, cashGiven: null, paymentMethod: 'cash', paymentStatus: 'completed',
+    this.matchedPatient = ''; this.patientPrefill = {}; this.paymentForm.reset({ patientName: '', mrNumber: null, patientId: this.generatePatientId(), amount: null, cashGiven: null, paymentMethod: 'cash', paymentStatus: 'completed',
       ...this.context, shiftDate: '', createdAt: '' });
     this.restoreStaffDefault();
     this.cashReturn = 0;

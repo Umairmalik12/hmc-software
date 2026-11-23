@@ -7,6 +7,7 @@ import { requiredText } from 'src/app/Services/validators.service';
 import { selectedDateTime, validSelectedDateTime } from 'src/app/Shared/date-time-values';
 import { PatientLookupService } from 'src/app/Services/patient-lookup.service';
 import { Subscription } from 'rxjs';
+import { replacePatientPrefill } from 'src/app/Shared/patient-lookup-form';
 
 @Component({
   selector: 'app-lab-edit',
@@ -20,6 +21,7 @@ export class LabEditComponent implements OnDestroy {
   matchedPatient = '';
   private lookupVersion = 0;
   private subscription?: Subscription;
+  private patientPrefill: Record<string, unknown> = {};
 
   
 constructor(
@@ -50,14 +52,14 @@ constructor(
 
   private async lookupPatient(value: unknown): Promise<void> {
     const version = ++this.lookupVersion, mr = Number(value); this.matchedPatient = '';
+    this.patientPrefill = replacePatientPrefill(this.labPatientForm, this.patientPrefill, {});
     if (!this.patientLookup || !Number.isSafeInteger(mr) || mr < 1) return;
     try {
       const patient = await this.patientLookup.byMr(mr);
       if (version !== this.lookupVersion || Number(this.labPatientForm.get('mrNumber')!.value) !== mr || !patient) return;
-      if (!this.labPatientForm.get('name')!.value) this.labPatientForm.get('name')!.setValue([patient.firstName, patient.lastName].filter(Boolean).join(' '));
-      if (!this.labPatientForm.get('phone')!.value && patient.phone) this.labPatientForm.get('phone')!.setValue(patient.phone);
-      if (!this.labPatientForm.get('suggestedDr')!.value && patient.drName) this.labPatientForm.get('suggestedDr')!.setValue(patient.drName);
-      this.matchedPatient = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
+      const name = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
+      this.patientPrefill = replacePatientPrefill(this.labPatientForm, {}, { name, phone: patient.phone, suggestedDr: patient.drName });
+      this.matchedPatient = name;
     } catch { if (version === this.lookupVersion) this.matchedPatient = ''; }
   }
 

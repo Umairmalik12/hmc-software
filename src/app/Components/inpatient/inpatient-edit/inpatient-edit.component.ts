@@ -7,6 +7,7 @@ import { requiredText, wholeNumber } from 'src/app/Services/validators.service';
 import { selectedDateTime, validSelectedDateTime } from 'src/app/Shared/date-time-values';
 import { PatientLookupService } from 'src/app/Services/patient-lookup.service';
 import { Subscription } from 'rxjs';
+import { replacePatientPrefill } from 'src/app/Shared/patient-lookup-form';
 
 @Component({
   selector: 'app-inpatient-edit',
@@ -20,6 +21,7 @@ export class InpatientEditComponent implements OnDestroy {
   matchedPatient = '';
   private lookupVersion = 0;
   private subscription?: Subscription;
+  private patientPrefill: Record<string, unknown> = {};
 
   constructor(
     private fb: FormBuilder,
@@ -61,13 +63,13 @@ export class InpatientEditComponent implements OnDestroy {
 
   private async lookupPatient(value: unknown): Promise<void> {
     const version = ++this.lookupVersion, mr = Number(value); this.matchedPatient = '';
+    this.patientPrefill = replacePatientPrefill(this.inpatientForm, this.patientPrefill, {});
     if (!this.patientLookup || !Number.isSafeInteger(mr) || mr < 1) return;
     try {
       const patient = await this.patientLookup.byMr(mr);
       if (version !== this.lookupVersion || Number(this.b['mrNumber'].value) !== mr || !patient) return;
       const name = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
-      const control = this.c['patientName']; if (!control.value) control.setValue(name);
-      if (!this.c['surgeonName'].value && patient.drName) this.c['surgeonName'].setValue(patient.drName);
+      this.patientPrefill = replacePatientPrefill(this.inpatientForm, {}, { 'inpatientDetail.basicInfo.patientName': name, 'inpatientDetail.basicInfo.surgeonName': patient.drName });
       this.matchedPatient = name;
     } catch { if (version === this.lookupVersion) this.matchedPatient = ''; }
   }

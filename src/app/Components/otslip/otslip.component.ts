@@ -14,6 +14,7 @@ import { OtMedicineCatalogComponent } from '../ot-medicine-catalog/ot-medicine-c
 import { printOtMedicine } from './ot-medicine-document';
 import { OtMedicinePreviewComponent } from './ot-medicine-preview.component';
 import { PatientLookupService } from 'src/app/Services/patient-lookup.service';
+import { replacePatientPrefill } from 'src/app/Shared/patient-lookup-form';
 
 interface ProductRow {
   key: string;
@@ -56,6 +57,7 @@ export class OtFormComponent implements OnInit, OnDestroy {
   private subscriptions = new Subscription();
   private lookupVersion = 0;
   matchedPatient = '';
+  private patientPrefill: Record<string, unknown> = {};
   @Input() set selectedPatientId(value: string | number) {
     this.requestedId = String(value || '');
     if (this.ready) void this.load();
@@ -81,13 +83,14 @@ export class OtFormComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void { this.version++; this.catalogueVersion++; this.ready = false; this.subscriptions.unsubscribe(); }
   private async lookupPatient(value: unknown): Promise<void> {
     const version = ++this.lookupVersion, mr = Number(value); this.matchedPatient = '';
+    this.patientPrefill = replacePatientPrefill(this.otForm, this.patientPrefill, {});
     if (!this.patientLookup || !Number.isSafeInteger(mr) || mr < 1) return;
     try {
       const patient = await this.patientLookup.byMr(mr);
       if (version !== this.lookupVersion || Number(this.otForm.get('mrNumber')!.value) !== mr || !patient) return;
-      if (!this.otForm.get('patientName')!.value) this.otForm.get('patientName')!.setValue([patient.firstName, patient.lastName].filter(Boolean).join(' '));
-      if (!this.otForm.get('doctorName')!.value && patient.drName) this.otForm.get('doctorName')!.setValue(patient.drName);
-      this.matchedPatient = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
+      const name = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
+      this.patientPrefill = replacePatientPrefill(this.otForm, {}, { patientName: name, doctorName: patient.drName });
+      this.matchedPatient = name;
     } catch { if (version === this.lookupVersion) this.matchedPatient = ''; }
   }
   private productGroup(): FormGroup {

@@ -7,6 +7,7 @@ import { calendarValue, selectedDateTime, validSelectedDateTime } from 'src/app/
 import { finiteNumber, requiredText, wholeNumber } from 'src/app/Services/validators.service';
 import { PatientLookupService } from 'src/app/Services/patient-lookup.service';
 import { Subscription } from 'rxjs';
+import { replacePatientPrefill } from 'src/app/Shared/patient-lookup-form';
 
 @Component({
   selector: 'app-opd-edit',
@@ -21,6 +22,7 @@ export class OpdEditComponent implements OnDestroy {
   matchedPatient = '';
   private lookupVersion = 0;
   private subscription?: Subscription;
+  private patientPrefill: Record<string, unknown> = {};
 
   constructor(
     private fb: FormBuilder,
@@ -61,16 +63,15 @@ export class OpdEditComponent implements OnDestroy {
 
   private async lookupPatient(value: unknown): Promise<void> {
     const version = ++this.lookupVersion; this.matchedPatient = '';
+    this.patientPrefill = replacePatientPrefill(this.opdForm, this.patientPrefill, {});
     const mr = Number(value);
     if (!this.patientLookup || !Number.isSafeInteger(mr) || mr < 1) return;
     try {
       const patient = await this.patientLookup.byMr(mr);
       if (version !== this.lookupVersion || Number(this.opdForm.get('patientId')!.value) !== mr || !patient) return;
       const name = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
-      const patch: Record<string, unknown> = {};
-      const fields: Array<[string, unknown]> = [['patientName', name], ['age', patient.age], ['sex', patient.gender], ['phone', patient.phone], ['address', patient.address], ['drName', patient.drName]];
-      fields.forEach(([key, fieldValue]) => { const control = this.opdForm.get(key)!; if ((control.value === '' || control.value == null) && fieldValue !== '' && fieldValue != null) patch[key] = fieldValue; });
-      this.opdForm.patchValue(patch); this.matchedPatient = name;
+      this.patientPrefill = replacePatientPrefill(this.opdForm, {}, { patientName: name, age: patient.age, sex: patient.gender, phone: patient.phone, address: patient.address, drName: patient.drName });
+      this.matchedPatient = name;
     } catch { if (version === this.lookupVersion) this.matchedPatient = ''; }
   }
 

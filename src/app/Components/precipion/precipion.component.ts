@@ -43,6 +43,7 @@ export class PreciptionComponent implements OnInit, OnDestroy, OnChanges {
   private patientLookupVersion = 0;
   matchedPatient = '';
   private lastMatchedPatient?: PatientDetail;
+  private patientPrefill: Record<string, string> = {};
 
   constructor(private prescriptions: PrescriptionService,
     private route: ActivatedRoute, private router: Router, private dialog: MatDialog, @Optional() private opdService: OpdService | null = null,
@@ -90,6 +91,7 @@ export class PreciptionComponent implements OnInit, OnDestroy, OnChanges {
       }
       if (version !== this.loadVersion) return;
       if (!record) throw new Error('This prescription could not be found. Return to the prescription list.');
+      this.patientPrefill = {};
       this.record = copyPrescription(record);
       if (!this.editingId && this.opdVisitId) {
         if (!this.opdService) throw new Error('OPD visit information is unavailable. Return to OPD visits and try again.');
@@ -134,21 +136,31 @@ export class PreciptionComponent implements OnInit, OnDestroy, OnChanges {
 
   private async lookupPatient(value: unknown): Promise<void> {
     const version = ++this.patientLookupVersion, mr = Number(value); this.matchedPatient = '';
+    Object.entries(this.patientPrefill).forEach(([field, previous]) => {
+      const current = field === 'doctorName' ? this.record.doctorName : this.record.patient[field as keyof typeof this.record.patient];
+      if (current === previous) {
+        if (field === 'doctorName') this.record.doctorName = '';
+        else (this.record.patient as any)[field] = '';
+      }
+    });
+    this.patientPrefill = {};
     if (!this.patientLookup || !Number.isSafeInteger(mr) || mr < 1) return;
     try {
       const patient = await this.patientLookup.byMr(mr);
       if (version !== this.patientLookupVersion || Number(this.record.patient.refId) !== mr || !patient) return;
       const name = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
-      this.record.patient.name ||= name;
-      this.record.patient.age ||= patient.age != null ? String(patient.age) : '';
-      this.record.patient.sex ||= patient.gender || '';
-      this.record.patient.contact ||= patient.phone || '';
-      this.doctorNameFromMaster(patient.drName);
+      const fields: Record<string, string> = { name, age: patient.age != null ? String(patient.age) : '', sex: patient.gender || '', contact: patient.phone || '', doctorName: patient.drName || '' };
+      Object.entries(fields).forEach(([field, value]) => {
+        const current = field === 'doctorName' ? this.record.doctorName : this.record.patient[field as keyof typeof this.record.patient];
+        if (!current && value) {
+          if (field === 'doctorName') this.record.doctorName = value;
+          else (this.record.patient as any)[field] = value;
+          this.patientPrefill[field] = value;
+        }
+      });
       this.lastMatchedPatient = patient; this.matchedPatient = name;
     } catch { if (version === this.patientLookupVersion) this.matchedPatient = ''; }
   }
-
-  private doctorNameFromMaster(name: string): void { if (!this.record.doctorName) this.record.doctorName = name || ''; }
 
   addMedicine(): void {
     if (!this.saving) this.record.medicines.push({ name: '', morning: false, afternoon: false, evening: false });

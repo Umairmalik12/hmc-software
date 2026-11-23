@@ -9,6 +9,7 @@ import { selectedDateTime, validSelectedDateTime } from 'src/app/Shared/date-tim
 import { MedicineCatalogComponent } from '../../precipion/medicine-catalog/medicine-catalog.component';
 import { PatientLookupService } from 'src/app/Services/patient-lookup.service';
 import { Subscription } from 'rxjs';
+import { replacePatientPrefill } from 'src/app/Shared/patient-lookup-form';
 
 @Component({
   selector: 'app-medicine-edit',
@@ -24,6 +25,7 @@ export class MedicineEditComponent implements OnInit, OnDestroy {
   matchedPatient = '';
   private lookupVersion = 0;
   private subscription?: Subscription;
+  private patientPrefill: Record<string, unknown> = {};
 
   constructor(
     private fb: FormBuilder,
@@ -64,13 +66,14 @@ export class MedicineEditComponent implements OnInit, OnDestroy {
 
   private async lookupPatient(value: unknown): Promise<void> {
     const version = ++this.lookupVersion, mr = Number(value); this.matchedPatient = '';
+    this.patientPrefill = replacePatientPrefill(this.medicineForm, this.patientPrefill, {});
     if (!this.patientLookup || !Number.isSafeInteger(mr) || mr < 1) return;
     try {
       const patient = await this.patientLookup.byMr(mr);
       if (version !== this.lookupVersion || Number(this.medicineForm.get('mrNumber')!.value) !== mr || !patient) return;
-      if (!this.medicineForm.get('patientName')!.value) this.medicineForm.get('patientName')!.setValue([patient.firstName, patient.lastName].filter(Boolean).join(' '));
-      if (!this.medicineForm.get('doctorName')!.value && patient.drName) this.medicineForm.get('doctorName')!.setValue(patient.drName);
-      this.matchedPatient = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
+      const name = [patient.firstName, patient.lastName].filter(Boolean).join(' ');
+      this.patientPrefill = replacePatientPrefill(this.medicineForm, {}, { patientName: name, doctorName: patient.drName });
+      this.matchedPatient = name;
     } catch { if (version === this.lookupVersion) this.matchedPatient = ''; }
   }
 
