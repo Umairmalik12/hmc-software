@@ -68,10 +68,8 @@ describe('OPD registration and filters', () => {
       const age = root.querySelector<HTMLInputElement>('input[formControlName="age"]')!;
       expect(age.placeholder).toBe('Age'); expect(age.type).toBe('number');
       age.value = '30'; age.dispatchEvent(new Event('input', { bubbles: true }));
-      const procedure = fixture.debugElement.query(By.css('app-procedure-select app-searchable-select')).componentInstance as SearchableSelectComponent;
-      procedure.open(); fixture.detectChanges();
-      Array.from(document.querySelectorAll<HTMLElement>('mat-option')).find(option => (option.querySelector('.hmc-option-label')?.textContent || option.textContent)?.trim() === 'Cystoscopy')!.click();
-      await settle(fixture);
+      const procedure = fixture.debugElement.query(By.directive(ProcedureSelectComponent)).componentInstance as ProcedureSelectComponent;
+      procedure.choose('Cystoscopy'); fixture.detectChanges();
       fixture.componentInstance.onSubmit();
       expect(close).toHaveBeenCalledWith(jasmine.objectContaining({ patientId: 8123, patientName: 'Ali', sex: 'Female', age: 30, procedure: 'Cystoscopy' }));
     } finally { fixture.destroy(); }
