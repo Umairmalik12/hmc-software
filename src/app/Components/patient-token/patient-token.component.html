@@ -26,7 +26,7 @@
         </select>
       </label>
     </div>
-    <form class="generate-form" (ngSubmit)="generateSlip()">
+    <form *appPermission="'tokens.create'" class="generate-form" (ngSubmit)="generateSlip()">
       <app-date-time-field class="token-issue-date" kind="datetime" label="Token date and time" name="tokenDateTime" [(ngModel)]="tokenDateTime" [required]="true" [disabled]="generating" min="1900-01-01"></app-date-time-field>
       <label for="patient-name">Patient name</label>
       <div class="form-controls">
@@ -102,12 +102,12 @@
           <tbody>
             <tr *ngFor="let slip of group.slips; trackBy: trackRecord">
               <td class="table-token">{{ slip.tokenNumber }}</td>
-              <td><input *ngIf="isSuperAdmin && editingSlipId === slip.id; else savedPatientName" class="token-name-input" [(ngModel)]="editedPatientName" maxlength="120" [readOnly]="updating" aria-label="Patient name"><ng-template #savedPatientName>{{ slip.customerName }}</ng-template></td>
+              <td><ng-container *ngIf="editingSlipId === slip.id; else savedPatientName"><input *appPermission="'tokens.edit'" class="token-name-input" [(ngModel)]="editedPatientName" maxlength="120" [readOnly]="updating" aria-label="Patient name"></ng-container><ng-template #savedPatientName>{{ slip.customerName }}</ng-template></td>
               <td>{{ formatDate(slip.date) }}</td>
               <td>{{ slip.time | timeFormat }}</td>
               <td class="actions">
-                <ng-container *ngIf="isSuperAdmin && editingSlipId === slip.id; else tokenActions"><button [appBusy]="updating" type="button" (click)="saveSlip(slip)" [disabled]="updating">Save</button><button type="button" class="secondary-button" (click)="cancelEdit()" [disabled]="updating">Cancel</button></ng-container><ng-template #tokenActions><button type="button" class="secondary-button" (click)="previewSlip(slip)" aria-label="Preview patient token" title="Preview">Preview</button><button type="button" class="secondary-button" (click)="printSlip(slip)">Print</button><button *ngIf="isSuperAdmin" type="button" class="secondary-button" (click)="editSlip(slip)" aria-label="Edit patient token">Edit</button>
-                <button *ngIf="isSuperAdmin" type="button" class="delete-button" (click)="deleteSlip(slip)" aria-label="Delete patient token" [appBusy]="deletingId === slip.id" [disabled]="updating || generating || deletingId !== null">Delete</button></ng-template>
+                <ng-container *ngIf="editingSlipId === slip.id"><ng-container *appPermission="'tokens.edit'"><button [appBusy]="updating" type="button" (click)="saveSlip(slip)" [disabled]="updating">Save</button><button type="button" class="secondary-button" (click)="cancelEdit()" [disabled]="updating">Cancel</button></ng-container></ng-container><ng-container *ngIf="editingSlipId !== slip.id"><button type="button" class="secondary-button" (click)="previewSlip(slip)" aria-label="Preview patient token" title="Preview">Preview</button><button type="button" class="secondary-button" (click)="printSlip(slip)">Print</button><button *appPermission="'tokens.edit'" type="button" class="secondary-button" (click)="editSlip(slip)" aria-label="Edit patient token">Edit</button>
+                <button *appPermission="'tokens.delete'" type="button" class="delete-button" (click)="deleteSlip(slip)" aria-label="Delete patient token" [appBusy]="deletingId === slip.id" [disabled]="updating || generating || deletingId !== null">Delete</button></ng-container>
               </td>
             </tr>
           </tbody>

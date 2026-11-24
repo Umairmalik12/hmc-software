@@ -36,7 +36,6 @@ export class PrescriptionService {
 
   async save(draft: PrescriptionRecord): Promise<PrescriptionRecord> {
     if (!draft.patient.name.trim()) throw new Error('Enter the patient name before saving.');
-    await this.db.requireAdministrator('Only administrators can save prescriptions.');
     const issuedAt = selectedDateTime(draft.issuedAt);
     const existingForVisit = draft.opdVisitId ? await this.getByOpdVisitId(draft.opdVisitId) : undefined;
     if (existingForVisit && draft.id && existingForVisit.id !== draft.id) {
@@ -44,6 +43,7 @@ export class PrescriptionService {
     }
     // A retry or second editor for the same visit updates its one linked record instead of creating a duplicate.
     const effectiveId = draft.id || existingForVisit?.id || '';
+    await this.db.requirePermission('prescriptions', effectiveId ? 'edit' : 'create', effectiveId ? 'You do not have permission to edit prescriptions.' : 'You do not have permission to create prescriptions.');
     const target = effectiveId ? await this.storageTarget(effectiveId) : undefined;
     const now = new Date().toISOString(); // Audit metadata only.
     const record = copyPrescription(draft);

@@ -452,3 +452,31 @@ Export/import patient, OPD, medicine, and inpatient spreadsheets before removing
 deployment if those local records must be retained. Token history, payments, operation
 slips, and prescription drafts need a one-time migration before the old browser data is
 cleared; Supabase does not have access to another PC's local database.
+
+### Team signup and account credentials
+
+Admins can open **Team accounts** (`/users`) or **Team signup** (`/signup`) in the sidebar.
+Team signup creates a confirmed Supabase Auth login and assigns its existing HMC role
+(Staff or Admin). It keeps the administrator signed in. Team accounts lists every
+account, supports name/email/role search, and provides email and password changes.
+**My account** opens the signed-in administrator's own record. Existing passwords
+are never displayed or stored in application records; leave the new password blank
+to keep it. Updated credentials are saved in Supabase Auth for the next sign-in.
+
+Deploy the account backend once using the Supabase CLI:
+
+```powershell
+supabase login
+supabase link --project-ref YOUR_PROJECT_REF
+supabase functions deploy manage-users
+```
+
+Hosted Edge Functions supply `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` automatically.
+Keep gateway JWT verification enabled. The function also verifies the session using
+Auth and checks the caller's `admin` role in `hmc_user_roles` on every request.
+Only the function uses the service role key; never put it in Angular environment files.
+The existing `supabase/schema.sql` roles table and RLS setup are required. No additional
+table migration is needed. Create the first administrator through the Supabase
+dashboard as described above. Team signup is restricted to administrators.
+
+Run the backend authorization checks with `node --test supabase/tests/manage-users.test.cjs`.

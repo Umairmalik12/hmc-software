@@ -1,5 +1,5 @@
 <div class="body">
-  <header class="list-header"><div class="list-intro"><span class="list-icon"><mat-icon>assignment</mat-icon></span><div><h1>OPD visits</h1><p>Outpatient visits, consultation details and follow-up.</p></div></div><span class="record-count"><strong>{{ filteredOpds.length }}</strong> records</span><button mat-flat-button color="primary" (click)="create.emit()"><mat-icon>add</mat-icon>New opd visit</button></header>
+  <header class="list-header"><div class="list-intro"><span class="list-icon"><mat-icon>assignment</mat-icon></span><div><h1>OPD visits</h1><p>Outpatient visits, consultation details and follow-up.</p></div></div><span class="record-count"><strong>{{ filteredOpds.length }}</strong> records</span><button *appPermission="'opd.create'" mat-flat-button color="primary" (click)="create.emit()"><mat-icon>add</mat-icon>New opd visit</button></header>
     <p *ngIf="loading" class="hmc-loading-state" role="status">Loading opd visit records...</p><p *ngIf="loadFailed" class="form-error" role="alert">Records could not be loaded. <button mat-stroked-button type="button" (click)="dataActions('', 'asc', 0, 20)" [disabled]="loading">Retry</button></p>
 
   <!-- Search and export -->
@@ -39,7 +39,7 @@
 
   <!-- 📋 OPD Table -->
   <div class="table-scroll-container" appScrollPagination [scrollDisabled]="loading" [scrollTotal]="total" [scrollShown]="displayedOpds.length" [scrollResetKey]="pagination.revision" (loadMore)="loadMore()" scrollLabel="OPD patients">
-  <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource" [trackBy]="trackRecord">
+  <mat-table class="patient-table hmc-record-table opd-visit-table mat-elevation-z8" [dataSource]="dataSource" [trackBy]="trackRecord">
 
     <ng-container matColumnDef="patientId">
       <mat-header-cell *matHeaderCellDef>MR Number</mat-header-cell>
@@ -94,14 +94,14 @@
         <div class="action-buttons"><button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Preview opd visit" title="Preview" (click)="viewOpd(visitKey(opd))"><mat-icon>visibility</mat-icon></button>
           <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="View prescription" title="View prescription" (click)="viewPrescription(opd)"><mat-icon>description</mat-icon></button>
           <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print prescription" title="Print prescription" (click)="printLinkedPrescription(opd)" [disabled]="!prescriptionFor(opd)"><mat-icon>print</mat-icon></button>
-          <button *ngIf="isSuperAdmin" mat-icon-button color="primary" class="table-btn" type="button" [attr.aria-label]="prescriptionFor(opd) ? 'Edit prescription' : 'Create prescription'" [title]="prescriptionFor(opd) ? 'Edit prescription' : 'Create prescription'" (click)="openPrescriptionEditor(opd)">
+          <button *appPermission="prescriptionFor(opd) ? 'prescriptions.edit' : 'prescriptions.create'" mat-icon-button color="primary" class="table-btn" type="button" [attr.aria-label]="prescriptionFor(opd) ? 'Edit prescription' : 'Create prescription'" [title]="prescriptionFor(opd) ? 'Edit prescription' : 'Create prescription'" (click)="openPrescriptionEditor(opd)">
             <mat-icon>{{ prescriptionFor(opd) ? 'edit_note' : 'note_add' }}</mat-icon>
           </button>
-          <button *ngIf="isSuperAdmin && prescriptionFor(opd)" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete prescription" title="Delete prescription" (click)="deleteLinkedPrescription(opd)"><mat-icon>delete_outline</mat-icon></button>
-          <button *ngIf="isSuperAdmin" mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit OPD slip" title="Edit OPD slip" (click)="editOpd(visitKey(opd))">
+          <ng-container *appPermission="'prescriptions.delete'"><button *ngIf="prescriptionFor(opd)" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete prescription" title="Delete prescription" (click)="deleteLinkedPrescription(opd)"><mat-icon>delete_outline</mat-icon></button></ng-container>
+          <button *appPermission="'opd.edit'" mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit OPD slip" title="Edit OPD slip" (click)="editOpd(visitKey(opd))">
             <mat-icon>edit_note</mat-icon>
           </button>
-          <button [appBusy]="deletingId === visitKey(opd)" [disabled]="deletingId !== null" *ngIf="isSuperAdmin" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete OPD slip" title="Delete OPD slip" (click)="deleteOpd(visitKey(opd))">
+          <button [appBusy]="deletingId === visitKey(opd)" [disabled]="deletingId !== null" *appPermission="'opd.delete'" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete OPD slip" title="Delete OPD slip" (click)="deleteOpd(visitKey(opd))">
             <mat-icon>delete_outline</mat-icon>
           </button>
           <button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Print OPD slip" title="Print OPD slip" (click)="printSlip(opd)">

@@ -23,6 +23,7 @@ import { MedicineService } from 'src/app/Services/medicine.service';
 import { MedicineEditComponent } from '../medicine/medicine-edit/medicine-edit.component';
 import { InPatient } from 'src/app/Models/inpatient.model';
 import { AdminAssistantComponent } from '../admin-assistant/admin-assistant.component';
+import { ModulePermissionService } from 'src/app/Services/module-permission.service';
 
 @Component({
   selector: 'app-home',
@@ -38,6 +39,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   opdVisitId: string | null = null;
   isShowDoctors = false;
   isShowStaff = false;
+  isShowTeamAccounts = false;
+  isShowPermissions = false;
+  teamSignup = false;
   isShowExpenses = false;
   isShowLabTestCatalog = false;
   isShowProcedures = false;
@@ -138,19 +142,25 @@ export class HomeComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private dataService: SupabaseDataService,
-    private userLogin: UserLoginService
+    private userLogin: UserLoginService,
+    private permissions: ModulePermissionService
   ) {
   }
 
   async ngOnInit(): Promise<void> {
-    this.userLogin.getLoginUser().then((loginUser) => {
-      this.isSuperAdmin = loginUser === 'admin';
-      this.roleLoaded = true;
-      this.userName = this.isSuperAdmin ? 'Administrator' : 'Staff';
-      if (!this.isSuperAdmin && this.route.snapshot.data['dashboardView'] === 'prescription') void this.router.navigate(['/prescriptions']);
+    this.subscriptions.add(this.permissions.changes.subscribe(() => {
+      this.isSuperAdmin = this.permissions.isAdmin;
+      const role = this.permissions.currentRole;
+      this.userName = this.isSuperAdmin ? 'Administrator' : (role === 'staff' ? 'Staff' : role || 'Loading account...');
+      if (this.roleLoaded) this.checkPrescriptionAccess();
+    }));
+    void this.permissions.load().then(() => {
+        this.roleLoaded = true;
+        this.checkPrescriptionAccess();
     }).catch(error => {
-      console.error('Unable to load current user role:', error);
-      this.notifyUpdate.alertNotify.next({ msg: 'Unable to load your account permissions.', type: 'error' });
+        this.roleLoaded = true;
+        this.userName = 'Account unavailable';
+        this.notifyUpdate.error(error instanceof Error ? error.message : 'Module permissions could not be loaded.');
     });
     this.clockTimer = setInterval(() => {
       this.currentDateTime = new Date();
@@ -163,12 +173,19 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.otPatientId = String(params['patientId'] || '');
       this.prescriptionId = routeParams.get('prescriptionId');
       this.opdVisitId = params['opdVisitId'] ? String(params['opdVisitId']) : null;
-      if (this.roleLoaded && !this.isSuperAdmin && data['dashboardView'] === 'prescription') {
+      if (this.roleLoaded && this.permissions.currentRole && data['dashboardView'] === 'prescription' && !this.permissions.can('prescriptions', routeParams.get('prescriptionId') ? 'edit' : 'create')) {
         void this.router.navigate(['/prescriptions']);
         return;
       }
       this.selectDashboardView(this.otPatientId ? 'ot-form' : data['dashboardView'] || 'patients');
     }));
+  }
+
+  private checkPrescriptionAccess(): void {
+    // Wait for a verified role when authentication restarts a pending lookup.
+    if (!this.permissions.currentRole || this.route.snapshot.data['dashboardView'] !== 'prescription') return;
+    const action = this.route.snapshot.paramMap.get('prescriptionId') ? 'edit' : 'create';
+    if (!this.permissions.can('prescriptions', action)) void this.router.navigate(['/prescriptions']);
   }
 
   ngOnDestroy(): void {
@@ -266,6 +283,14 @@ export class HomeComponent implements OnInit, OnDestroy {
   private selectDashboardView(view: string): void {
     this.resetViews();
     switch (view) {
+      case 'team-accounts':
+      case 'team-signup':
+        this.isShowTeamAccounts = true;
+        this.teamSignup = view === 'team-signup';
+        break;
+      case 'permissions':
+        this.isShowPermissions = true;
+        break;
       case 'opd':
         this.isShowOpdPatients = true;
         break;
@@ -343,6 +368,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   private resetViews() {
+    this.isShowTeamAccounts = false;
+    this.isShowPermissions = false;
+    this.teamSignup = false;
     this.isShowPatients = false;
     this.isShowOpdPatients = false;
     this.isShowLabSlips = false;

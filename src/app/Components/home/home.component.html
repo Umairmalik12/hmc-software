@@ -18,8 +18,11 @@
       <a mat-list-item routerLink="/medicine" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>medication</mat-icon><span matListItemTitle>Daily medicines</span></a>
       <a mat-list-item routerLink="/ot-medicines" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>vaccines</mat-icon><span matListItemTitle>OT medicine catalogue</span></a>
       <a mat-list-item routerLink="/ot-records" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>inventory_2</mat-icon><span matListItemTitle>OT medicine records</span></a>
-      <a mat-list-item routerLink="/ot-slip" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>post_add</mat-icon><span matListItemTitle>New OT medicine slip</span></a>
+      <a *appPermission="'ot-medicine-records.create'" mat-list-item routerLink="/ot-slip" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>post_add</mat-icon><span matListItemTitle>New OT medicine slip</span></a>
       <h3 class="sidebar-title">ADMINISTRATION</h3>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/users" routerLinkActive="active-nav" (click)="closeMobileNav()"><mat-icon matListItemIcon>manage_accounts</mat-icon><span matListItemTitle>Team accounts</span></a>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/signup" routerLinkActive="active-nav" (click)="closeMobileNav()"><mat-icon matListItemIcon>person_add</mat-icon><span matListItemTitle>Team signup</span></a>
+      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/permissions" routerLinkActive="active-nav" (click)="closeMobileNav()"><mat-icon matListItemIcon>admin_panel_settings</mat-icon><span matListItemTitle>Permissions</span></a>
       <a mat-list-item routerLink="/expenses" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>receipt_long</mat-icon><span matListItemTitle>Expenses</span></a>
       <a mat-list-item routerLink="/staff" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>badge</mat-icon><span matListItemTitle>Staff &amp; duties</span></a>
       <a mat-list-item routerLink="/doctors" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>medical_services</mat-icon><span matListItemTitle>Doctors &amp; surgeons</span></a>
@@ -28,7 +31,7 @@
       <a mat-list-item routerLink="/procedures" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>medical_services</mat-icon><span matListItemTitle>Procedures</span></a>
       <a mat-list-item routerLink="/payments" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>account_balance_wallet</mat-icon><span matListItemTitle>Payments</span></a>
       <a mat-list-item routerLink="/prescriptions" routerLinkActive="active-nav" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>description</mat-icon><span matListItemTitle>Prescription records</span></a>
-      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/prescriptions/new" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>note_add</mat-icon><span matListItemTitle>New prescription</span></a>
+      <a *appPermission="'prescriptions.create'" mat-list-item routerLink="/prescriptions/new" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>note_add</mat-icon><span matListItemTitle>New prescription</span></a>
     </mat-nav-list>
     <div class="sidebar-footer"><span class="workspace-dot"></span> Hospital management <button mat-icon-button (click)="logout()" aria-label="Sign out" title="Sign out"><mat-icon>logout</mat-icon></button></div>
   </mat-sidenav>
@@ -42,6 +45,8 @@
       <div class="user-info"><span class="user-avatar"><mat-icon>person_outline</mat-icon></span><span>{{ userName }}<small>Care team</small></span></div>
     </mat-toolbar>
     <main class="content">
+      <app-team-accounts *ngIf="isSuperAdmin && isShowTeamAccounts" [signup]="teamSignup"></app-team-accounts>
+      <app-permission-management *ngIf="isSuperAdmin && isShowPermissions"></app-permission-management>
       <app-patient (create)="addPatient()" *ngIf="isShowPatients"></app-patient>
       <app-opd (create)="addOpdSlip()" *ngIf="isShowOpdPatients"></app-opd>
       <app-lab (create)="addLabTestSlip()" *ngIf="isShowLabSlips"></app-lab>
@@ -52,7 +57,7 @@
       <app-payment *ngIf="isShowPayment"></app-payment>
       <app-staff-list *ngIf="isShowStaff" [isSuperAdmin]="isSuperAdmin"></app-staff-list>
       <app-expenses *ngIf="isShowExpenses" [isSuperAdmin]="isSuperAdmin"></app-expenses>
-      <app-preciption *ngIf="isSuperAdmin && isShowPrecption" [prescriptionId]="prescriptionId" [opdVisitId]="opdVisitId"></app-preciption>
+      <app-preciption *ngIf="isShowPrecption" [prescriptionId]="prescriptionId" [opdVisitId]="opdVisitId"></app-preciption>
       <app-prescription-list *ngIf="isShowPrescriptionList" [isSuperAdmin]="isSuperAdmin"></app-prescription-list>
       <app-clinical-catalog *ngIf="isShowDoctors" kind="doctors" [isSuperAdmin]="isSuperAdmin"></app-clinical-catalog>
       <app-clinical-catalog *ngIf="isShowLabTestCatalog" kind="lab-tests" [isSuperAdmin]="isSuperAdmin"></app-clinical-catalog>
@@ -65,10 +70,11 @@
   </mat-sidenav-content>
 </mat-sidenav-container>
 <mat-menu #createMenu="matMenu" class="record-menu">
-  <button mat-menu-item (click)="addPatient(); closeMobileNav()"><mat-icon>person_add_alt</mat-icon><span>Operation patient</span></button>
-  <button mat-menu-item (click)="addOpdSlip(); closeMobileNav()"><mat-icon>assignment</mat-icon><span>OPD visit</span></button>
-  <button mat-menu-item (click)="addInnPatient(); closeMobileNav()"><mat-icon>hotel</mat-icon><span>Inpatient admission</span></button>
-  <button mat-menu-item (click)="addLabTestSlip(); closeMobileNav()"><mat-icon>science</mat-icon><span>Lab test</span></button>
-  <button mat-menu-item (click)="addMedicine(); closeMobileNav()"><mat-icon>medication</mat-icon><span>Daily medicine record</span></button>
-  <a *ngIf="isSuperAdmin" mat-menu-item routerLink="/prescriptions/new" (click)="closeMobileNav()"><mat-icon>note_add</mat-icon><span>Prescription</span></a>
+  <button *appPermission="'operation-patients.create'" mat-menu-item (click)="addPatient(); closeMobileNav()"><mat-icon>person_add_alt</mat-icon><span>Operation patient</span></button>
+  <button *appPermission="'opd.create'" mat-menu-item (click)="addOpdSlip(); closeMobileNav()"><mat-icon>assignment</mat-icon><span>OPD visit</span></button>
+  <button *appPermission="'inpatient.create'" mat-menu-item (click)="addInnPatient(); closeMobileNav()"><mat-icon>hotel</mat-icon><span>Inpatient admission</span></button>
+  <button *appPermission="'laboratory.create'" mat-menu-item (click)="addLabTestSlip(); closeMobileNav()"><mat-icon>science</mat-icon><span>Lab test</span></button>
+  <button *appPermission="'daily-medicines.create'" mat-menu-item (click)="addMedicine(); closeMobileNav()"><mat-icon>medication</mat-icon><span>Daily medicine record</span></button>
+  <a *appPermission="'ot-medicine-records.create'" mat-menu-item routerLink="/ot-slip" (click)="closeMobileNav()"><mat-icon>post_add</mat-icon><span>OT medicine slip</span></a>
+  <a *appPermission="'prescriptions.create'" mat-menu-item routerLink="/prescriptions/new" (click)="closeMobileNav()"><mat-icon>note_add</mat-icon><span>Prescription</span></a>
 </mat-menu>

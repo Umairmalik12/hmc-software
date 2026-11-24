@@ -21,7 +21,8 @@ describe('Workspace save navigation', () => {
     component = new HomeComponent(dialog, new NotifyUpdateService(),
       { addNewPatient: save } as any, { addNewOpd: save } as any,
       { addNewLabPatient: save } as any, { addNewInpatient: save } as any,
-      medicines as any, { showAlert: jasmine.createSpy('showAlert') } as any, {} as any, router, {} as any, {} as any);
+      medicines as any, { showAlert: jasmine.createSpy('showAlert') } as any, {} as any, router, {} as any, {} as any,
+      { load: async () => undefined, can: () => true } as any);
   });
 
   afterEach(() => component.ngOnDestroy());

@@ -152,7 +152,9 @@ export class PatientTokenComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   async deleteSlip(slip: PatientTokenSlip): Promise<void> {
-    if (!this.isSuperAdmin || this.deletingId !== null || this.generating || this.updating) return;
+    if (this.deletingId !== null || this.generating || this.updating) return;
+    try { await this.indexedDb.requirePermission('tokens', 'delete', 'You do not have permission to delete patient tokens.'); }
+    catch (error) { this.feedback.error(error instanceof Error ? error.message : 'You do not have permission to delete patient tokens.'); return; }
     if (!window.confirm('Delete token ' + slip.tokenNumber + ' for ' + slip.customerName + '?')) {
       return;
     }
@@ -204,10 +206,10 @@ export class PatientTokenComponent implements OnInit, OnDestroy, OnChanges {
     this.savePaperWidth();
   }
 
-  editSlip(slip: PatientTokenSlip): void { if (!this.isSuperAdmin || this.updating || this.generating || this.deletingId !== null) return; this.editingSlipId = slip.id; this.editedPatientName = slip.customerName; }
+  async editSlip(slip: PatientTokenSlip): Promise<void> { if (this.updating || this.generating || this.deletingId !== null) return; try { await this.indexedDb.requirePermission('tokens', 'edit', 'You do not have permission to edit patient tokens.'); this.editingSlipId = slip.id; this.editedPatientName = slip.customerName; } catch (error) { this.feedback.error(error instanceof Error ? error.message : 'You do not have permission to edit patient tokens.'); } }
   cancelEdit(): void { if (!this.updating) { this.editingSlipId = null; this.editedPatientName = ''; } }
   async saveSlip(slip: PatientTokenSlip): Promise<void> {
-    if (!this.isSuperAdmin || this.updating || this.generating || this.deletingId !== null) return;
+    if (this.updating || this.generating || this.deletingId !== null) return;
     if (!this.editedPatientName.trim()) { this.errorMessage = 'Enter the patient name.'; if (this.errorMessage) this.feedback.alertNotify.next({ msg: this.errorMessage, type: 'error' }); return; }
     this.updating = true;
     this.errorMessage = '';

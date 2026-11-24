@@ -49,7 +49,7 @@ export class MedicineCatalogComponent implements OnInit, OnDestroy {
     finally { if (version === this.version) this.loading = false; }
   }
   edit(option?: PrescriptionMedicineOption): void {
-    if (option && (!this.isSuperAdmin || this.loading)) return;
+    if (this.loading) return;
     this.error = ''; this.success = '';
     const ref = this.dialog.open(MedicineOptionDialogComponent, { data: option ? { id: option.id, name: option.name, strength: option.strength } : {}, width: '560px', maxWidth: '94vw', panelClass: 'hmc-dialog-panel' });
     this.subscriptions.add(ref.afterClosed().subscribe(saved => { if (saved) { this.success = 'Medicine saved.'; void this.load(); } }));
@@ -61,7 +61,7 @@ export class MedicineCatalogComponent implements OnInit, OnDestroy {
     this.subscriptions.add(ref.afterClosed().subscribe(saved => { if (saved) { this.success = 'Medicine strength saved.'; void this.load(); } }));
   }
   async delete(option: PrescriptionMedicineOption): Promise<void> {
-    if (!this.isSuperAdmin || this.loading || this.deletingId || !window.confirm('Remove ' + option.name + ' from future medicine selections? Saved records will keep their medicine text.')) return;
+    if (this.loading || this.deletingId || !window.confirm('Remove ' + option.name + ' from future medicine selections? Saved records will keep their medicine text.')) return;
     this.deletingId = option.id; this.error = ''; this.success = '';
     try { await this.catalog.delete(option); this.feedback.success('Medicine deleted successfully. Saved records are preserved.', { title: 'Medicine deleted', route: '/prescription-medicines' }); this.success = 'Medicine removed from the catalogue.'; await this.load(); }
     catch (error) { this.error = error instanceof Error ? error.message : 'Unable to remove this medicine.'; if (this.error) this.feedback.alertNotify.next({ msg: this.error, type: 'error' }); }

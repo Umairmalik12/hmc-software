@@ -97,7 +97,10 @@ export class UserLoginService {
       if (roleError) {
         throw new Error(roleError.message);
       }
-      const currentRole = role?.role || 'staff';
+      const currentRole = role?.role;
+      if (!currentRole) {
+        throw new Error('Your account has no assigned role. Ask an administrator to configure your account role.');
+      }
       if (this.lastRole?.userId === data.user.id && this.lastRole.role !== currentRole) {
         this.feedback.info('Your account role was updated to ' + currentRole + '.', { title: 'Account permissions updated', route: '/home' });
       }

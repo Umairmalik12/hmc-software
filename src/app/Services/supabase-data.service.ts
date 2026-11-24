@@ -93,16 +93,35 @@ export class SupabaseDataService {
     }, 2);
   }
 
+  async deleteOpdVisit(id: string | number): Promise<void> {
+    return this.loading.track('Deleting OPD visit...', async () => {
+      const visitId = String(id).trim();
+      if (!visitId) throw new Error('Select a valid OPD visit.');
+      const { data, error } = await this.client.rpc('hmc_delete_opd_visit', { p_visit_id: visitId });
+      if (error && ['PGRST202', '42883'].includes(error.code)) {
+        throw new Error('OPD deletion needs a database update. Apply supabase/migrations/20261127_opd_delete_authorization.sql in the Supabase SQL Editor.');
+      }
+      this.throwIfError(error);
+      if (data?.deleted !== true || data?.record_id !== visitId) {
+        throw new Error('The database did not confirm deletion of this OPD visit.');
+      }
+      this.changes.next('opdDetails');
+    }, 2);
+  }
+
   async deleteRecord(collection: string, id: string | number): Promise<void> {
     return this.loading.track('Deleting record...', async () => {
-      const { error } = await this.client.rpc('apply_hmc_record_changes', {
-        p_collection: collection,
-        p_inserts: [],
-        p_updates: [],
-        p_delete_ids: [String(id)],
-      });
+      const recordId = String(id);
+      if (!collection || !recordId.trim()) throw new Error('Select a valid record to delete.');
+      // RLS enforces delete permission. Request the removed key so a filtered
+      // or missing row cannot be reported as a successful deletion.
+      const { data, error } = await this.client.from('hmc_records').delete()
+        .eq('collection', collection).eq('record_id', recordId).select('record_id');
       this.throwIfError(error);
-
+      if (!Array.isArray(data) || data.length !== 1 || data[0].record_id !== recordId) {
+        throw new Error('The record was not deleted. It may have already been removed or your account may not have delete permission.');
+      }
+      this.changes.next(collection);
     }, 2);
   }
 
@@ -129,13 +148,16 @@ export class SupabaseDataService {
 
   async upsertRecord(collection: string, id: string | number, data: any, sortOrder = 0): Promise<void> {
     return this.loading.track('Saving record...', async () => {
-      // The RPC insert branch already uses INSERT ... ON CONFLICT DO UPDATE.
-      // Use that branch for upserts: older deployed functions reject an update
-      // when a new or built-in catalogue entry has not been stored yet.
+      // Choose the correct RPC branch for both existing and older deployments.
+      // Older functions reject a missing record in p_updates instead of inserting it.
+      const { data: existing, error: lookupError } = await this.client.from('hmc_records')
+        .select('record_id').eq('collection', collection).eq('record_id', String(id)).maybeSingle();
+      this.throwIfError(lookupError);
+      const record = { record_id: String(id), data, sort_order: sortOrder };
       const { error } = await this.client.rpc('apply_hmc_record_changes', {
         p_collection: collection,
-        p_inserts: [{ record_id: String(id), data, sort_order: sortOrder }],
-        p_updates: [],
+        p_inserts: existing ? [] : [record],
+        p_updates: existing ? [record] : [],
         p_delete_ids: [],
       });
       this.throwIfError(error);
@@ -267,7 +289,7 @@ export class SupabaseDataService {
 
   async deletePatientToken(id: number): Promise<void> {
     return this.loading.track('Deleting patient token...', async () => {
-      await this.requireAdministrator('Only administrators can edit or delete patient tokens.');
+      await this.requirePermission('tokens', 'delete', 'You do not have permission to delete patient tokens.');
       const { data, error } = await this.client
         .from('patient_token_slips')
         .delete()
@@ -283,7 +305,7 @@ export class SupabaseDataService {
 
   async updatePatientTokenName(id: number, customerName: string): Promise<PatientTokenSlip> {
     return this.loading.track('Updating patient token...', async () => {
-      await this.requireAdministrator('Only administrators can edit or delete patient tokens.');
+      await this.requirePermission('tokens', 'edit', 'You do not have permission to edit patient tokens.');
       const name = customerName.trim();
       if (!name) throw new Error('Enter the patient name.');
       const { data, error } = await this.client.from('patient_token_slips')
@@ -302,10 +324,21 @@ export class SupabaseDataService {
     if (data !== true) throw new Error(message);
   }
 
+  async requirePermission(moduleKey: string, action: 'create' | 'edit' | 'delete', message = 'You do not have permission to perform this action.'): Promise<void> {
+    // The database verifies Admin on every action. Its full access is independent
+    // of role-matrix rows, the module RPC version, and cached frontend state.
+    const { data: isAdmin, error: adminError } = await this.client.rpc('hmc_is_admin');
+    this.throwIfError(adminError);
+    if (isAdmin === true) return;
+    const { data, error } = await this.client.rpc('hmc_has_permission', { p_module: moduleKey, p_action: action });
+    this.throwIfError(error);
+    if (data !== true) throw new Error(message);
+  }
+
   async deletePrescriptionRecord(collection: 'prescriptions' | 'prescription', id: string): Promise<void> {
     return this.loading.track('Deleting prescription...', async () => {
       if (!id || !['prescriptions', 'prescription'].includes(collection) || (collection === 'prescription' && id !== SINGLETON_ID)) throw new Error('Invalid prescription record.');
-      await this.requireAdministrator('Only administrators can delete prescriptions.');
+      await this.requirePermission('prescriptions', 'delete', 'You do not have permission to delete prescriptions.');
       const { data, error } = await this.client.from('hmc_records').delete()
         .eq('collection', collection).eq('record_id', id).select('record_id');
       this.throwIfError(error);

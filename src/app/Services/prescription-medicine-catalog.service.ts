@@ -25,7 +25,8 @@ export class PrescriptionMedicineCatalogService implements OnDestroy {
   ngOnDestroy(): void { this.subscription.unsubscribe(); this.changes.complete(); }
   private invalidate(): void { this.cache = undefined; this.changes.next(); }
   async canManage(): Promise<boolean> {
-    try { await this.db.requireAdministrator(); return true; } catch { return false; }
+    for (const action of ['create', 'edit', 'delete'] as const) { try { await this.db.requirePermission('medicine-catalog', action); return true; } catch { /* Check the next catalogue action. */ } }
+    return false;
   }
 
   async getAll(includeInactive = false, refresh = false): Promise<PrescriptionMedicineOption[]> {
@@ -55,7 +56,7 @@ export class PrescriptionMedicineCatalogService implements OnDestroy {
   }
 
   async save(name: string, id?: string, strength?: string): Promise<PrescriptionMedicineOption> {
-    if (id) await this.db.requireAdministrator('Only administrators can edit catalogue medicines.');
+    await this.db.requirePermission('medicine-catalog', id ? 'edit' : 'create', id ? 'You do not have permission to edit catalogue medicines.' : 'You do not have permission to add catalogue medicines.');
     const trimmed = name.trim().replace(/\s+/g, ' ');
     if (!trimmed) throw new Error('Enter a medicine name.');
     if (trimmed.length > 160) throw new Error('Use 160 characters or fewer for the medicine name.');
@@ -69,7 +70,7 @@ export class PrescriptionMedicineCatalogService implements OnDestroy {
     const matches = all.filter(option => option.id !== id && medicineVariantKey(option.name, option.strength) === medicineVariantKey(displayName, selectedStrength));
     const duplicate = matches.find(option => option.active) || matches[0];
     if (duplicate?.active) throw new Error('This medicine already exists.');
-    if (!id && duplicate) await this.db.requireAdministrator('Only administrators can restore catalogue medicines.');
+    if (!id && duplicate) await this.db.requirePermission('medicine-catalog', 'edit', 'You do not have permission to restore catalogue medicines.');
     const option: PrescriptionMedicineOption = { ...(existing || duplicate), id: id || duplicate?.id || String(await this.db.allocateId(PRESCRIPTION_MEDICINE_CATALOG)), name: displayName, active: true, ...(selectedStrength !== undefined ? { strength: selectedStrength } : {}) };
     await this.db.upsertRecord(PRESCRIPTION_MEDICINE_CATALOG, option.id, option);
     this.invalidate();
@@ -77,7 +78,7 @@ export class PrescriptionMedicineCatalogService implements OnDestroy {
   }
 
   async delete(option: PrescriptionMedicineOption): Promise<void> {
-    await this.db.requireAdministrator('Only administrators can delete catalogue medicines.');
+    await this.db.requirePermission('medicine-catalog', 'delete', 'You do not have permission to delete catalogue medicines.');
     // Tombstones keep removed built-in and legacy suggestions from reappearing.
     // Saved prescriptions retain the original name and dose text.
     await this.db.upsertRecord(PRESCRIPTION_MEDICINE_CATALOG, option.id, { ...option, active: false });

@@ -120,22 +120,13 @@ export class OpdService {
   }
 
   async deleteOpd(id: number | string): Promise<boolean> {
-    try {
-      await this.loadOpdData();
-      const requested = String(id);
-      const target = this.opdDetail.find(opd => String(opd.visitId || '') === requested)
-        || this.opdDetail.find(opd => opd.patientId === Number(id));
-      if (!target) {
-        return false;
-      }
-      const key = String(target.visitId || target.patientId);
-      await this.dbService.deleteRecord('opdDetails', key);
-      this.opdDetail = this.opdDetail.filter(opd => String(opd.visitId || opd.patientId) !== key);
-      this.total = this.opdDetail.length;
-      return true;
-    } catch (e) {
-      console.error('Error deleting OPD:', e);
-      return false;
-    }
+    // The list passes the stored visit key, including numeric legacy keys.
+    // Do not resolve an MR number to another encounter for a destructive action.
+    const key = String(id).trim();
+    if (!key) throw new Error('Select an OPD visit to delete.');
+    await this.dbService.deleteOpdVisit(key);
+    this.opdDetail = this.opdDetail.filter(opd => String(opd.visitId || opd.patientId) !== key);
+    this.total = this.opdDetail.length;
+    return true;
   }
 }

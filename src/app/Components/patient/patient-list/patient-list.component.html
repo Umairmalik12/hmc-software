@@ -1,5 +1,5 @@
 <div class="body">
-    <header class="list-header"><div class="list-intro"><span class="list-icon"><mat-icon>people_outline</mat-icon></span><div><h1>Operation patients</h1><p>Registration, contact details and planned procedures.</p></div></div><span class="record-count"><strong>{{ filteredPatients.length }}</strong> records</span><button mat-flat-button color="primary" (click)="create.emit()"><mat-icon>add</mat-icon>New patient</button></header>
+    <header class="list-header"><div class="list-intro"><span class="list-icon"><mat-icon>people_outline</mat-icon></span><div><h1>Operation patients</h1><p>Registration, contact details and planned procedures.</p></div></div><span class="record-count"><strong>{{ filteredPatients.length }}</strong> records</span><button *appPermission="'operation-patients.create'" mat-flat-button color="primary" (click)="create.emit()"><mat-icon>add</mat-icon>New patient</button></header>
     <p *ngIf="loading" class="hmc-loading-state" role="status">Loading operation patient records...</p><p *ngIf="loadFailed" class="form-error" role="alert">Records could not be loaded. <button mat-stroked-button type="button" (click)="dataActions('', 'asc', 0, 20)" [disabled]="loading">Retry</button></p>
     <div class="search-bar" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
         <mat-form-field appearance="outline">
@@ -27,10 +27,10 @@
         <button class="search-export" mat-raised-button color="primary" (click)="exportToExcel()"><mat-icon>file_download</mat-icon>Export</button></div>
     </div>
     <div class="table-scroll-container" appScrollPagination [scrollDisabled]="loading" [scrollTotal]="total" [scrollShown]="displayedPatients.length" [scrollResetKey]="pagination.revision" (loadMore)="loadMore()" scrollLabel="Operation patients">
-    <mat-table class="patient-table mat-elevation-z8" [dataSource]="dataSource" [trackBy]="trackRecord">
+    <mat-table class="patient-table hmc-record-table operation-patient-table mat-elevation-z8" [dataSource]="dataSource" [trackBy]="trackRecord">
         <ng-container matColumnDef="patientId">
             <mat-header-cell *matHeaderCellDef >MR number</mat-header-cell>
-            <mat-cell *matCellDef="let patient"><button mat-icon-button class="history-toggle" type="button" (click)="toggleHistory(patient)" [attr.aria-expanded]="expandedHistoryFor === patient.patientId" [attr.aria-label]="(expandedHistoryFor === patient.patientId ? 'Collapse' : 'Expand') + ' history for MR ' + patient.patientId"><mat-icon>{{ expandedHistoryFor === patient.patientId ? 'expand_less' : 'expand_more' }}</mat-icon></button><span><strong>{{ patient.patientId }}</strong><small>{{ historyCount(patient) }} linked records</small></span></mat-cell>
+            <mat-cell *matCellDef="let patient"><button mat-icon-button class="history-toggle" type="button" (click)="toggleHistory(patient)" [attr.aria-expanded]="expandedHistoryFor === patient.patientId" aria-controls="operation-patient-history" [attr.aria-label]="(expandedHistoryFor === patient.patientId ? 'Collapse' : 'Expand') + ' history for MR ' + patient.patientId"><mat-icon>{{ expandedHistoryFor === patient.patientId ? 'expand_less' : 'expand_more' }}</mat-icon></button><span class="patient-mr-summary"><strong>{{ patient.patientId }}</strong><small>{{ historyCount(patient) }} linked records</small></span></mat-cell>
         </ng-container>
         <ng-container matColumnDef="name">
             <mat-header-cell *matHeaderCellDef>Name</mat-header-cell>
@@ -68,15 +68,17 @@
             <mat-header-cell *matHeaderCellDef>Action</mat-header-cell>
             <mat-cell  *matCellDef="let patient">
                       <div class="action-buttons"><button mat-icon-button color="accent" class="table-btn" type="button" aria-label="Preview operation patient" title="Preview" (click)="viewPatient(patient.patientId)"><mat-icon>visibility</mat-icon></button>
-                <button *ngIf="isSuperAdmin" mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit patient" title="Edit patient" (click)="editPatient(patient.patientId)"><mat-icon>edit_note</mat-icon></button>
-                <button [appBusy]="deletingId === patient.patientId" [disabled]="deletingId !== null" *ngIf="isSuperAdmin" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete patient" title="Delete patient" (click)="deletePatient(patient.patientId)"><mat-icon>delete_outline</mat-icon></button>
+                <button *appPermission="'operation-patients.edit'" mat-icon-button color="primary" class="table-btn" type="button" aria-label="Edit patient" title="Edit patient" (click)="editPatient(patient.patientId)"><mat-icon>edit_note</mat-icon></button>
+                <button [appBusy]="deletingId === patient.patientId" [disabled]="deletingId !== null" *appPermission="'operation-patients.delete'" mat-icon-button color="warn" class="table-btn" type="button" aria-label="Delete patient" title="Delete patient" (click)="deletePatient(patient.patientId)"><mat-icon>delete_outline</mat-icon></button>
                 </div>
             </mat-cell>
         </ng-container>
         <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-        <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns" [class.history-expanded-row]="expandedHistoryFor === row.patientId"></mat-row>
     </mat-table>
-    <section *ngIf="expandedHistoryFor !== null" class="patient-history-panel" aria-live="polite">
+    <div class="list-empty" *ngIf="!loading && !loadFailed && !filteredPatients.length"><mat-icon>inbox</mat-icon><span>No records to display.</span></div>
+    </div>
+    <section *ngIf="expandedHistoryFor !== null" id="operation-patient-history" class="patient-history-panel" aria-live="polite">
       <header><div><h3>Patient history · MR {{ expandedHistoryFor }} <span *ngIf="expandedPatient">· {{ expandedPatient.name }}</span></h3><p>{{ expandedHistoryRecords.length }} linked records, newest first</p></div><button mat-icon-button type="button" (click)="expandedHistoryFor = null" aria-label="Collapse patient history"><mat-icon>close</mat-icon></button></header>
       <p *ngIf="historyError" class="form-error" role="alert">{{ historyError }}</p>
       <div *ngIf="!historyError && !expandedHistoryRecords.length" class="history-empty">No linked visits or transactions have been recorded for this MR number.</div>
@@ -87,8 +89,6 @@
         </article>
       </div>
     </section>
-<div class="list-empty" *ngIf="!loading && !loadFailed && !filteredPatients.length"><mat-icon>inbox</mat-icon><span>No records to display.</span></div>
-    </div>
 </div>
 
 <app-scroll-list-footer [total]="total" [shown]="displayedPatients.length" (loadMore)="loadMore()"></app-scroll-list-footer>

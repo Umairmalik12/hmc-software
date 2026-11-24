@@ -1,4 +1,5 @@
 import { SearchableSelectComponent } from './Shared/searchable-select.component';
+import { TeamAccountsComponent } from './Components/team-accounts/team-accounts.component';
 import { DateTimeFieldComponent } from './Shared/date-time-field.component';
 import { ClinicalCatalogComponent } from './Components/clinical-catalog/clinical-catalog.component';
 import { ClinicalCatalogSelectComponent } from './Components/clinical-catalog/clinical-catalog-select.component';
@@ -51,6 +52,9 @@ import { AuthGuardService } from './Services/Guard-Services/auth-guard.service';
 import { AgePipePipe } from './Pipes/age-pipe.pipe';
 import { OpdComponent } from './Components/opdslip/opd.component';
 import { OpdListComponent } from './Components/opdslip/opd-list/opd-list.component';
+import { OpdDeleteConfirmComponent } from './Components/opdslip/opd-list/opd-delete-confirm.component';
+import { PermissionManagementComponent } from './Components/permissions/permission-management.component';
+import { PermissionDirective } from './Shared/permission.directive';
 import { OpdEditComponent } from './Components/opdslip/opd-edit/opd-edit.component';
 import { LabComponent } from './Components/lab/lab.component';
 import { LabListComponent } from './Components/lab/lab-list/lab-list.component';
@@ -107,6 +111,9 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
     PatientEditComponent,
     OpdComponent,
     OpdListComponent,
+    OpdDeleteConfirmComponent,
+    PermissionManagementComponent,
+    PermissionDirective,
     OpdEditComponent,
     OpdSlipComponent,
     LabComponent,
@@ -151,6 +158,7 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
     TimeFormatPipe,
   ],
   imports: [
+    TeamAccountsComponent,
     BrowserModule,
     ClinicalCatalogSelectComponent,
     SearchableSelectComponent,

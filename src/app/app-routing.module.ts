@@ -3,8 +3,12 @@ import { Routes, RouterModule } from '@angular/router';
 import { HomeComponent } from './Components/home/home.component';
 import { LoginComponent } from './Components/login/login.component';
 import { AuthGuardService } from './Services/Guard-Services/auth-guard.service';
+import { AdminGuardService } from './Services/Guard-Services/admin-guard.service';
 
 const routes: Routes = [
+  { path: 'users', component: HomeComponent, canActivate: [AuthGuardService, AdminGuardService], data: { dashboardView: 'team-accounts' } },
+  { path: 'signup', component: HomeComponent, canActivate: [AuthGuardService, AdminGuardService], data: { dashboardView: 'team-signup' } },
+  { path: 'permissions', component: HomeComponent, canActivate: [AuthGuardService, AdminGuardService], data: { dashboardView: 'permissions' } },
   {
     path:'', 
     component: LoginComponent, 

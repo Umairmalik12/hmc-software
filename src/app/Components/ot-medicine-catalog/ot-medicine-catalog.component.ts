@@ -52,15 +52,13 @@ export class OtMedicineCatalogComponent implements OnInit, OnDestroy {
     finally { if (version === this.version) this.loading = false; }
   }
   edit(medicine?: OtCatalogMedicine): void {
-    if (medicine && (!this.isSuperAdmin || this.loading)) return;
-    if (this.deletingId) return;
+    if (this.loading || this.deletingId) return;
     this.success = ''; this.error = '';
     const ref = this.dialog.open(OtMedicineEditComponent, { data: { id: medicine?.id }, width: '760px', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
     this.subscriptions.add(ref.afterClosed().subscribe(saved => { if (saved) { this.success = 'OT medicine saved.'; void this.load(); } }));
   }
   async delete(medicine: OtCatalogMedicine): Promise<void> {
-    if (!this.isSuperAdmin || this.loading) return;
-    if (this.deletingId) return;
+    if (this.loading || this.deletingId) return;
     this.deletingId = medicine.id; this.success = ''; this.error = '';
     try {
       const confirmed = await firstValueFrom(this.dialog.open(OtMedicineDeleteComponent, { data: { name: medicine.name }, role: 'alertdialog', width: '520px', maxWidth: '94vw', panelClass: 'hmc-dialog-panel', autoFocus: '[cdkFocusInitial]' }).afterClosed());

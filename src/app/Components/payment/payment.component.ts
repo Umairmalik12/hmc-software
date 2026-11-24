@@ -312,8 +312,10 @@ export class PaymentComponent implements OnInit, OnDestroy {
       'Amount (Rs)': payment.amount, 'Cash tendered (Rs)': payment.cashGiven ?? '', 'Change (Rs)': payment.cashReturn ?? '', 'Method': payment.paymentMethod || '', 'Status': payment.paymentStatus || '',
       'Recorded by account': payment.recordedByEmail || 'Not recorded', 'Updated by account': payment.updatedByEmail || 'Not recorded', 'Updated at': payment.updatedAt || '' })), 'payments.xlsx', 'Payments', this.feedback);
   }
-  editPayment(payment: PaymentRecord): void {
+  async editPayment(payment: PaymentRecord): Promise<void> {
     if (this.saving || this.deletingId) return;
+    try { await this.indexedDbService.requirePermission('payments', 'edit', 'You do not have permission to edit payments.'); }
+    catch (error) { this.feedback.error(error instanceof Error ? error.message : 'You do not have permission to edit payments.'); return; }
     this.editingId = payment.id; this.editingStaffName = payment.staffName || ''; this.patientId = payment.patientId || '';
     this.attributionValidators(true);
     this.paymentForm.reset({ patientName: payment.patientName, mrNumber: payment.mrNumber ?? null, patientId: this.patientId, amount: payment.amount, cashGiven: payment.cashGiven ?? null,
@@ -323,7 +325,10 @@ export class PaymentComponent implements OnInit, OnDestroy {
     document.getElementById('payment-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   async deletePayment(payment: PaymentRecord): Promise<void> {
-    if (!this.isSuperAdmin || this.saving || this.deletingId || !window.confirm('Delete payment #' + payment.id + ' for ' + payment.patientName + '?')) return;
+    if (this.saving || this.deletingId) return;
+    try { await this.indexedDbService.requirePermission('payments', 'delete', 'You do not have permission to delete payments.'); }
+    catch (error) { this.errorMessage = error instanceof Error ? error.message : 'You do not have permission to delete payments.'; this.feedback.error(this.errorMessage); return; }
+    if (!window.confirm('Delete payment #' + payment.id + ' for ' + payment.patientName + '?')) return;
     this.deletingId = payment.id; this.errorMessage = ''; this.successMessage = '';
     try {
       await this.indexedDbService.deleteRecord('payments', payment.id);

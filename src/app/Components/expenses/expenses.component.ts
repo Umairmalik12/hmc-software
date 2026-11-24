@@ -51,11 +51,12 @@ export class ExpensesComponent implements OnInit, OnDestroy, OnChanges {
     finally { if (version === this.version) this.loading = false; }
   }
   async edit(record?: ExpenseRecord): Promise<void> {
-    if ((record && !this.isSuperAdmin) || this.loading || this.loadFailed || this.deletingId) return;
+    if (this.loading || this.loadFailed || this.deletingId) return;
     try {
+      await this.expenses.assertPermission(record ? 'edit' : 'create');
       const current = record ? await this.expenses.getById(record.id) : undefined;
       if (record && (!current || current.deleted)) throw new Error('This expense is unavailable. Refresh or restore it before editing.');
-      if (this.destroyed || (record && !this.isSuperAdmin)) return;
+      if (this.destroyed) return;
       const ref = this.editor = this.dialog.open(ExpenseEditComponent, { data: { record: current }, disableClose: true, width: 'min(760px, calc(100vw - 32px))', maxWidth: '94vw', maxHeight: '92vh', panelClass: 'hmc-dialog-panel' });
       ref.afterClosed().subscribe((saved?: ExpenseRecord) => {
         if (this.editor === ref) this.editor = undefined;
@@ -69,7 +70,10 @@ export class ExpensesComponent implements OnInit, OnDestroy, OnChanges {
       amount: record.amount, remarks: record.remarks, location: record.location, status: record.deleted ? 'Deleted' : 'Recorded', createdAt: record.createdAt, updatedAt: record.updatedAt } } });
   }
   async remove(record: ExpenseRecord): Promise<void> {
-    if (!this.isSuperAdmin || this.deletingId || this.loading || this.loadFailed || !window.confirm((record.deleted ? 'Restore' : 'Delete') + ' expense #' + record.id + '? ' + (record.deleted ? 'It will be included in totals again.' : 'It will be excluded from totals and exports. You can restore it from Deleted expenses.'))) return;
+    if (this.deletingId || this.loading || this.loadFailed) return;
+    try { await this.expenses.assertPermission(record.deleted ? 'edit' : 'delete'); }
+    catch (error) { this.fail(error, 'You do not have permission to manage expenses.'); return; }
+    if (!window.confirm((record.deleted ? 'Restore' : 'Delete') + ' expense #' + record.id + '? ' + (record.deleted ? 'It will be included in totals again.' : 'It will be excluded from totals and exports. You can restore it from Deleted expenses.'))) return;
     this.deletingId = record.id;
     try { await this.expenses.setDeleted(record.id, !record.deleted); this.feedback.success(record.deleted ? 'Expense restored successfully.' : 'Expense deleted successfully.', { route: '/expenses' }); await this.load(); }
     catch (error) { this.fail(error, 'Unable to update the expense.'); } finally { this.deletingId = ''; }

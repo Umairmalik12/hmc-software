@@ -22,6 +22,7 @@ import { PrescriptionService } from 'src/app/Services/prescription.service';
 import { PrescriptionPreviewComponent } from 'src/app/Components/precipion/prescription-preview.component';
 import { printPrescription } from 'src/app/Components/precipion/prescription-print';
 import { Router } from '@angular/router';
+import { OpdDeleteConfirmComponent } from './opd-delete-confirm.component';
 
 @Component({
   selector: 'app-opd-list',
@@ -167,18 +168,20 @@ export class OpdListComponent implements OnInit, OnDestroy {
   viewPrescription(opd: Opd): void {
     const record = this.prescriptionFor(opd);
     if (!record) {
-      if (this.isSuperAdmin) this.openPrescriptionEditor(opd);
-      else this.notifyUpdate.info('Prescription is pending for this OPD visit.');
+      void this.openPrescriptionEditor(opd);
       return;
     }
     this.dialog.open(PrescriptionPreviewComponent, { data: { record: copyPrescription(record) }, width: '950px', maxWidth: '96vw', maxHeight: '94dvh', panelClass: 'prescription-preview-panel', autoFocus: false });
   }
 
-  openPrescriptionEditor(opd: Opd): void {
-    if (!this.isSuperAdmin || !this.router) return;
+  async openPrescriptionEditor(opd: Opd): Promise<void> {
+    if (!this.router) return;
     const record = this.prescriptionFor(opd);
-    if (record) void this.router.navigate(['/prescriptions', record.id, 'edit']);
-    else void this.router.navigate(['/prescriptions/new'], { queryParams: { opdVisitId: this.visitKey(opd) } });
+    try {
+      await this.indexDb.requirePermission('prescriptions', record ? 'edit' : 'create', 'You do not have permission to ' + (record ? 'edit' : 'create') + ' prescriptions.');
+      if (record) void this.router.navigate(['/prescriptions', record.id, 'edit']);
+      else void this.router.navigate(['/prescriptions/new'], { queryParams: { opdVisitId: this.visitKey(opd) } });
+    } catch (error) { this.notifyUpdate.error(error instanceof Error ? error.message : 'Prescription permission is required.'); }
   }
 
   printLinkedPrescription(opd: Opd): void {
@@ -190,7 +193,10 @@ export class OpdListComponent implements OnInit, OnDestroy {
 
   async deleteLinkedPrescription(opd: Opd): Promise<void> {
     const record = this.prescriptionFor(opd);
-    if (!this.isSuperAdmin || !record || !this.prescriptions || !window.confirm('Delete the prescription for ' + (record.patient.name || opd.patientName) + '? This cannot be undone.')) return;
+    if (!record || !this.prescriptions) return;
+    try { await this.indexDb.requirePermission('prescriptions', 'delete', 'You do not have permission to delete prescriptions.'); }
+    catch (error) { this.notifyUpdate.error(error instanceof Error ? error.message : 'You do not have permission to delete prescriptions.'); return; }
+    if (!window.confirm('Delete the prescription for ' + (record.patient.name || opd.patientName) + '? This cannot be undone.')) return;
     try {
       await this.prescriptions.delete(record.id);
       this.linkedPrescriptions.delete(this.visitKey(opd));
@@ -202,7 +208,9 @@ export class OpdListComponent implements OnInit, OnDestroy {
 
 
   // ✏️ Edit
-  editOpd(id: number | string): void {
+  async editOpd(id: number | string): Promise<void> {
+    try { await this.indexDb.requirePermission('opd', 'edit', 'You do not have permission to edit OPD visits.'); }
+    catch (error) { this.notifyUpdate.error(error instanceof Error ? error.message : 'You do not have permission to edit OPD visits.'); return; }
     this.opdService.getOpdDetails(id).subscribe({ next: (data: Opd) => {
       if (data) {
         this.tempOpd = data;
@@ -230,13 +238,25 @@ export class OpdListComponent implements OnInit, OnDestroy {
 
   // 🗑️ Delete
   async deleteOpd(id: number | string): Promise<void> {
-    if (this.deletingId !== null || !window.confirm('Delete this opd visit? This action cannot be undone.')) return;
+    if (this.deletingId !== null) return;
     const visit = this.opd.find(item => this.visitKey(item) === String(id));
+    if (!visit) { this.notifyUpdate.warning('This OPD record is no longer available. Refresh the list and try again.'); return; }
     if (visit && this.prescriptionFor(visit)) { this.notifyUpdate.warning('Delete the linked prescription before deleting this OPD visit.'); return; }
+    try { await this.indexDb.requirePermission('opd', 'delete', 'You do not have permission to delete OPD visits.'); }
+    catch (error) { this.notifyUpdate.error(error instanceof Error ? error.message : 'You do not have permission to delete OPD visits.'); return; }
+    const dialogRef = this.dialog.open(OpdDeleteConfirmComponent, {
+      width: 'min(480px, calc(100vw - 32px))',
+      maxWidth: '94vw',
+      data: { patientName: visit.patientName, mrNumber: visit.patientId },
+      autoFocus: false,
+    });
+    const confirmed = await firstValueFrom(dialogRef.afterClosed());
+    if (!confirmed || this.deletingId !== null) return;
     this.deletingId = String(id);
     try {
-      const saved = await this.opdService.deleteOpd(id);
-      if (!saved) throw new Error('OPD visit could not be deleted. Refresh the list and try again.');
+      await this.opdService.deleteOpd(id);
+      this.opd = this.opd.filter(item => this.visitKey(item) !== String(id));
+      this.onDateFilter(false);
       this.notifyUpdate.notify.next(true);
       this.notifyUpdate.alertNotify.next({ type: 'success', msg: 'OPD visit deleted successfully.' });
     } catch (error) { this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'OPD visit could not be deleted. Please try again.' }); }
