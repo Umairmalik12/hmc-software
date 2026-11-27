@@ -1,5 +1,5 @@
 import { SearchableSelectComponent } from './Shared/searchable-select.component';
-import { TeamAccountsComponent } from './Components/team-accounts/team-accounts.component';
+import { PatientHistoryPanelComponent, PatientHistoryLinkComponent } from './Shared/patient-history-panel.component';
 import { DateTimeFieldComponent } from './Shared/date-time-field.component';
 import { ClinicalCatalogComponent } from './Components/clinical-catalog/clinical-catalog.component';
 import { ClinicalCatalogSelectComponent } from './Components/clinical-catalog/clinical-catalog-select.component';
@@ -20,6 +20,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { LoginComponent } from './Components/login/login.component';
+import { ChangePasswordDialogComponent } from './Components/login/change-password-dialog.component';
 import { HomeComponent } from './Components/home/home.component';
 import { StaffListComponent } from './Components/staff/staff-list.component';
 import { StaffEditComponent } from './Components/staff/staff-edit.component';
@@ -53,7 +54,6 @@ import { AgePipePipe } from './Pipes/age-pipe.pipe';
 import { OpdComponent } from './Components/opdslip/opd.component';
 import { OpdListComponent } from './Components/opdslip/opd-list/opd-list.component';
 import { OpdDeleteConfirmComponent } from './Components/opdslip/opd-list/opd-delete-confirm.component';
-import { PermissionManagementComponent } from './Components/permissions/permission-management.component';
 import { PermissionDirective } from './Shared/permission.directive';
 import { OpdEditComponent } from './Components/opdslip/opd-edit/opd-edit.component';
 import { LabComponent } from './Components/lab/lab.component';
@@ -112,7 +112,6 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
     OpdComponent,
     OpdListComponent,
     OpdDeleteConfirmComponent,
-    PermissionManagementComponent,
     PermissionDirective,
     OpdEditComponent,
     OpdSlipComponent,
@@ -158,7 +157,9 @@ import { TimeFormatPipe } from './Pipes/time-format.pipe';
     TimeFormatPipe,
   ],
   imports: [
-    TeamAccountsComponent,
+    ChangePasswordDialogComponent,
+    PatientHistoryPanelComponent,
+    PatientHistoryLinkComponent,
     BrowserModule,
     ClinicalCatalogSelectComponent,
     SearchableSelectComponent,

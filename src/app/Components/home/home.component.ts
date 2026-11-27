@@ -39,9 +39,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   opdVisitId: string | null = null;
   isShowDoctors = false;
   isShowStaff = false;
-  isShowTeamAccounts = false;
-  isShowPermissions = false;
-  teamSignup = false;
   isShowExpenses = false;
   isShowLabTestCatalog = false;
   isShowProcedures = false;
@@ -151,7 +148,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.subscriptions.add(this.permissions.changes.subscribe(() => {
       this.isSuperAdmin = this.permissions.isAdmin;
       const role = this.permissions.currentRole;
-      this.userName = this.isSuperAdmin ? 'Administrator' : (role === 'staff' ? 'Staff' : role || 'Loading account...');
+      this.userName = this.isSuperAdmin ? 'Administrator' : (role ? 'User' : 'Loading account...');
       if (this.roleLoaded) this.checkPrescriptionAccess();
     }));
     void this.permissions.load().then(() => {
@@ -178,10 +175,16 @@ export class HomeComponent implements OnInit, OnDestroy {
         return;
       }
       this.selectDashboardView(this.otPatientId ? 'ot-form' : data['dashboardView'] || 'patients');
+      if (this.roleLoaded) this.checkPrescriptionAccess();
     }));
   }
 
   private checkPrescriptionAccess(): void {
+    if (this.permissions.currentRole && this.route.snapshot.data['dashboardView'] === 'ot-form'
+      && this.route.snapshot.queryParamMap.get('patientId') && !this.permissions.can('ot-medicine-records','edit')) {
+      void this.router.navigate(['/ot-records']);
+      return;
+    }
     // Wait for a verified role when authentication restarts a pending lookup.
     if (!this.permissions.currentRole || this.route.snapshot.data['dashboardView'] !== 'prescription') return;
     const action = this.route.snapshot.paramMap.get('prescriptionId') ? 'edit' : 'create';
@@ -225,7 +228,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         } catch (error) {
           console.error('Unable to save dialog record:', error);
           this.notifyUpdate.alertNotify.next({
-            msg: entity + ' could not be saved. Please try again.',
+            msg: error instanceof Error ? error.message : entity + ' could not be saved. Please try again.',
             type: 'error'
           });
         }
@@ -283,14 +286,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   private selectDashboardView(view: string): void {
     this.resetViews();
     switch (view) {
-      case 'team-accounts':
-      case 'team-signup':
-        this.isShowTeamAccounts = true;
-        this.teamSignup = view === 'team-signup';
-        break;
-      case 'permissions':
-        this.isShowPermissions = true;
-        break;
       case 'opd':
         this.isShowOpdPatients = true;
         break;
@@ -368,9 +363,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   private resetViews() {
-    this.isShowTeamAccounts = false;
-    this.isShowPermissions = false;
-    this.teamSignup = false;
     this.isShowPatients = false;
     this.isShowOpdPatients = false;
     this.isShowLabSlips = false;

@@ -43,6 +43,30 @@ export class UserLoginService {
     }, 2);
   }
 
+  async changePassword(email: string, currentPassword: string, newPassword: string): Promise<void> {
+    return this.loading.track('Updating password...', async () => {
+      if (!email.trim() || !currentPassword) throw new Error('Enter your email and current password.');
+      if (newPassword.length < 8 || newPassword.length > 128) throw new Error('Use 8–128 characters for the new password.');
+      if (newPassword === currentPassword) throw new Error('Choose a new password different from your current password.');
+      const client = this.supabase.createPasswordChangeClient();
+      try {
+        const { data, error } = await client.auth.signInWithPassword({ email: email.trim(), password: currentPassword });
+        if (error) {
+          if (error.code === 'invalid_credentials') throw new Error('The email or current password is incorrect.');
+          throw new Error(error.message);
+        }
+        if (!data.session || !data.user) throw new Error('Your account could not be verified. Please try again.');
+        const { data: updated, error: updateError } = await client.auth.updateUser({ password: newPassword, current_password: currentPassword });
+        if (updateError) throw new Error(updateError.message);
+        if (updated.user?.id !== data.user.id) throw new Error('The password update could not be confirmed. Please try again.');
+      } finally {
+        // Revoke only this temporary session. Passwords and tokens are never
+        // written to HMC records, localStorage or the application login session.
+        try { await client.auth.signOut({ scope: 'local' }); } catch { /* The client uses memory storage only. */ }
+      }
+    }, 2);
+  }
+
   async restoreSession(): Promise<boolean> {
     return this.loading.track('Restoring session...', async () => {
       const { data, error } = await this.supabase.client.auth.getSession();
@@ -97,7 +121,7 @@ export class UserLoginService {
       if (roleError) {
         throw new Error(roleError.message);
       }
-      const currentRole = role?.role;
+      const currentRole = typeof role?.role === 'string' ? role.role.trim().toLowerCase() : '';
       if (!currentRole) {
         throw new Error('Your account has no assigned role. Ask an administrator to configure your account role.');
       }

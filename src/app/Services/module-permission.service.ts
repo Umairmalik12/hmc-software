@@ -5,7 +5,6 @@ import { UserLoginService } from './user-login.service';
 
 export type PermissionAction = 'view' | 'create' | 'edit' | 'delete';
 export interface ModulePermission { moduleKey: string; view: boolean; create: boolean; edit: boolean; delete: boolean; }
-export interface RoleModulePermission extends ModulePermission { role: string; }
 export interface PermissionModule { key: string; label: string; }
 
 export const HMC_PERMISSION_MODULES: PermissionModule[] = [
@@ -23,10 +22,8 @@ export const HMC_PERMISSION_MODULES: PermissionModule[] = [
 export class ModulePermissionService {
   private role = '';
   private admin = false;
-  private readonly permissionMap = new Map<string, ModulePermission>();
   private readonly subject = new BehaviorSubject<readonly ModulePermission[]>([]);
   readonly changes: Observable<readonly ModulePermission[]> = this.subject.asObservable();
-  private realtime: any = null;
   private reloadTimer?: ReturnType<typeof setTimeout>;
 
   private loadVersion = 0;
@@ -70,74 +67,29 @@ export class ModulePermissionService {
     if (role !== this.role) this.clearPermissions();
     if (!role) throw new Error('Sign in again to load your account permissions.');
 
-    // Admin access comes from the existing protected account role. It must
-    // not depend on the optional role matrix RPC being available or seeded.
-    if (role === 'admin') {
-      this.role = role;
-      this.admin = true;
-      this.publishPermissions();
-      this.listenForChanges();
-      return;
-    }
-
-    const { data, error } = await this.supabase.client.rpc('hmc_get_my_permissions');
-    if (version !== this.loadVersion) return;
-    if (error) throw new Error(error.message || 'Module permissions could not be loaded.');
-    const payload = data as { role?: string; is_admin?: boolean; permissions?: ModulePermission[] } | null;
-    if (!payload || payload.role !== role) throw new Error('Account permissions changed. Refresh the page to reload them.');
+    if (!['admin', 'staff', 'user'].includes(role)) throw new Error('This account has an unsupported role. Contact the hospital administrator.');
     this.role = role;
-    this.admin = false;
-    this.permissionMap.clear();
-    for (const permission of payload?.permissions || []) this.permissionMap.set(permission.moduleKey, permission);
+    this.admin = role === 'admin';
     this.publishPermissions();
-    this.listenForChanges();
   }
 
   private clearPermissions(): void {
     this.role = '';
     this.admin = false;
-    this.permissionMap.clear();
     this.publishPermissions();
   }
 
   private publishPermissions(): void {
     // Supabase auth/realtime callbacks can run outside Angular's change detection.
-    this.zone.run(() => this.subject.next([...this.permissionMap.values()]));
+    this.zone.run(() => this.subject.next(HMC_PERMISSION_MODULES.map(module => ({
+      moduleKey: module.key, view: !!this.role, create: !!this.role, edit: this.admin, delete: this.admin,
+    }))));
   }
 
   get currentRole(): string { return this.role; }
   get isAdmin(): boolean { return this.admin; }
   can(moduleKey: string, action: PermissionAction): boolean {
-    if (action === 'view') return true;
-    if (this.admin) return true;
-    return this.permissionMap.get(moduleKey)?.[action] === true;
-  }
-
-  async getMatrix(): Promise<{ roles: string[]; permissions: RoleModulePermission[] }> {
-    const { data, error } = await this.supabase.client.rpc('hmc_get_permission_matrix');
-    if (error) throw new Error(error.message || 'Permission settings could not be loaded.');
-    return { roles: data?.roles || [], permissions: data?.permissions || [] };
-  }
-
-  async saveMatrix(role: string, permissions: ModulePermission[]): Promise<void> {
-    const { error } = await this.supabase.client.rpc('hmc_save_role_permissions', { p_role: role, p_permissions: permissions });
-    if (error) throw new Error(error.message || 'Permissions could not be saved.');
-    if (role === this.role) await this.load();
-  }
-
-  async resetMatrix(role: string): Promise<void> {
-    const { error } = await this.supabase.client.rpc('hmc_reset_role_permissions', { p_role: role });
-    if (error) throw new Error(error.message || 'Permissions could not be reset.');
-    if (role === this.role) await this.load();
-  }
-
-  private listenForChanges(): void {
-    if (this.realtime) return;
-    this.realtime = this.supabase.client.channel('hmc-permission-refresh')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'hmc_role_module_permissions' }, () => {
-        if (this.reloadTimer) clearTimeout(this.reloadTimer);
-        this.reloadTimer = setTimeout(() => { void this.load().catch(() => { /* load clears unverified permissions. */ }); }, 120);
-      })
-      .subscribe() as any;
+    if (!this.role || !HMC_PERMISSION_MODULES.some(module => module.key === moduleKey)) return false;
+    return action === 'view' || action === 'create' || this.admin;
   }
 }

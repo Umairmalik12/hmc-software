@@ -177,11 +177,11 @@ button.hmc-button-busy{cursor:wait!important}button.hmc-button-busy::before{cont
   }
   .hmc-record-table.opd-visit-table {
     --hmc-record-min-width: 1300px;
-    --hmc-record-columns: 100px minmax(145px, 1.2fr) 154px 70px minmax(125px, 1fr) minmax(125px, 1fr) 100px 120px 142px 184px;
+    --hmc-record-columns: 140px minmax(145px, 1.2fr) 154px 70px minmax(125px, 1fr) minmax(125px, 1fr) 100px 120px 142px 184px;
   }
   .hmc-record-table.inpatient-record-table {
     --hmc-record-min-width: 1100px;
-    --hmc-record-columns: 100px minmax(150px, 1.3fr) minmax(140px, 1.2fr) 132px 132px minmax(135px, 1fr) 142px 140px;
+    --hmc-record-columns: 145px minmax(150px, 1.3fr) minmax(140px, 1.2fr) 132px 132px minmax(135px, 1fr) 142px 140px;
   }
   .hmc-record-table.daily-medicine-table {
     --hmc-record-min-width: 850px;
@@ -189,7 +189,7 @@ button.hmc-button-busy{cursor:wait!important}button.hmc-button-busy::before{cont
   }
   .hmc-record-table.lab-record-table {
     --hmc-record-min-width: 1040px;
-    --hmc-record-columns: 105px minmax(155px, 1.2fr) minmax(190px, 1.5fr) 110px minmax(135px, 1fr) 150px 176px;
+    --hmc-record-columns: 140px minmax(155px, 1.2fr) minmax(190px, 1.5fr) 110px minmax(135px, 1fr) 150px 176px;
   }
   .hmc-record-table > mat-header-row,
   .hmc-record-table > mat-row {

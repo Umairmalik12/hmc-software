@@ -86,7 +86,7 @@ export class PatientService {
       return true;
     } catch (e) {
       console.error('Error adding new patient:', e);
-      return false;
+      throw e;
     }
   }
 
@@ -118,7 +118,7 @@ export class PatientService {
       return false;
     } catch (e) {
       console.error('Error updating patient:', e);
-      return false;
+      throw e;
     }
   }
 
@@ -158,7 +158,7 @@ export class PatientService {
     return true;
   } catch (e) {
     console.error('Error deleting patient:', e);
-    return false;
+    throw e;
   }
 }
 

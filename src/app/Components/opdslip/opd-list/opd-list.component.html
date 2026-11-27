@@ -43,7 +43,12 @@
 
     <ng-container matColumnDef="patientId">
       <mat-header-cell *matHeaderCellDef>MR Number</mat-header-cell>
-      <mat-cell *matCellDef="let opd">{{ opd.patientId }}</mat-cell>
+      <mat-cell *matCellDef="let opd"><div class="record-reference"><app-patient-history-link [panel]="linkedHistory" [record]="opd"></app-patient-history-link></div></mat-cell>
+    </ng-container>
+
+    <ng-container matColumnDef="visitNumber">
+      <mat-header-cell *matHeaderCellDef>Visit No.</mat-header-cell>
+      <mat-cell *matCellDef="let opd">{{ opd.visitNumber || '1' }}</mat-cell>
     </ng-container>
 
     <ng-container matColumnDef="dateTime">
@@ -118,4 +123,5 @@
   </div>
 </div>
 
+<app-patient-history-panel #linkedHistory="patientHistory" [records]="filteredOpds" mrField="patientId" nameField="patientName"></app-patient-history-panel>
 <app-scroll-list-footer [total]="total" [shown]="displayedOpds.length" (loadMore)="loadMore()"></app-scroll-list-footer>

@@ -6,7 +6,7 @@
 
         <ng-container matColumnDef="patientId">
             <mat-header-cell *matHeaderCellDef>MR number</mat-header-cell>
-            <mat-cell *matCellDef="let lab">{{ lab.mrNumber || lab.patientId || '—' }}</mat-cell>
+            <mat-cell *matCellDef="let lab"><div class="record-reference"><app-patient-history-link [panel]="linkedHistory" [record]="lab"></app-patient-history-link></div></mat-cell>
         </ng-container>
 
         <ng-container matColumnDef="name">
@@ -58,4 +58,5 @@
     </div>
 </div>
 
+<app-patient-history-panel #linkedHistory="patientHistory" [records]="filteredPatients" mrField="mrNumber" nameField="name"></app-patient-history-panel>
 <app-scroll-list-footer [total]="total" [shown]="displayedPatients.length" (loadMore)="loadMore()"></app-scroll-list-footer>

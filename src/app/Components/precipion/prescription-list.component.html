@@ -9,8 +9,8 @@
       <thead><tr><th>Patient</th><th>MR number</th><th>Visit</th><th>Status</th><th>Issued on</th><th>Medicines</th><th>Last updated</th><th>Actions</th></tr></thead>
       <tbody><tr *ngFor="let record of visibleRecords; trackBy: trackRecord">
         <td><strong>{{ record.patient.name || 'Unnamed patient' }}</strong><small>#{{ record.id }}</small></td>
-        <td>{{ record.patient.refId || '—' }}</td>
-        <td>{{ record.opdVisitId || record.patient.visit || '—' }}</td>
+        <td><app-patient-history-link [panel]="linkedHistory" [record]="record"></app-patient-history-link></td>
+        <td>{{ record.patient.visit || '—' }}</td>
         <td>{{ record.status === 'draft' ? 'Draft' : 'Completed' }}</td>
         <td>{{ record.issuedAt ? (record.issuedAt | date:'dd MMM y, h:mm a') : 'Not recorded' }}</td>
         <td>{{ record.medicines.length }}</td>
@@ -25,5 +25,6 @@
     </table>
   </div>
   <div class="list-empty" *ngIf="!loading && !errorMessage && !filteredRecords.length"><mat-icon>inbox</mat-icon><span>{{ query ? 'No prescriptions match your search.' : 'No prescriptions saved yet.' }}</span></div>
-  <app-scroll-list-footer [total]="filteredRecords.length" [shown]="visibleRecords.length" (loadMore)="loadMore()"></app-scroll-list-footer>
+  <app-patient-history-panel #linkedHistory="patientHistory" [records]="filteredRecords" mrField="patient.refId" nameField="patient.name"></app-patient-history-panel>
+<app-scroll-list-footer [total]="filteredRecords.length" [shown]="visibleRecords.length" (loadMore)="loadMore()"></app-scroll-list-footer>
 </section>

@@ -84,7 +84,7 @@ export class MedicineService {
       return true;
     } catch (e) {
       console.error('Error adding new medicine:', e);
-      return false;
+      throw e;
     }
   }
 
@@ -100,7 +100,7 @@ export class MedicineService {
       return true;
     } catch (e) {
       console.error('Error adding multiple medicines:', e);
-      return false;
+      throw e;
     }
   }
 
@@ -117,7 +117,7 @@ export class MedicineService {
       return false;
     } catch (e) {
       console.error('Error updating medicine:', e);
-      return false;
+      throw e;
     }
   }
 
@@ -140,7 +140,7 @@ export class MedicineService {
       return true;
     } catch (e) {
       console.error('Error updating multiple medicines:', e);
-      return false;
+      throw e;
     }
   }
 
@@ -157,7 +157,7 @@ export class MedicineService {
       return true;
     } catch (e) {
       console.error('Error deleting medicine:', e);
-      return false;
+      throw e;
     }
   }
 }

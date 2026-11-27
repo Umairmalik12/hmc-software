@@ -28,7 +28,7 @@
     <mat-table class="patient-table hmc-record-table inpatient-record-table mat-elevation-z8" [dataSource]="dataSource" [trackBy]="trackRecord">
         <ng-container matColumnDef="inpatientId">
             <mat-header-cell *matHeaderCellDef>Patient ID</mat-header-cell>
-            <mat-cell *matCellDef="let inpatient">{{inpatient.inpatientId}}</mat-cell>
+            <mat-cell *matCellDef="let inpatient"><div class="record-reference">{{inpatient.inpatientId}}<app-patient-history-link [panel]="linkedHistory" [record]="inpatient"></app-patient-history-link></div></mat-cell>
         </ng-container>
         <ng-container matColumnDef="patientName">
             <mat-header-cell *matHeaderCellDef>P/Name</mat-header-cell>
@@ -70,4 +70,5 @@
     </div>
 </div>
 
+<app-patient-history-panel #linkedHistory="patientHistory" [records]="filteredInpatients" mrField="mrNumber" nameField="patientName"></app-patient-history-panel>
 <app-scroll-list-footer [total]="total" [shown]="displayedInpatients.length" (loadMore)="loadMore()"></app-scroll-list-footer>

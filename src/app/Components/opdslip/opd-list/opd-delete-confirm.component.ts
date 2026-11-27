@@ -16,6 +16,7 @@ export interface OpdDeleteConfirmData {
         <div><span>Patient name</span><strong>{{ data.patientName || 'Not recorded' }}</strong></div>
         <div><span>MR Number</span><strong>{{ data.mrNumber || 'Not recorded' }}</strong></div>
       </section>
+      <p class="confirm-note">This deletes only this OPD visit. Any linked prescriptions will be kept in Prescription records and unlinked from this visit. Other patient records remain available.</p>
       <p class="confirm-note">This action cannot be undone.</p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">

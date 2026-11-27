@@ -71,7 +71,7 @@ export class PatientTokenComponent implements OnInit, OnDestroy, OnChanges {
   get lastGeneratedToken(): string {
     const todaysSlips = this.slips
       .filter(slip => slip.date === this.today)
-      .sort((a, b) => b.sequence - a.sequence);
+      .sort((a, b) => b.id - a.id);
     return todaysSlips.length ? todaysSlips[0].tokenNumber : '—';
   }
 

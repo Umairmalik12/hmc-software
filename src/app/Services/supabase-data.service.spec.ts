@@ -176,7 +176,7 @@ describe('SupabaseDataService', () => {
 
     const slip = await service.createPatientToken(' Ali Khan ', '2026-11-11T10:30');
 
-    expect(client.rpc).toHaveBeenCalledWith('create_patient_token_at', {
+    expect(client.rpc).toHaveBeenCalledWith('hmc_issue_patient_token', {
       p_customer_name: 'Ali Khan',
       p_token_date: '2026-11-11', p_token_time: '10:30',
     });

@@ -430,7 +430,7 @@ their loading state, and delete actions prevent repeated submissions while pendi
      ('STAFF-USER-UUID', 'staff');
    ```
 
-   Admins can delete clinical records; authenticated staff can read, add, and update them.
+   Admin has full CRUD in every module; User/Staff can view and add records, with no edit or delete access.
    The roles table is not writable by app users.
 5. In Supabase **Project Settings → API**, copy the Project URL and the `anon`/publishable
    key. Put them in both `src/environments/environment.ts` and
@@ -453,30 +453,39 @@ deployment if those local records must be retained. Token history, payments, ope
 slips, and prescription drafts need a one-time migration before the old browser data is
 cleared; Supabase does not have access to another PC's local database.
 
-### Team signup and account credentials
+### Fixed Admin and User access
 
-Admins can open **Team accounts** (`/users`) or **Team signup** (`/signup`) in the sidebar.
-Team signup creates a confirmed Supabase Auth login and assigns its existing HMC role
-(Staff or Admin). It keeps the administrator signed in. Team accounts lists every
-account, supports name/email/role search, and provides email and password changes.
-**My account** opens the signed-in administrator's own record. Existing passwords
-are never displayed or stored in application records; leave the new password blank
-to keep it. Updated credentials are saved in Supabase Auth for the next sign-in.
+The application uses the protected `hmc_user_roles` table directly. Admin can view,
+create, edit and delete records in every module. The existing `staff` role is shown
+as User and can view and add records in every module. The application no longer
+includes permission-matrix settings, team signup or account-management pages.
+Existing Supabase Auth accounts and their assigned roles are preserved.
 
-Deploy the account backend once using the Supabase CLI:
+For an existing database, paste the entire file
+[`supabase/migrations/20261128_simple_roles_crud.sql`](./supabase/migrations/20261128_simple_roles_crud.sql)
+into Supabase SQL Editor and run it, then refresh the application. This one file
+contains no SQL comments. It replaces the old record/token policies and write
+functions, disables the obsolete matrix RPCs, and persists catalogue defaults
+with their original IDs. Existing catalogue edits and inactive flags are kept.
+No account is automatically promoted to Admin. The application stops writes with
+a setup message until this migration has been installed.
 
-```powershell
-supabase login
-supabase link --project-ref YOUR_PROJECT_REF
-supabase functions deploy manage-users
-```
+All record writes use database authorization with atomic existence checks.
+Admin edits/deletes target exact record keys. OPD deletion preserves linked
+prescriptions, records their original visit reference, and removes their active
+link to the deleted encounter; the confirmation explains this behavior. Other
+patient records are retained. Catalogue removal preserves historical snapshots.
+Token allocation reuses the smallest free number within its date and existing
+prefix, with two-digit minimum formatting and database locking.
 
-Hosted Edge Functions supply `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` automatically.
-Keep gateway JWT verification enabled. The function also verifies the session using
-Auth and checks the caller's `admin` role in `hmc_user_roles` on every request.
-Only the function uses the service role key; never put it in Angular environment files.
-The existing `supabase/schema.sql` roles table and RLS setup are required. No additional
-table migration is needed. Create the first administrator through the Supabase
-dashboard as described above. Team signup is restricted to administrators.
+Operation, OPD, inpatient, laboratory, daily medicine, OT medicine, prescription
+and payment lists share a linked-records panel with counts, search, module filters,
+newest-first ordering, View actions and incremental loading. The existing tables,
+filters, individual record actions and print templates remain in use. Only an
+explicit MR number links records; admission, payment and lab record IDs are never
+silently treated as a patient's MR. Records without an MR remain accessible
+individually and are marked as unlinked.
 
-Run the backend authorization checks with `node --test supabase/tests/manage-users.test.cjs`.
+Regenerate the deployment SQL after editing its source fragments or catalogue
+defaults with `python scripts/generate-simple-access.py`. This only writes local
+SQL files and does not execute queries against a database.

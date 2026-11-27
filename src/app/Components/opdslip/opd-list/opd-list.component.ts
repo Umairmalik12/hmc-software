@@ -97,7 +97,7 @@ export class OpdListComponent implements OnInit, OnDestroy {
     this.procedureSubscription = this.indexDb.changes.subscribe(collection => { if (collection === 'procedures') void this.loadProcedures(); });
     this.userLogin.getLoginUser().then((loginUser) => {
       this.isSuperAdmin = loginUser === 'admin';
-      this.displayedColumns = ['patientId', 'patientName', 'dateTime', 'sex', 'drName', 'procedure', 'followUp', 'rxStatus', 'createdAt'];
+      this.displayedColumns = ['patientId', 'visitNumber', 'patientName', 'dateTime', 'sex', 'drName', 'procedure', 'followUp', 'rxStatus', 'createdAt'];
       this.displayedColumns.push('action');
       this.dataActions('', 'asc', 0, 5);
     }).catch(() => { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: 'Account permissions could not be loaded. Please refresh the page.' }); });
@@ -241,7 +241,6 @@ export class OpdListComponent implements OnInit, OnDestroy {
     if (this.deletingId !== null) return;
     const visit = this.opd.find(item => this.visitKey(item) === String(id));
     if (!visit) { this.notifyUpdate.warning('This OPD record is no longer available. Refresh the list and try again.'); return; }
-    if (visit && this.prescriptionFor(visit)) { this.notifyUpdate.warning('Delete the linked prescription before deleting this OPD visit.'); return; }
     try { await this.indexDb.requirePermission('opd', 'delete', 'You do not have permission to delete OPD visits.'); }
     catch (error) { this.notifyUpdate.error(error instanceof Error ? error.message : 'You do not have permission to delete OPD visits.'); return; }
     const dialogRef = this.dialog.open(OpdDeleteConfirmComponent, {

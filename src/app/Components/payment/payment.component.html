@@ -66,7 +66,7 @@
     <p *ngIf="loading" role="status" class="hmc-loading-state loading-note">Loading payment records...</p>
     <div class="table-scroll-container" appScrollPagination [scrollTotal]="filteredPayments.length" [scrollShown]="displayedPayments.length" [scrollResetKey]="pagination.revision" [scrollDisabled]="loading" (loadMore)="loadMore()" scrollLabel="Payments">
       <table mat-table [dataSource]="displayedPayments" [trackBy]="trackRecord" class="payment-table">
-        <ng-container matColumnDef="patientName"><th mat-header-cell *matHeaderCellDef>Patient / receipt</th><td mat-cell *matCellDef="let payment"><strong>{{ payment.patientName }}</strong><small>#{{ payment.id }} &middot; {{ payment.patientId || 'No reference' }}</small></td></ng-container>
+        <ng-container matColumnDef="patientName"><th mat-header-cell *matHeaderCellDef>Patient / receipt</th><td mat-cell *matCellDef="let payment"><strong>{{ payment.patientName }}</strong><app-patient-history-link [panel]="linkedHistory" [record]="payment"></app-patient-history-link><small>#{{ payment.id }} &middot; {{ payment.patientId || 'No reference' }}</small></td></ng-container>
         <ng-container matColumnDef="createdAt"><th mat-header-cell *matHeaderCellDef>Receipt time</th><td mat-cell *matCellDef="let payment">{{ payment.createdAt ? (payment.createdAt | date:'dd MMM yyyy') : 'Not recorded' }}<small *ngIf="payment.createdAt">{{ payment.createdAt | date:'h:mm a' }}</small><small *ngIf="payment.updatedByEmail" [title]="'Updated ' + (payment.updatedAt | date:'dd MMM yyyy, h:mm a')">Updated by {{ payment.updatedByEmail }}</small></td></ng-container>
         <ng-container matColumnDef="staff"><th mat-header-cell *matHeaderCellDef>Counter staff / shift</th><td mat-cell *matCellDef="let payment"><strong>{{ payment.staffName || 'Not recorded' }}</strong><small>{{ payment.shiftName || 'Shift not recorded' }}<ng-container *ngIf="payment.shiftDate"> &middot; {{ payment.shiftDate | date:'dd MMM yyyy' }}</ng-container></small><small *ngIf="payment.counterName">{{ payment.counterName }}</small></td></ng-container>
         <ng-container matColumnDef="amount"><th mat-header-cell *matHeaderCellDef>Amount</th><td mat-cell *matCellDef="let payment" class="money-cell">Rs {{ payment.amount | number:'1.2-2' }}</td></ng-container>
@@ -78,6 +78,7 @@
       </table>
       <div class="list-empty" *ngIf="!loading && !filteredPayments.length"><mat-icon>inbox</mat-icon>{{ payments.length ? 'No payments match these filters.' : 'No payments recorded yet.' }}</div>
     </div>
-    <app-scroll-list-footer [total]="filteredPayments.length" [shown]="displayedPayments.length" (loadMore)="loadMore()"></app-scroll-list-footer>
+    <app-patient-history-panel #linkedHistory="patientHistory" [records]="filteredPayments" mrField="mrNumber" nameField="patientName"></app-patient-history-panel>
+<app-scroll-list-footer [total]="filteredPayments.length" [shown]="displayedPayments.length" (loadMore)="loadMore()"></app-scroll-list-footer>
   </mat-card>
 </main>

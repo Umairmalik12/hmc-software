@@ -93,6 +93,15 @@ describe('PatientTokenComponent', () => {
     expect(component.selectedSlip).toBe(slip);
   });
 
+  it('shows the most recently created token when a deleted lower number is reused', () => {
+    component.today = slip.date;
+    component.slips = [
+      { ...slip, id: 3, sequence: 3, tokenNumber: 'A03' },
+      { ...slip, id: 4, sequence: 2, tokenNumber: 'A02' },
+    ];
+    expect(component.lastGeneratedToken).toBe('A02');
+  });
+
   it('prints the selected saved token independently of stale receipt markup', () => {
     const source = document.createElement('section');
     source.id = 'patient-token-slip-print';

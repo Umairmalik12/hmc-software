@@ -23,7 +23,32 @@ export class OpdService {
 
   private async loadOpdData(): Promise<void> {
     const storedOpd = await this.dbService.getItem<Opd[]>('opdDetails');
-    this.opdDetail = this.sortNewestFirst(storedOpd ?? []);
+    this.opdDetail = this.addLegacyVisitNumbers(storedOpd ?? []);
+  }
+
+  private addLegacyVisitNumbers(items: Opd[]): Opd[] {
+    const grouped = new Map<number, Opd[]>();
+    items.forEach(item => {
+      const key = Number(item.patientId);
+      const group = grouped.get(key) || [];
+      group.push(item);
+      grouped.set(key, group);
+    });
+    grouped.forEach(group => {
+      group.sort((left, right) => {
+        const leftTime = left.createdAt ? new Date(left.createdAt).getTime() : 0;
+        const rightTime = right.createdAt ? new Date(right.createdAt).getTime() : 0;
+        return (leftTime || 0) - (rightTime || 0);
+      });
+      let next = group.reduce((highest, item) => {
+        const number = Number(item.visitNumber);
+        return Math.max(highest, Number.isSafeInteger(number) && number > 0 ? number : 0);
+      }, 0);
+      group.forEach(item => {
+        if (!Number.isSafeInteger(Number(item.visitNumber)) || Number(item.visitNumber) < 1) item.visitNumber = ++next;
+      });
+    });
+    return this.sortNewestFirst(items);
   }
 
   private async savePatientOpdData(): Promise<void> {
@@ -63,9 +88,7 @@ export class OpdService {
     return defer(async () => {
       await this.loadOpdData();
       const requested = String(id);
-      // Prefer an encounter ID. Numeric MR lookup remains for older callers and legacy links.
-      const opd = this.opdDetail.find(o => String(o.visitId || '') === requested)
-        || this.opdDetail.find(o => o.patientId === Number(id));
+      const opd = this.opdDetail.find(o => String(o.visitId || o.patientId) === requested);
       return opd!;
     });
   }
@@ -76,13 +99,18 @@ export class OpdService {
       await this.loadOpdData();
       const visitId = data.visitId || this.newVisitId();
       if (this.opdDetail.some(o => String(o.visitId || o.patientId) === visitId)) return false;
-      const saved = { ...data, visitId };
+      const patientVisits = this.opdDetail.filter(item => Number(item.patientId) === Number(data.patientId));
+      const nextVisitNumber = patientVisits.reduce((highest, item) => {
+        const stored = Number(item.visitNumber);
+        return Math.max(highest, Number.isSafeInteger(stored) && stored > 0 ? stored : 1);
+      }, 0) + 1;
+      const saved = { ...data, visitId, visitNumber: nextVisitNumber };
       await this.dbService.insertRecord('opdDetails', visitId, saved);
       this.opdDetail.push(saved);
       return true;
     } catch (e) {
       console.error('Error adding new OPD:', e);
-      return false;
+      throw e;
     }
   }
 
@@ -105,7 +133,7 @@ export class OpdService {
       return false;
     } catch (e) {
       console.error('Error updating OPD:', e);
-      return false;
+      throw e;
     }
   }
 

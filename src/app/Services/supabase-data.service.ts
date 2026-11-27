@@ -34,16 +34,19 @@ const SINGLETON_ID = '__singleton__';
 export class SupabaseDataService {
   readonly changes = new Subject<string>();
   private realtimeStarted = false;
+  private accessSetup?: Promise<void>;
 
   constructor(private supabase: SupabaseClientService, private loading: LoadingService = new LoadingService()) {}
 
   async setItem(key: string, value: any): Promise<void> {
     return this.loading.track('Saving records...', async () => {
+      await this.ensureAccessSetup();
       if (!Array.isArray(value)) {
-        const { error } = await this.client
-          .from('hmc_records')
-          .upsert({ collection: key, record_id: SINGLETON_ID, data: value, sort_order: 0 });
+        const { error } = await this.client.rpc('apply_hmc_record_changes', {
+          p_collection: key, p_inserts: [{ record_id: SINGLETON_ID, data: value, sort_order: 0 }], p_updates: [], p_delete_ids: [],
+        });
         this.throwIfError(error);
+        this.changes.next(key);
         return;
       }
 
@@ -87,6 +90,7 @@ export class SupabaseDataService {
           p_delete_ids: [],
         });
         this.throwIfError(error);
+        this.changes.next(key);
       }
 
 
@@ -95,38 +99,39 @@ export class SupabaseDataService {
 
   async deleteOpdVisit(id: string | number): Promise<void> {
     return this.loading.track('Deleting OPD visit...', async () => {
+      await this.ensureAccessSetup();
       const visitId = String(id).trim();
       if (!visitId) throw new Error('Select a valid OPD visit.');
       const { data, error } = await this.client.rpc('hmc_delete_opd_visit', { p_visit_id: visitId });
       if (error && ['PGRST202', '42883'].includes(error.code)) {
-        throw new Error('OPD deletion needs a database update. Apply supabase/migrations/20261127_opd_delete_authorization.sql in the Supabase SQL Editor.');
+        throw new Error('Apply supabase/migrations/20261128_simple_roles_crud.sql in Supabase SQL Editor, then refresh the app.');
       }
       this.throwIfError(error);
       if (data?.deleted !== true || data?.record_id !== visitId) {
         throw new Error('The database did not confirm deletion of this OPD visit.');
       }
       this.changes.next('opdDetails');
+      this.changes.next('prescriptions');
+      this.changes.next('prescription');
     }, 2);
   }
 
   async deleteRecord(collection: string, id: string | number): Promise<void> {
     return this.loading.track('Deleting record...', async () => {
+      await this.ensureAccessSetup();
       const recordId = String(id);
       if (!collection || !recordId.trim()) throw new Error('Select a valid record to delete.');
-      // RLS enforces delete permission. Request the removed key so a filtered
-      // or missing row cannot be reported as a successful deletion.
-      const { data, error } = await this.client.from('hmc_records').delete()
-        .eq('collection', collection).eq('record_id', recordId).select('record_id');
+      const { error } = await this.client.rpc('apply_hmc_record_changes', {
+        p_collection: collection, p_inserts: [], p_updates: [], p_delete_ids: [recordId],
+      });
       this.throwIfError(error);
-      if (!Array.isArray(data) || data.length !== 1 || data[0].record_id !== recordId) {
-        throw new Error('The record was not deleted. It may have already been removed or your account may not have delete permission.');
-      }
       this.changes.next(collection);
     }, 2);
   }
 
   async moveRecord(collection: string, oldId: string | number, newId: string | number, data: any): Promise<void> {
     return this.loading.track('Updating record...', async () => {
+      await this.ensureAccessSetup();
       const { error } = await this.client.rpc('apply_hmc_record_changes', {
         p_collection: collection,
         p_inserts: [{ record_id: String(newId), data, sort_order: 0 }],
@@ -134,20 +139,25 @@ export class SupabaseDataService {
         p_delete_ids: [String(oldId)],
       });
       this.throwIfError(error);
+      this.changes.next(collection);
 
     }, 2);
   }
 
   async insertRecord(collection: string, id: string | number, data: any, sortOrder = 0): Promise<void> {
     return this.loading.track('Saving record...', async () => {
-      // A new registration must fail on an existing MR, including concurrent submissions.
-      const { error } = await this.client.from('hmc_records').insert({ collection, record_id: String(id), data, sort_order: sortOrder });
+      await this.ensureAccessSetup();
+      const { error } = await this.client.rpc('hmc_insert_record', {
+        p_collection: collection, p_record_id: String(id), p_data: data, p_sort_order: sortOrder,
+      });
       this.throwIfError(error);
+      this.changes.next(collection);
     }, 2);
   }
 
   async upsertRecord(collection: string, id: string | number, data: any, sortOrder = 0): Promise<void> {
     return this.loading.track('Saving record...', async () => {
+      await this.ensureAccessSetup();
       // Choose the correct RPC branch for both existing and older deployments.
       // Older functions reject a missing record in p_updates instead of inserting it.
       const { data: existing, error: lookupError } = await this.client.from('hmc_records')
@@ -161,6 +171,7 @@ export class SupabaseDataService {
         p_delete_ids: [],
       });
       this.throwIfError(error);
+      this.changes.next(collection);
 
     }, 2);
   }
@@ -220,20 +231,25 @@ export class SupabaseDataService {
 
   async createPatientToken(customerName: string, dateTime: string): Promise<PatientTokenSlip> {
     return this.loading.track('Generating patient token...', async () => {
+      await this.ensureAccessSetup();
       const name = customerName.trim();
       if (!name) {
         throw new Error('Patient name is required.');
       }
 
       if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(dateTime) || !calendarDate(dateTime.slice(0, 10)) || !clockValue(dateTime.slice(11)) || dateTime.slice(0, 4) < '1900') throw new Error('Select a valid token date and time.');
-      const { data, error } = await this.client.rpc('create_patient_token_at', {
+      const { data, error } = await this.client.rpc('hmc_issue_patient_token', {
         p_customer_name: name,
         p_token_date: dateTime.slice(0, 10), p_token_time: dateTime.slice(11),
       });
+      if (error && ['PGRST202','42883'].includes(error.code || '')) {
+        throw new Error('Apply supabase/migrations/20261129_token_number_reuse.sql in Supabase SQL Editor, then refresh the app.');
+      }
       this.throwIfError(error);
       if (!data) {
         throw new Error('Supabase did not return the generated patient token.');
       }
+      this.changes.next('patientTokens');
 
       return {
         id: Number(data.id),
@@ -290,15 +306,12 @@ export class SupabaseDataService {
   async deletePatientToken(id: number): Promise<void> {
     return this.loading.track('Deleting patient token...', async () => {
       await this.requirePermission('tokens', 'delete', 'You do not have permission to delete patient tokens.');
-      const { data, error } = await this.client
-        .from('patient_token_slips')
-        .delete()
-        .eq('id', id)
-        .select('id');
+      const { data, error } = await this.client.rpc('hmc_mutate_patient_token', { p_id: id, p_action: 'delete' });
       this.throwIfError(error);
-      if (!data || !data.length) {
+      if (data?.deleted !== true || Number(data?.id) !== id) {
         throw new Error('Patient token was not found or could not be deleted.');
       }
+      this.changes.next('patientTokens');
 
     }, 2);
   }
@@ -308,23 +321,24 @@ export class SupabaseDataService {
       await this.requirePermission('tokens', 'edit', 'You do not have permission to edit patient tokens.');
       const name = customerName.trim();
       if (!name) throw new Error('Enter the patient name.');
-      const { data, error } = await this.client.from('patient_token_slips')
-        .update({ customer_name: name }).eq('id', id)
-        .select('id,token_number,sequence,customer_name,token_date,token_time,created_at').single();
+      const { data, error } = await this.client.rpc('hmc_mutate_patient_token', { p_id: id, p_action: 'edit', p_customer_name: name });
       this.throwIfError(error);
       if (!data) throw new Error('Patient token was not found or could not be updated.');
+      this.changes.next('patientTokens');
       return this.mapToken(data);
 
     }, 2);
   }
 
   async requireAdministrator(message = 'Only administrators can perform this action.'): Promise<void> {
+    await this.ensureAccessSetup();
     const { data, error } = await this.client.rpc('hmc_is_admin');
     this.throwIfError(error);
     if (data !== true) throw new Error(message);
   }
 
   async requirePermission(moduleKey: string, action: 'create' | 'edit' | 'delete', message = 'You do not have permission to perform this action.'): Promise<void> {
+    await this.ensureAccessSetup();
     // The database verifies Admin on every action. Its full access is independent
     // of role-matrix rows, the module RPC version, and cached frontend state.
     const { data: isAdmin, error: adminError } = await this.client.rpc('hmc_is_admin');
@@ -339,11 +353,7 @@ export class SupabaseDataService {
     return this.loading.track('Deleting prescription...', async () => {
       if (!id || !['prescriptions', 'prescription'].includes(collection) || (collection === 'prescription' && id !== SINGLETON_ID)) throw new Error('Invalid prescription record.');
       await this.requirePermission('prescriptions', 'delete', 'You do not have permission to delete prescriptions.');
-      const { data, error } = await this.client.from('hmc_records').delete()
-        .eq('collection', collection).eq('record_id', id).select('record_id');
-      this.throwIfError(error);
-      if (!Array.isArray(data) || data.length !== 1 || data[0].record_id !== id) throw new Error('The prescription was not deleted. Refresh the list and check your administrator permissions.');
-      this.changes.next(collection);
+      await this.deleteRecord(collection,id);
     }, 2);
   }
 
@@ -412,8 +422,18 @@ export class SupabaseDataService {
     };
   }
 
-  private throwIfError(error: { message: string } | null): void {
+  private async ensureAccessSetup(): Promise<void> {
+    if (!this.accessSetup) this.accessSetup = Promise.resolve(this.client.rpc('hmc_simple_access_version').then(({ data,error }) => {
+      this.throwIfError(error);
+      if (data !== 1) throw new Error('Apply supabase/migrations/20261128_simple_roles_crud.sql in Supabase SQL Editor, then refresh the app.');
+    }));
+    const request = this.accessSetup;
+    try { await request; } catch (error) { if (this.accessSetup === request) this.accessSetup = undefined; throw error; }
+  }
+
+  private throwIfError(error: { message: string; code?: string } | null): void {
     if (error) {
+      if (['PGRST202','42883'].includes(error.code || '')) throw new Error('Apply supabase/migrations/20261128_simple_roles_crud.sql in Supabase SQL Editor, then refresh the app.');
       throw new Error(error.message);
     }
   }

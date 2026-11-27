@@ -134,7 +134,9 @@ ngOnInit(): void {
     dialogRef.afterClosed().subscribe(async (data: LabPatient) => {
       if (data) {
 
-        const success = await this.labService.updateLabPatient(data);
+        let success: boolean;
+        try { success = await this.labService.updateLabPatient(data); }
+        catch (error) { this.notifyUpdate.error(error instanceof Error ? error.message : 'Unable to update lab test.'); return; }
         const msg = success ? "Lab test updated successfully." : 'The record could not be updated. Please try again.';
         const type = success ? "success" : "error";
         if (success) {

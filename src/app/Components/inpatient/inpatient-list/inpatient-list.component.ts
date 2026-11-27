@@ -166,7 +166,9 @@ export class InpatientListComponent implements OnInit, OnDestroy {
 
         dialogRef.afterClosed().subscribe(async (resultData: any) => {
           if (resultData) {
-            const success = await this.inpatientService.updateInpatient(resultData);
+            let success: boolean;
+            try { success = await this.inpatientService.updateInpatient(resultData); }
+            catch (error) { this.notifyUpdate.error(error instanceof Error ? error.message : 'Unable to update inpatient.'); return; }
             const msg = success ? "Inpatient updated successfully." : "Inpatient could not be updated. Please try again.";
             const type = success ? "success" : "error";
 

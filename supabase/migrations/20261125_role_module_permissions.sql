@@ -55,17 +55,17 @@ $$;
 
 create or replace function public.hmc_has_permission(p_module text, p_action text)
 returns boolean language plpgsql stable security definer set search_path = public, auth as $$
-declare current_role text;
+declare account_role text;
 begin
   if auth.uid() is null then return false; end if;
-  select role into current_role from public.hmc_user_roles where user_id = auth.uid();
-  if current_role is null then return false; end if;
-  if current_role = 'admin' then return true; end if;
+  select role into account_role from public.hmc_user_roles where user_id = auth.uid();
+  if account_role is null then return false; end if;
+  if account_role = 'admin' then return true; end if;
   if p_action = 'view' then return true; end if;
   if p_action not in ('create','edit','delete') then return false; end if;
   return exists (
     select 1 from public.hmc_role_module_permissions p
-    where p.role = current_role and p.module_key = p_module
+    where p.role = account_role and p.module_key = p_module
       and case p_action when 'create' then p.can_create when 'edit' then p.can_edit when 'delete' then p.can_delete else false end
   );
 end;
@@ -104,16 +104,16 @@ on conflict (role,module_key) do nothing;
 
 create or replace function public.hmc_get_my_permissions()
 returns jsonb language plpgsql stable security definer set search_path = public, auth as $$
-declare current_role text; result jsonb;
+declare account_role text; result jsonb;
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
-  select role into current_role from public.hmc_user_roles where user_id = auth.uid();
-  if current_role is null then raise exception 'Account role is not configured'; end if;
+  select role into account_role from public.hmc_user_roles where user_id = auth.uid();
+  if account_role is null then raise exception 'Account role is not configured'; end if;
   select coalesce(jsonb_agg(jsonb_build_object(
     'moduleKey', p.module_key, 'view', true, 'create', p.can_create, 'edit', p.can_edit, 'delete', p.can_delete
   ) order by p.module_key), '[]'::jsonb) into result
-  from public.hmc_role_module_permissions p where p.role = current_role;
-  return jsonb_build_object('role', current_role, 'is_admin', current_role = 'admin', 'permissions', result);
+  from public.hmc_role_module_permissions p where p.role = account_role;
+  return jsonb_build_object('role', account_role, 'is_admin', account_role = 'admin', 'permissions', result);
 end;
 $$;
 

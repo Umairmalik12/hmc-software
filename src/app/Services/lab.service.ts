@@ -63,7 +63,7 @@ export class LabService {
     return new Observable<LabPatient | undefined>(observer => {
       this.indexedDbService.getItem<LabPatient[]>('labDetails').then(data => {
         this.labDetail = data ?? [];
-        const patient = this.labDetail.find(o => String(o.labId || '') === String(id)) || this.labDetail.find(o => o.patientId === Number(id));
+        const patient = this.labDetail.find(o => String(o.labId || o.patientId) === String(id));
         observer.next(patient);
         observer.complete();
       }).catch(err => observer.error(err));
@@ -82,7 +82,7 @@ export class LabService {
       return true;
     } catch (err) {
       console.error('Error adding lab patient:', err);
-      return false;
+      throw err;
     }
   }
 
@@ -101,7 +101,7 @@ export class LabService {
       return false;
     } catch (err) {
       console.error('Error updating lab patient:', err);
-      return false;
+      throw err;
     }
   }
 
@@ -131,8 +131,7 @@ export class LabService {
       const data = await this.indexedDbService.getItem<LabPatient[]>('labDetails');
       this.labDetail = data ?? [];
 
-      let index = this.labDetail.findIndex(p => String(p.labId || '') === String(id));
-      if (index < 0) index = this.labDetail.findIndex(p => p.patientId === Number(id));
+      const index = this.labDetail.findIndex(p => String(p.labId || p.patientId) === String(id));
       if (index !== -1) {
         await this.indexedDbService.deleteRecord('labDetails', this.labDetail[index].labId || id);
         this.labDetail.splice(index, 1);
@@ -141,7 +140,7 @@ export class LabService {
       return false;
     } catch (err) {
       console.error('Error deleting lab patient:', err);
-      return false;
+      throw err;
     }
   }
 

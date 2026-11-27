@@ -99,7 +99,7 @@ export class PreciptionComponent implements OnInit, OnDestroy, OnChanges {
         this.record.opdVisitId = String(opd.visitId || this.opdVisitId);
         // Only map supplied OPD values into blank fields. Clinical fields remain for the doctor to complete.
         this.record.patient.refId ||= String(opd.patientId || '');
-        this.record.patient.visit ||= String(opd.visitId || this.opdVisitId);
+        this.record.patient.visit = String(opd.visitNumber || 1);
         this.record.patient.name ||= opd.patientName || '';
         this.record.patient.age ||= opd.age !== null && opd.age !== undefined && Number.isFinite(opd.age) ? String(opd.age) : '';
         this.record.patient.sex ||= opd.sex || '';

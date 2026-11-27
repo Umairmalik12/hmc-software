@@ -3,6 +3,7 @@ import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 
 const LABELS: Record<string, string> = {
   staffId: 'Staff ID',
+  sourceOpdVisitId: 'Original OPD visit',
   expenseId: 'Expense ID',
   patientId: 'MR number', inpatientId: 'Patient ID', medicineId: 'Medicine record', firstName: 'Patient name',
   lastName: "Father's name", drName: 'Doctor', suggestedDr: 'Referred by', roomNo: 'Room', createdAt: 'Registered on',

@@ -33,3 +33,7 @@
 .login-brand { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 16px; border: 1px solid #ffffff38; border-radius: 16px; background: #ffffff12; }
 .login-brand mat-icon { width: 30px; height: 30px; font-size: 30px; }
 .login-error { margin: 8px 0; padding: 12px; color: #a13a3a; border-radius: 8px; background: #fff0ef; font-size: 12px; }
+.login-success { margin: 8px 0; padding: 12px; color: #176f62; border: 1px solid #d3e9df; border-radius: 8px; background: #edf8f3; font-size: 12px; line-height: 1.5; }
+.account-actions { display: flex; justify-content: center; margin-top: 10px; }
+.account-actions button { display: inline-flex; align-items: center; gap: 6px; color: #14796e; border-radius: 8px; font-size: 12px; }
+.account-actions mat-icon { width: 18px; height: 18px; font-size: 18px; line-height: 18px; }

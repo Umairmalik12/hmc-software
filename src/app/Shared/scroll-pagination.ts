@@ -22,5 +22,6 @@ export class ScrollPagination {
 
 export function trackRecord(_index: number, value: unknown): unknown {
   const record = value as Record<string, unknown> | null;
-  return record?.['id'] ?? record?.['patientId'] ?? record?.['inpatientId'] ?? record?.['medicineId'] ?? value;
+  return record?.['id'] ?? record?.['visitId'] ?? record?.['labId'] ?? record?.['admissionId']
+    ?? record?.['medicineId'] ?? record?.['inpatientId'] ?? record?.['patientId'] ?? value;
 }

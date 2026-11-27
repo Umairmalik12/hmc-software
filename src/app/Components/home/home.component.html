@@ -7,31 +7,31 @@
     </a>
     <div class="sidebar-create"><button mat-flat-button color="primary" [matMenuTriggerFor]="createMenu"><mat-icon>add</mat-icon> New record <mat-icon>expand_more</mat-icon></button></div>
     <mat-nav-list aria-label="Main navigation">
-      <h3 class="sidebar-title">PATIENT CARE</h3>
+      <h3 class="sidebar-title">PATIENTS</h3>
       <a mat-list-item routerLink="/patient" [class.active-nav]="isShowPatients" [attr.aria-current]="isShowPatients ? 'page' : null" (click)="closeMobileNav()"><mat-icon matListItemIcon>people_outline</mat-icon><span matListItemTitle>Operation patients</span></a>
-      <a mat-list-item routerLink="/opd" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>assignment</mat-icon><span matListItemTitle>OPD visits</span></a>
       <a mat-list-item routerLink="/inpatient" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>hotel</mat-icon><span matListItemTitle>Inpatients</span></a>
-      <a mat-list-item routerLink="/lab" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>science</mat-icon><span matListItemTitle>Laboratory</span></a>
       <a mat-list-item routerLink="/patient-tokens" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>confirmation_number</mat-icon><span matListItemTitle>Patient tokens</span></a>
-      <h3 class="sidebar-title">PHARMACY</h3>
+      <h3 class="sidebar-title">CLINICAL CARE</h3>
+      <a mat-list-item routerLink="/opd" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>assignment</mat-icon><span matListItemTitle>OPD visits</span></a>
+      <a mat-list-item routerLink="/lab" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>science</mat-icon><span matListItemTitle>Laboratory</span></a>
+      <a mat-list-item routerLink="/prescriptions" routerLinkActive="active-nav" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>description</mat-icon><span matListItemTitle>Prescription records</span></a>
+      <a *appPermission="'prescriptions.create'" mat-list-item routerLink="/prescriptions/new" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>note_add</mat-icon><span matListItemTitle>New prescription</span></a>
+      <h3 class="sidebar-title">MEDICINES</h3>
       <a mat-list-item routerLink="/prescription-medicines" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>vaccines</mat-icon><span matListItemTitle>Medicine catalogue</span></a>
       <a mat-list-item routerLink="/medicine" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>medication</mat-icon><span matListItemTitle>Daily medicines</span></a>
       <a mat-list-item routerLink="/ot-medicines" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>vaccines</mat-icon><span matListItemTitle>OT medicine catalogue</span></a>
+      <h3 class="sidebar-title">OPERATIONS</h3>
       <a mat-list-item routerLink="/ot-records" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>inventory_2</mat-icon><span matListItemTitle>OT medicine records</span></a>
       <a *appPermission="'ot-medicine-records.create'" mat-list-item routerLink="/ot-slip" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>post_add</mat-icon><span matListItemTitle>New OT medicine slip</span></a>
-      <h3 class="sidebar-title">ADMINISTRATION</h3>
-      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/users" routerLinkActive="active-nav" (click)="closeMobileNav()"><mat-icon matListItemIcon>manage_accounts</mat-icon><span matListItemTitle>Team accounts</span></a>
-      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/signup" routerLinkActive="active-nav" (click)="closeMobileNav()"><mat-icon matListItemIcon>person_add</mat-icon><span matListItemTitle>Team signup</span></a>
-      <a *ngIf="isSuperAdmin" mat-list-item routerLink="/permissions" routerLinkActive="active-nav" (click)="closeMobileNav()"><mat-icon matListItemIcon>admin_panel_settings</mat-icon><span matListItemTitle>Permissions</span></a>
+      <a mat-list-item routerLink="/rooms" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>bed</mat-icon><span matListItemTitle>Rooms &amp; beds</span></a>
+      <a mat-list-item routerLink="/procedures" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>medical_services</mat-icon><span matListItemTitle>Procedures</span></a>
+      <h3 class="sidebar-title">BILLING &amp; EXPENSES</h3>
+      <a mat-list-item routerLink="/payments" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>account_balance_wallet</mat-icon><span matListItemTitle>Payments</span></a>
       <a mat-list-item routerLink="/expenses" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>receipt_long</mat-icon><span matListItemTitle>Expenses</span></a>
+      <h3 class="sidebar-title">TEAM &amp; CATALOGUES</h3>
       <a mat-list-item routerLink="/staff" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>badge</mat-icon><span matListItemTitle>Staff &amp; duties</span></a>
       <a mat-list-item routerLink="/doctors" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>medical_services</mat-icon><span matListItemTitle>Doctors &amp; surgeons</span></a>
       <a mat-list-item routerLink="/lab-tests" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>biotech</mat-icon><span matListItemTitle>Lab test catalogue</span></a>
-      <a mat-list-item routerLink="/rooms" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>bed</mat-icon><span matListItemTitle>Rooms &amp; beds</span></a>
-      <a mat-list-item routerLink="/procedures" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>medical_services</mat-icon><span matListItemTitle>Procedures</span></a>
-      <a mat-list-item routerLink="/payments" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>account_balance_wallet</mat-icon><span matListItemTitle>Payments</span></a>
-      <a mat-list-item routerLink="/prescriptions" routerLinkActive="active-nav" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>description</mat-icon><span matListItemTitle>Prescription records</span></a>
-      <a *appPermission="'prescriptions.create'" mat-list-item routerLink="/prescriptions/new" routerLinkActive="active-nav" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><mat-icon matListItemIcon>note_add</mat-icon><span matListItemTitle>New prescription</span></a>
     </mat-nav-list>
     <div class="sidebar-footer"><span class="workspace-dot"></span> Hospital management <button mat-icon-button (click)="logout()" aria-label="Sign out" title="Sign out"><mat-icon>logout</mat-icon></button></div>
   </mat-sidenav>
@@ -45,8 +45,6 @@
       <div class="user-info"><span class="user-avatar"><mat-icon>person_outline</mat-icon></span><span>{{ userName }}<small>Care team</small></span></div>
     </mat-toolbar>
     <main class="content">
-      <app-team-accounts *ngIf="isSuperAdmin && isShowTeamAccounts" [signup]="teamSignup"></app-team-accounts>
-      <app-permission-management *ngIf="isSuperAdmin && isShowPermissions"></app-permission-management>
       <app-patient (create)="addPatient()" *ngIf="isShowPatients"></app-patient>
       <app-opd (create)="addOpdSlip()" *ngIf="isShowOpdPatients"></app-opd>
       <app-lab (create)="addLabTestSlip()" *ngIf="isShowLabSlips"></app-lab>

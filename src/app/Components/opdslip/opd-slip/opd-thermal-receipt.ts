@@ -28,7 +28,7 @@ function displayDate(value: string): string {
 export function buildOpdThermalReceipt(opd: Opd): string {
   const row = (label: string, value: unknown, className = ''): string => `<div class="slip-row ${className}"><span class="slip-label">${escapeHtml(label)}</span><span class="slip-value">${escapeHtml(value === '' || value == null ? 'Not recorded' : value)}</span></div>`;
   return `<article class="opd-thermal-receipt"><div class="slip-brand">HAQ MEDICAL CENTER</div><div class="slip-title">OPD PATIENT SLIP</div>
-    ${row('MR no.', opd.patientId)}${row('Date', displayDate(opd.date))}${row('Time', formatTime12(opd.time))}
+    ${row('MR no.', opd.patientId)}${row('Visit no.', opd.visitNumber || 1)}${row('Date', displayDate(opd.date))}${row('Time', formatTime12(opd.time))}
     ${row('Patient', opd.patientName, 'opd-patient')}${row('Sex', opd.sex)}${row('Doctor', opd.drName)}${row('Follow-up', displayDate(opd.followUp))}
     <div class="slip-footer">PLEASE KEEP THIS SLIP</div><div class="slip-thanks">THANK YOU!</div></article>`;
 }

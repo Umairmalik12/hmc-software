@@ -95,7 +95,7 @@ export class InpatientService {
       return true;
     } catch (e) {
       console.error('Error adding new inpatient:', e);
-      return false;
+      throw e;
     }
   }
 
@@ -113,7 +113,7 @@ export class InpatientService {
       return false;
     } catch (e) {
       console.error('Error updating inpatient:', e);
-      return false;
+      throw e;
     }
   }
 
@@ -148,7 +148,7 @@ export class InpatientService {
       return true;
     } catch (e) {
       console.error('Error deleting inpatient:', e);
-      return false;
+      throw e;
     }
   }
 }

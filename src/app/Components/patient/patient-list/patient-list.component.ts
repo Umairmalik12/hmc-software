@@ -131,15 +131,7 @@ export class PatientListComponent implements OnInit, OnDestroy {
       next: records => {
         if (version !== this.loadVersion) return;
         this.patient = records; this.onDateFilter(false);
-        if (!this.patientHistory) { this.loading = false; return; }
-        void this.patientHistory.forPatients(records.map(patient => patient.patientId)).then(history => {
-          if (version !== this.loadVersion) return;
-          this.historyByPatient = history; this.historyError = ''; this.loading = false;
-        }).catch(error => {
-          if (version !== this.loadVersion) return;
-          this.historyError = error instanceof Error ? error.message : 'Patient history could not be loaded.';
-          this.historyByPatient.clear(); this.loading = false; this.notifyUpdate.error(this.historyError);
-        });
+        this.loading = false;
       },
       error: error => { if (version === this.loadVersion) { this.loading = false; this.loadFailed = true; this.notifyUpdate.alertNotify.next({ type: 'error', msg: error instanceof Error ? error.message : 'Unable to load records.' }); } }
     });
